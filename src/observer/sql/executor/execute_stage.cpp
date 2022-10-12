@@ -42,6 +42,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/filter_stmt.h"
 #include "storage/common/table.h"
 #include "storage/common/field.h"
+#include "storage/common/table_meta.h"
 #include "storage/index/index.h"
 #include "storage/default/default_handler.h"
 #include "storage/common/condition_filter.h"
@@ -383,6 +384,50 @@ IndexScanOperator *try_to_create_index_scan_operator(FilterStmt *filter_stmt)
   return oper;
 }
 
+RC check_attr(SelectStmt *expr) {
+  Table *table = expr->tables()[0];
+  const TableMeta &meta = table->table_meta();
+  for (const auto &field : expr->query_fields()) {
+    if (meta.field(field.field_name())) {
+      LOG_ERROR("wrong field %s", field.field_name());
+      return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+  }
+  return RC::SUCCESS;
+}
+
+RC check_cond(SelectStmt *select_stmt) {
+  Table *table = select_stmt->tables()[0];
+  const TableMeta &meta = table->table_meta();
+
+  auto check = [&](Expression *expr) {
+    if (expr->type() != ExprType::FIELD) {
+      return true;
+    }
+    FieldExpr &field_expr = *(FieldExpr *)expr;
+    const Field &field = field_expr.field();
+    if (meta.field(field.field_name()) == nullptr) {
+      return false;
+    }
+    return true;
+  };
+
+  for (const auto &filter_units : select_stmt->filter_stmt()->filter_units()) {
+    Expression *left = filter_units->left();
+    Expression *right = filter_units->right();
+
+    if (!check(left)) {
+      LOG_ERROR("left expr has wrong field");
+      return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+    if (!check(right)) {
+      LOG_ERROR("right expr has wrong field");
+      return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+  }
+  return RC::SUCCESS;
+}
+
 RC ExecuteStage::do_select(SQLStageEvent *sql_event)
 {
   SelectStmt *select_stmt = (SelectStmt *)(sql_event->stmt());
@@ -394,31 +439,13 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
     return rc;
   }
 
-  auto check = [&](Expression *expr) {
-    if (expr->type() != ExprType::FIELD) {
-      return true;
-    }
-    FieldExpr &field_expr = *(FieldExpr *)expr;
-    const Field &field = field_expr.field();
-    const Table *table = field.table();
-    if (table->table_meta().field(field.field_name()) == nullptr) {
-      return false;
-    }
-    return true;
-  };
-
   // check fields
-  for (const auto &filter_units : select_stmt->filter_stmt()->filter_units()) {
-    Expression *left = filter_units->left();
-    Expression *right = filter_units->right();
-    if (!check(left)) {
-      LOG_ERROR("left expr has wrong field");
-      return RC::SCHEMA_FIELD_NOT_EXIST;
-    }
-    if (!check(right)) {
-      LOG_ERROR("right expr has wrong field");
-      return RC::SCHEMA_FIELD_NOT_EXIST;
-    }
+  if ((rc = check_attr(select_stmt)) != RC::SUCCESS) {
+    return rc;
+  }
+
+  if ((rc = check_cond(select_stmt)) != RC::SUCCESS) {
+    return rc;
   }
 
   Operator *scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt());
