@@ -12,9 +12,11 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi & Wangyunlai on 2021/5/13.
 //
 
+#include <cstdio>
 #include <limits.h>
 #include <string.h>
 #include <algorithm>
+#include <string>
 
 #include "common/defs.h"
 #include "storage/common/table.h"
@@ -115,6 +117,45 @@ RC Table::create(
 
   base_dir_ = base_dir;
   LOG_INFO("Successfully create table %s:%s", base_dir, name);
+  return rc;
+}
+
+RC Table::drop()
+{
+  data_buffer_pool_->close_file();
+
+  RC rc = RC::SUCCESS;
+  std::string path = base_dir_ + "/" + table_meta_.name();
+  std::string file1 = path + TABLE_META_SUFFIX;
+  std::string file2 = path + TABLE_DATA_SUFFIX;
+
+  {
+    std::fstream f(file1);
+    if (!f.good()) {
+      LOG_ERROR("No such table. filename=%s, errmsg=%d:%s", path.c_str(), errno, strerror(errno));
+      return RC::SCHEMA_TABLE_NOT_EXIST;
+    }
+    f.close();
+  }
+
+  {
+    std::fstream f(file2);
+    if (!f.good()) {
+      LOG_ERROR("No such table data. filename=%s, errmsg=%d:%s", path.c_str(), errno, strerror(errno));
+      return RC::SCHEMA_TABLE_NOT_EXIST;
+    }
+    f.close();
+  }
+
+  if (std::remove(file1.c_str())) {
+    LOG_ERROR("Cannot delete %s", file1.c_str());
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+
+  if (std::remove(file2.c_str())) {
+    LOG_ERROR("Cannot delete %s", file2.c_str());
+    rc = RC::SCHEMA_TABLE_NOT_EXIST;
+  }
   return rc;
 }
 
