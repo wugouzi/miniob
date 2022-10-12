@@ -26,6 +26,7 @@ See the Mulan PSL v2 for more details. */
 #include "event/storage_event.h"
 #include "event/sql_event.h"
 #include "event/session_event.h"
+#include "sql/expr/expression.h"
 #include "sql/expr/tuple.h"
 #include "sql/operator/table_scan_operator.h"
 #include "sql/operator/index_scan_operator.h"
@@ -391,6 +392,33 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
     LOG_WARN("select more than 1 tables is not supported");
     rc = RC::UNIMPLENMENT;
     return rc;
+  }
+
+  auto check = [&](Expression *expr) {
+    if (expr->type() != ExprType::FIELD) {
+      return true;
+    }
+    FieldExpr &field_expr = *(FieldExpr *)expr;
+    const Field &field = field_expr.field();
+    const Table *table = field.table();
+    if (table->table_meta().field(field.field_name()) == nullptr) {
+      return false;
+    }
+    return true;
+  };
+
+  // check fields
+  for (const auto &filter_units : select_stmt->filter_stmt()->filter_units()) {
+    Expression *left = filter_units->left();
+    Expression *right = filter_units->right();
+    if (!check(left)) {
+      LOG_ERROR("left expr has wrong field");
+      return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+    if (!check(right)) {
+      LOG_ERROR("right expr has wrong field");
+      return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
   }
 
   Operator *scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt());
