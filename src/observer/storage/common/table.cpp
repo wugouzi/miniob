@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi & Wangyunlai on 2021/5/13.
 //
 
+#include <cstddef>
 #include <cstdio>
 #include <limits.h>
 #include <string.h>
@@ -19,11 +20,13 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 
 #include "common/defs.h"
+#include "storage/common/field_meta.h"
 #include "storage/common/table.h"
 #include "storage/common/table_meta.h"
 #include "common/log/log.h"
 #include "common/lang/string.h"
 #include "storage/default/disk_buffer_pool.h"
+#include "storage/record/record.h"
 #include "storage/record/record_manager.h"
 #include "storage/common/condition_filter.h"
 #include "storage/common/meta_util.h"
@@ -257,6 +260,39 @@ RC Table::rollback_insert(Trx *trx, const RID &rid)
   return rc;
 }
 
+RC Table::update_record(Trx *trx, Record *record)
+{
+  RC rc = RC::SUCCESS;
+
+  if (trx != nullptr) {
+    trx->init_trx_info(this, *record);
+  }
+
+  rc = record_handler_->update_record(record);
+  if (rc != RC::SUCCESS) {
+    LOG_ERROR("Update record failed. table name=%s, rc=%d:%s", table_meta_.name(), rc, strrc(rc));
+    return rc;
+  }
+
+  if (trx != nullptr) {
+    rc = trx->update_record(this, record);
+    if (rc != RC::SUCCESS) {
+      LOG_ERROR("Failed to log operation(insertion) to trx");
+
+      RC rc2 = record_handler_->delete_record(&record->rid());
+      if (rc2 != RC::SUCCESS) {
+        LOG_ERROR("Failed to rollback record data when insert index entries failed. table name=%s, rc=%d:%s",
+            name(),
+            rc2,
+            strrc(rc2));
+      }
+      return rc;
+    }
+  }
+
+  return rc;
+}
+
 RC Table::insert_record(Trx *trx, Record *record)
 {
   RC rc = RC::SUCCESS;
@@ -325,6 +361,55 @@ RC Table::insert_record(Trx *trx, int value_num, const Value *values)
   // record.valid = true;
   rc = insert_record(trx, &record);
   delete[] record_data;
+  return rc;
+}
+
+RC Table::update_record(Trx *trx, const char *attribute_name, const Value *value, int condition_num,
+    const Condition conditions[], int *updated_count)
+{
+  RC rc = RC::SUCCESS;
+
+  CompositeConditionFilter filter;
+  filter.init(*this, conditions, condition_num);
+
+  RecordFileScanner scanner;
+  rc = scanner.open_scan(*data_buffer_pool_, &filter);
+  if (rc != RC::SUCCESS) {
+    LOG_ERROR("failed to open scanner. rc=%d:%s", rc, strrc(rc));
+  }
+
+  const FieldMeta *field = table_meta_.field(attribute_name);
+
+  *updated_count = 0;
+  Record record;
+  while (scanner.has_next()) {
+    rc = scanner.next(record);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to fetch next record. rc=%d:%s", rc, strrc(rc));
+      return rc;
+    }
+    if (trx == nullptr || trx->is_visible(this, &record)) {
+      // prepare data
+      size_t copy_len = field->len();
+      if (field->type() == CHARS) {
+        const size_t data_len = strlen((const char *)value->data);
+        if (copy_len > data_len) {
+          copy_len = data_len + 1;
+        }
+      }
+      memcpy(record.data() + field->offset(), value->data, copy_len);
+
+      // update
+      rc = update_record(trx, &record);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("failed to update");
+        return rc;
+      }
+      (*updated_count)++;
+    }
+  }
+
+  scanner.close_scan();
   return rc;
 }
 
@@ -646,11 +731,7 @@ RC Table::create_index(Trx *trx, const char *index_name, const char *attribute_n
   return rc;
 }
 
-RC Table::update_record(Trx *trx, const char *attribute_name, const Value *value, int condition_num,
-    const Condition conditions[], int *updated_count)
-{
-  return RC::GENERIC_ERROR;
-}
+
 
 class RecordDeleter {
 public:

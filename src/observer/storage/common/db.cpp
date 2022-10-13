@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "storage/common/db.h"
 
+#include <cstddef>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <vector>
@@ -21,6 +22,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include "common/os/path.h"
 #include "common/lang/string.h"
+#include "sql/parser/parse_defs.h"
 #include "storage/common/table_meta.h"
 #include "storage/common/table.h"
 #include "storage/common/meta_util.h"
@@ -95,7 +97,25 @@ RC Db::drop_table(const char *table_name)
   delete table;
   LOG_INFO("Drop table success. table name=%s", table_name);
   return rc;
+}
 
+RC Db::update_table(const char *relation_name, const char *attribute_name, const Value *value,
+                    const size_t condition_num, const Condition *conditions)
+{
+  RC rc = RC::SUCCESS;
+  if (opened_tables_.count(relation_name) == 0) {
+    LOG_WARN("there is no table %s", relation_name);
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+  Table *table = opened_tables_[relation_name];
+  int updated_cnt;
+  rc = table->update_record(nullptr, attribute_name, value, condition_num, conditions, &updated_cnt);
+  if (rc != RC::SUCCESS) {
+    LOG_ERROR("Failed to update table %s", relation_name);
+    return rc;
+  }
+  LOG_INFO("Update table success. table name=%s", relation_name);
+  return rc;
 }
 
 Table *Db::find_table(const char *table_name) const

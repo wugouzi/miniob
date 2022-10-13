@@ -145,7 +145,7 @@ void ExecuteStage::handle_request(common::StageEvent *event)
       do_insert(sql_event);
     } break;
     case StmtType::UPDATE: {
-      //do_update((UpdateStmt *)stmt, session_event);
+      // do_update(sql_event);
     } break;
     case StmtType::DELETE: {
       do_delete(sql_event);
@@ -171,7 +171,9 @@ void ExecuteStage::handle_request(common::StageEvent *event)
     case SCF_DESC_TABLE: {
       do_desc_table(sql_event);
     } break;
-
+    case SCF_UPDATE: {
+      do_update_table(sql_event);
+    } break;
     case SCF_DROP_TABLE: {
       do_drop_table(sql_event);
     } break;
@@ -388,7 +390,7 @@ RC check_attr(SelectStmt *expr) {
   Table *table = expr->tables()[0];
   const TableMeta &meta = table->table_meta();
   for (const auto &field : expr->query_fields()) {
-    if (meta.field(field.field_name())) {
+    if (meta.field(field.field_name()) == nullptr) {
       LOG_ERROR("wrong field %s", field.field_name());
       return RC::SCHEMA_FIELD_NOT_EXIST;
     }
@@ -538,6 +540,8 @@ RC ExecuteStage::do_drop_table(SQLStageEvent *sql_event)
   return rc;
 }
 
+
+
 RC ExecuteStage::do_create_index(SQLStageEvent *sql_event)
 {
   SessionEvent *session_event = sql_event->session_event();
@@ -588,6 +592,33 @@ RC ExecuteStage::do_desc_table(SQLStageEvent *sql_event)
   return RC::SUCCESS;
 }
 
+/*
+create table t(id int, age int);
+insert into t values(1,1);
+insert into t values(2,3);
+select * from t;
+update t set age =100 where id=1;
+select * from t;
+update set age=20 where id>1;
+select * from t;
+drop table t;
+ */
+
+RC ExecuteStage::do_update_table(SQLStageEvent *sql_event)
+{
+  const Updates &updates = sql_event->query()->sstr.update;
+  SessionEvent *session_event = sql_event->session_event();
+  Db *db = session_event->session()->get_current_db();
+  RC rc = db->update_table(updates.relation_name, updates.attribute_name, &updates.value,
+                           updates.condition_num, updates.conditions);
+  if (rc == RC::SUCCESS) {
+    session_event->set_response("SUCCESS\n");
+  } else {
+    session_event->set_response("FAILURE\n");
+  }
+  return rc;
+}
+
 RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
 {
   Stmt *stmt = sql_event->stmt();
@@ -609,6 +640,8 @@ RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
   }
   return rc;
 }
+
+
 
 RC ExecuteStage::do_delete(SQLStageEvent *sql_event)
 {
