@@ -12,8 +12,13 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi & Longda on 2021/4/13.
 //
 
+#include <algorithm>
+#include <cstring>
+#include <iterator>
 #include <string>
 #include <sstream>
+#include <unordered_map>
+#include <vector>
 
 #include "execute_stage.h"
 
@@ -28,18 +33,14 @@ See the Mulan PSL v2 for more details. */
 #include "event/session_event.h"
 #include "sql/expr/expression.h"
 #include "sql/expr/tuple.h"
-#include "sql/operator/table_scan_operator.h"
-#include "sql/operator/index_scan_operator.h"
+#include "sql/expr/tuple_cell.h"
 #include "sql/operator/predicate_operator.h"
-#include "sql/operator/delete_operator.h"
+#include "sql/operator/pretable_scan_operator.h"
 #include "sql/operator/project_operator.h"
+#include "sql/operator/table_scan_operator.h"
 #include "sql/parser/parse_defs.h"
-#include "sql/stmt/stmt.h"
-#include "sql/stmt/select_stmt.h"
-#include "sql/stmt/update_stmt.h"
-#include "sql/stmt/delete_stmt.h"
-#include "sql/stmt/insert_stmt.h"
 #include "sql/stmt/filter_stmt.h"
+#include "storage/common/field_meta.h"
 #include "storage/common/table.h"
 #include "storage/common/field.h"
 #include "storage/common/table_meta.h"
@@ -139,7 +140,7 @@ void ExecuteStage::handle_request(common::StageEvent *event)
   if (stmt != nullptr) {
     switch (stmt->type()) {
     case StmtType::SELECT: {
-      do_select(sql_event);
+      do_select2(sql_event);
     } break;
     case StmtType::INSERT: {
       do_insert(sql_event);
@@ -430,6 +431,90 @@ RC check_cond(SelectStmt *select_stmt) {
   return RC::SUCCESS;
 }
 
+// RC do_select_subset(Table *table, SelectStmt *select_stmt, std::vector<Tuple> &tuples)
+// {
+
+// }
+
+RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
+{
+  SelectStmt *select_stmt = (SelectStmt *)(sql_event->stmt());
+  SessionEvent *session_event = sql_event->session_event();
+  FilterStmt *filter_stmt = select_stmt->filter_stmt();
+
+  std::vector<Pretable*> pretables;
+
+  RC rc = RC::SUCCESS;
+
+  for (int i = select_stmt->tables().size() - 1; i >= 0; i--) {
+    Pretable *pre = new Pretable;
+    rc = pre->init(select_stmt->tables()[i], filter_stmt);
+    if (rc != RC::RECORD_EOF) {
+      delete pre;
+      for (auto &t : pretables)
+        delete t;
+      return rc;
+    }
+    pretables.push_back(pre);
+  }
+
+  // no relevant field or something
+  if (pretables.empty()) {
+    LOG_ERROR("No table or No relevant condition");
+    return RC::INTERNAL;
+  }
+
+  Pretable *res = pretables[0];
+  auto iter = std::next(pretables.begin());
+  while (iter != pretables.end()) {
+    rc = res->join(*iter, filter_stmt);
+    delete *iter;
+    iter = pretables.erase(iter);
+    if (rc != RC::SUCCESS) {
+      while (iter != pretables.end()) {
+        delete *iter;
+        iter = pretables.erase(iter);
+      }
+      LOG_ERROR("join fails");
+      return rc;
+    }
+  }
+
+  std::stringstream ss;
+  res->print(ss, select_stmt->query_fields());
+  // if (rc != RC::RECORD_EOF) {
+  //   LOG_WARN("something wrong while iterate operator. rc=%s", strrc(rc));
+  // } else {
+  //   rc = RC::SUCCESS;
+  // }
+
+  session_event->set_response(ss.str());
+  return rc;
+}
+
+
+/*
+drop table t1;
+drop table t2;
+create table t1(id int, age int);
+create table t2(id int, sb int);
+insert into t1 values(1,1);
+insert into t1 values(2,2);
+insert into t2 values(1,2);
+insert into t2 values(2,4);
+select * from t1,t2 where t1.id=t2.id and t1.age=1;
+select * from t1,t2;
+select * from t1,t2,t3;
+ */
+
+/*
+drop table t;
+create table t(id int, age int);
+insert into t values(1,1);
+insert into t values(2,2);
+insert into t values(3,3);
+select * from t;
+ */
 RC ExecuteStage::do_select(SQLStageEvent *sql_event)
 {
   SelectStmt *select_stmt = (SelectStmt *)(sql_event->stmt());
@@ -441,14 +526,14 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
     return rc;
   }
 
-  // check fields
-  if ((rc = check_attr(select_stmt)) != RC::SUCCESS) {
-    return rc;
-  }
+  // // check fields
+  // if ((rc = check_attr(select_stmt)) != RC::SUCCESS) {
+  //   return rc;
+  // }
 
-  if ((rc = check_cond(select_stmt)) != RC::SUCCESS) {
-    return rc;
-  }
+  // if ((rc = check_cond(select_stmt)) != RC::SUCCESS) {
+  //   return rc;
+  // }
 
   Operator *scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt());
   if (nullptr == scan_oper) {
@@ -599,7 +684,7 @@ insert into t values(2,3);
 select * from t;
 update t set age =100 where id=1;
 select * from t;
-update set age=20 where id>1;
+update t set age=20 where id>1;
 select * from t;
 drop table t;
  */
@@ -667,4 +752,272 @@ RC ExecuteStage::do_delete(SQLStageEvent *sql_event)
     session_event->set_response("SUCCESS\n");
   }
   return rc;
+}
+
+TupleSet::TupleSet(const Tuple *t, Table *table) {
+  table_num_ = 1;
+  for (const FieldMeta &meta : *table->table_meta().field_metas()) {
+    metas_.emplace_back(table, meta);
+  }
+  for (int i = 0; i < t->cell_num(); i++) {
+    TupleCell cell;
+    t->cell_at(i, cell);
+    cells_.push_back(cell);
+  }
+}
+
+TupleSet::TupleSet(const TupleSet *t) {
+  cells_ = t->cells_;
+  metas_ = t->metas_;
+  table_num_ = t->table_num_;
+}
+
+TupleSet *TupleSet::copy() const {
+  return new TupleSet(this);
+}
+
+void TupleSet::combine(const TupleSet *t2) {
+  table_num_ += t2->table_num_;
+  for (auto meta : metas_)
+    metas_.push_back(meta);
+  for (auto cell : t2->cells_)
+    cells_.push_back(cell);
+}
+
+TupleSet *TupleSet::generate_combine(const TupleSet *t2) const {
+  TupleSet *res = this->copy();
+  res->table_num_ += t2->table_num_;
+  for (auto meta : metas_) {
+    res->metas_.push_back(meta);
+  }
+  for (auto cell : t2->cells_) {
+    res->cells_.push_back(cell);
+  }
+  return res;
+}
+
+void TupleSet::filter_fields(const std::vector<Field> &fields) {
+  std::unordered_map<std::string, std::unordered_map<std::string, bool>> mp;
+  for (const Field &field : fields) {
+    mp[field.table_name()][field.field_name()] = true;
+  }
+
+  table_num_ = mp.size();
+
+  auto meta_iter = metas_.begin();
+  auto cell_iter = cells_.begin();
+  for (; meta_iter != metas_.end();) {
+    if (!mp[meta_iter->first->name()][meta_iter->second.name()]) {
+      meta_iter = metas_.erase(meta_iter);
+      cell_iter = cells_.erase(cell_iter);
+    } else {
+      meta_iter++;
+      cell_iter++;
+    }
+  }
+}
+
+const FieldMeta &TupleSet::meta(int idx) const {
+  return metas_[idx].second;
+}
+
+const std::vector<TupleCell> &TupleSet::cells() const {
+  return cells_;
+}
+
+// filter table with table-specific conditions
+FilterStmt *get_sub_filter(Table *table, FilterStmt *old_filter)
+{
+  FilterStmt *filter = new FilterStmt();
+  for (FilterUnit *unit : old_filter->filter_units()) {
+    Expression *left = unit->left();
+    Expression *right = unit->right();
+    if (left->type() == ExprType::FIELD && right->type() == ExprType::FIELD) {
+      continue;
+    }
+    if (left->type() == ExprType::VALUE && right->type() == ExprType::FIELD) {
+      std::swap(left, right);
+    }
+    FieldExpr &left_field_expr = *(FieldExpr *)left;
+    if (table->table_meta().field(left_field_expr.field_name()) == nullptr) {
+      continue;
+    }
+    filter->push(unit);
+  }
+  return filter;
+}
+
+Pretable::Pretable(Pretable&& t)
+    :tuples_(std::move(t.tuples_)),
+     tables_(std::move(t.tables_))
+{
+
+}
+Pretable& Pretable::operator=(Pretable&& t)
+{
+  tuples_ = std::move(t.tuples_);
+  tables_ = std::move(t.tables_);
+  return *this;
+}
+
+// TODO: delete filters
+RC Pretable::init(Table *table, FilterStmt *old_filter)
+{
+  // TODO: check how to use index scan
+  FilterStmt *filter = get_sub_filter(table, old_filter);
+  tables_.push_back(table);
+
+  Operator *scan_oper = new TableScanOperator(table);
+  DEFER([&] () {delete scan_oper;});
+
+  // first get a subset of filter
+  PredicateOperator pred_oper(filter);
+  pred_oper.add_child(scan_oper);
+
+  RC rc = RC::SUCCESS;
+  rc = pred_oper.open();
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to open operator");
+    return rc;
+  }
+  while ((rc = pred_oper.next()) == RC::SUCCESS) {
+    // get current record
+    // write to response
+    Tuple *tuple = pred_oper.current_tuple();
+    if (nullptr == tuple) {
+      rc = RC::INTERNAL;
+      LOG_WARN("failed to get current record. rc=%s", strrc(rc));
+      break;
+    }
+    tuples_.push_back(new TupleSet(tuple, table));
+  }
+  // delete filter;
+
+  return rc;
+}
+
+const FieldMeta *Pretable::field(const Field &field) const {
+  for (auto table : tables_) {
+    if (std::strcmp(table->name(), field.table_name())) {
+      const FieldMeta *tp = table->table_meta().field(field.field_name());
+      if (tp != nullptr) {
+        return tp;
+      }
+    }
+  }
+  return nullptr;
+}
+
+RC Pretable::join(Pretable *pre2, FilterStmt *filter)
+{
+  const FieldMeta *left_field = nullptr;
+  const FieldMeta *right_field = nullptr;
+  for (const FilterUnit *unit : filter->filter_units()) {
+    Expression *left = unit->left();
+    Expression *right = unit->right();
+    if (left->type() == ExprType::VALUE || right->type() == ExprType::VALUE) {
+      continue;
+    }
+    FieldExpr *left_field_expr = dynamic_cast<FieldExpr*>(left);
+    FieldExpr *right_field_expr = dynamic_cast<FieldExpr*>(right);
+    if ((left_field = this->field(left_field_expr->field())) != nullptr &&
+        (right_field = pre2->field(right_field_expr->field())) != nullptr) {
+      break;
+    } else if ((left_field = this->field(right_field_expr->field())) != nullptr &&
+               (right_field = pre2->field(left_field_expr->field())) != nullptr) {
+      break;
+    } else {
+      continue;
+    }
+  }
+
+
+  if (pre2->tuples_.size() == 0 || tuples_.size() == 0) {
+    tuples_.clear();
+    return RC::SUCCESS;
+  }
+
+  std::vector<TupleSet> res;
+  for (const TupleSet &t1 : tuples_) {
+    for (const TupleSet &t2 : pre2->tuples_) {
+      res.push_back(t1.generate_combine(&t2));
+    }
+  }
+  // need to write hash functions to support hash join
+
+  // // hash join
+  // if (left_field != nullptr && right_field != nullptr) {
+  //   std::unordered_map<std::string, class _Tp>
+  // } else {
+  //   // nested loop join
+
+  // }
+
+  tuples_.swap(res);
+  return RC::SUCCESS;
+}
+
+
+// TODO: ALIAS
+void Pretable::print_fields(std::stringstream &ss, const std::vector<Field> &fields) {
+  bool multi = false;
+  std::string s = fields.back().table_name();
+  int idx = fields.size() - 1;
+  while (idx >= 0 && fields[idx].field_name() == s) {
+    idx--;
+  }
+  if (idx > -1) {
+    multi = true;
+  }
+  idx++;
+
+  bool first = true;
+  int last_idx = fields.size();
+  while (1) {
+    for (int i = idx; i < last_idx; i++) {
+      ss << (first ? "" : " | ");
+      first = false;
+      std::string tp = fields[i].field_name();
+      if (multi) {
+        tp = fields[i].table_name() + ("." + tp);
+      }
+      ss << tp;
+    }
+    last_idx = idx;
+    idx--;
+    if (idx < 0) {
+      break;
+    }
+    s = fields[idx].table_name();
+    while (idx >= 0 && s == fields[idx].table_name()) {
+      idx--;
+    }
+    idx++;
+  }
+
+  if (!first) {
+    ss << '\n';
+  }
+}
+
+void Pretable::print(std::stringstream &ss, const std::vector<Field> &fields)
+{
+  for (auto &tuple : tuples_) {
+    tuple.filter_fields(fields);
+  }
+
+  print_fields(ss, fields);
+
+  for (const TupleSet &tuple : tuples_) {
+    bool first = true;
+    for (const TupleCell &cell : tuple.cells()) {
+      if (!first) {
+        ss << " | ";
+      } else {
+        first = false;
+      }
+      cell.to_string(ss);
+    }
+    ss << '\n';
+  }
 }

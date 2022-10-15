@@ -40,6 +40,12 @@ public:
       right_ = nullptr;
     }
   }
+
+  FilterUnit(const FilterUnit *unit) {
+    comp_ = unit->comp_;
+    left_ = unit->left_;
+    right_ = unit->right_;
+  }
   
   void set_comp(CompOp comp) {
     comp_ = comp;
@@ -80,10 +86,13 @@ public:
   virtual ~FilterStmt();
 
 public:
-  const std::vector<FilterUnit *> &filter_units() const
+  // remove the reference
+  std::vector<FilterUnit *> filter_units()
   {
     return filter_units_;
   }
+
+  void push(FilterUnit *unit) { filter_units_.push_back(unit); }
 
 public:
   static RC create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,

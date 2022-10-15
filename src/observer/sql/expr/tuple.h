@@ -68,7 +68,6 @@ public:
   virtual int cell_num() const = 0; 
   virtual RC  cell_at(int index, TupleCell &cell) const = 0;
   virtual RC  find_cell(const Field &field, TupleCell &cell) const = 0;
-
   virtual RC  cell_spec_at(int index, const TupleCellSpec *&spec) const = 0;
 };
 
@@ -83,7 +82,7 @@ public:
     }
     speces_.clear();
   }
-  
+
   void set_record(Record *record)
   {
     this->record_ = record;
@@ -131,7 +130,7 @@ public:
       const FieldExpr * field_expr = (const FieldExpr *)speces_[i]->expression();
       const Field &field = field_expr->field();
       if (0 == strcmp(field_name, field.field_name())) {
-	return cell_at(i, cell);
+        return cell_at(i, cell);
       }
     }
     return RC::NOTFOUND;
@@ -161,18 +160,6 @@ private:
   const Table *table_ = nullptr;
   std::vector<TupleCellSpec *> speces_;
 };
-
-/*
-class CompositeTuple : public Tuple
-{
-public:
-  int cell_num() const override; 
-  RC  cell_at(int index, TupleCell &cell) const = 0;
-private:
-  int cell_num_ = 0;
-  std::vector<Tuple *> tuples_;
-};
-*/
 
 class ProjectTuple : public Tuple
 {
@@ -229,3 +216,98 @@ private:
   std::vector<TupleCellSpec *> speces_;
   Tuple *tuple_ = nullptr;
 };
+
+// class CompositeTuple : public Tuple
+// {
+// public:
+//   CompositeTuple() = default;
+//   ~CompositeTuple() {
+//     for (Tuple *t : tuples_) {
+//       delete t;
+//     }
+//   }
+
+//   int tuple_num() {
+//     return tuple_num_;
+//   }
+
+//   CompositeTuple(const Tuple *t) {
+//     tuples_.push_back(t->copy());
+//     tuple_num_ = 1;
+//     cell_num_ = t->cell_num();
+//   }
+
+//   CompositeTuple(const CompositeTuple *t) {
+//     cell_num_ = t->cell_num_;
+//     tuples_ = t->tuples_;
+//     tuple_num_ = t->tuple_num_;
+//   }
+
+//   int cell_num() const override {
+//     return cell_num_;
+//   }
+
+//   void add_tuple(Tuple *tuple) {
+//     tuples_.push_back(tuple);
+//     cell_num_ += tuple->cell_num();
+//     tuple_num_++;
+//   }
+
+//   CompositeTuple *copy() const override {
+//     return new CompositeTuple(this);
+//   }
+
+//   CompositeTuple *generate_combine(const CompositeTuple *t2) const {
+//     CompositeTuple *res = this->copy();
+//     for (const Tuple *t : t2->tuples_) {
+//       res->add_tuple(t->copy());
+//     }
+//     return res;
+//   }
+
+//   const std::vector<Tuple *> tuples() {
+//     return tuples_;
+//   }
+
+//   RC cell_at(int index, TupleCell &cell) const override {
+//     if (index < 0 || index >= cell_num_) {
+//       LOG_WARN("invalid argument. index=%d", index);
+//       return RC::INVALID_ARGUMENT;
+//     }
+//     RC rc = RC::SUCCESS;
+//     for (const Tuple *t : tuples_) {
+//       if (index >= t->cell_num()) {
+//         index -= t->cell_num();
+//         continue;
+//       }
+//       rc = t->cell_at(index, cell);
+//       break;
+//     }
+//     return rc;
+//   }
+
+//   RC find_cell(const Field &field, TupleCell &cell) const override {
+//     RC rc = RC::SUCCESS;
+//     for (const Tuple *t : tuples_) {
+//       if ((rc = t->find_cell(field, cell)) == RC::SUCCESS) {
+//         return rc;
+//       }
+//     }
+//     return RC::NOTFOUND;
+//   }
+
+//   RC cell_spec_at(int index, const TupleCellSpec *&spec) const override {
+//     RC rc = RC::SUCCESS;
+//     for (const Tuple *t : tuples_) {
+//       if ((rc = t->cell_spec_at(index, spec)) == RC::SUCCESS) {
+//         return rc;
+//       }
+//       index -= t->cell_num();
+//     }
+//     return RC::NOTFOUND;
+//   }
+// private:
+//   int tuple_num_ = 0;
+//   int cell_num_ = 0;
+//   std::vector<Tuple *> tuples_;
+// };

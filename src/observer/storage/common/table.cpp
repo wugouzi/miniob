@@ -136,7 +136,7 @@ RC Table::drop()
     std::fstream f(file1);
     if (!f.good()) {
       LOG_ERROR("No such table. filename=%s, errmsg=%d:%s", path.c_str(), errno, strerror(errno));
-      return RC::SCHEMA_TABLE_NOT_EXIST;
+      return RC::GENERIC_ERROR;
     }
     f.close();
   }
@@ -145,20 +145,30 @@ RC Table::drop()
     std::fstream f(file2);
     if (!f.good()) {
       LOG_ERROR("No such table data. filename=%s, errmsg=%d:%s", path.c_str(), errno, strerror(errno));
-      return RC::SCHEMA_TABLE_NOT_EXIST;
+      return RC::GENERIC_ERROR;
     }
     f.close();
   }
 
   if (std::remove(file1.c_str())) {
     LOG_ERROR("Cannot delete %s", file1.c_str());
-    return RC::SCHEMA_TABLE_NOT_EXIST;
+    return RC::GENERIC_ERROR;
   }
 
   if (std::remove(file2.c_str())) {
     LOG_ERROR("Cannot delete %s", file2.c_str());
-    rc = RC::SCHEMA_TABLE_NOT_EXIST;
+    return RC::GENERIC_ERROR;
   }
+
+  for (int i = 0; i < table_meta_.index_num(); i++) {
+    ((BplusTreeIndex*)indexes_[i])->close();
+    std::string index_file = path + TABLE_INDEX_SUFFIX;
+    if(unlink(index_file.c_str()) != 0) {
+      LOG_ERROR("Failed to remove index file=%s, errno=%d", index_file.c_str(), errno);
+      return RC::GENERIC_ERROR;
+    }
+  }
+
   return rc;
 }
 

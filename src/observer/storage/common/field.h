@@ -27,6 +27,12 @@ public:
   const Table *table() const { return table_; }
   const FieldMeta *meta() const { return field_; }
 
+  Field &operator=(Field &t) {
+    table_ = t.table_;
+    field_ = t.field_;
+    return *this;
+  }
+
   AttrType attr_type() const
   {
     return field_->type();
