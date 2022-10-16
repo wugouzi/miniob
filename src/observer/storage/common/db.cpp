@@ -110,6 +110,15 @@ RC Db::update_table(const char *relation_name, const char *attribute_name, const
   if (value->type == DATES && *(int *)value->data == -1) {
     return RC::RECORD_INVALID_KEY;
   }
+  for (int i = 0; i < condition_num; i++) {
+    const Condition &c = conditions[i];
+    if (!c.left_is_attr && c.left_value.type == DATES && *(int*)c.left_value.data == -1) {
+      return RC::INVALID_ARGUMENT;
+    }
+    if (!c.right_is_attr && c.right_value.type == DATES && *(int*)c.right_value.data == -1) {
+      return RC::INVALID_ARGUMENT;
+    }
+  }
   Table *table = opened_tables_[relation_name];
   int updated_cnt;
   rc = table->update_record(nullptr, attribute_name, value, condition_num, conditions, &updated_cnt);

@@ -107,7 +107,6 @@ int value_init_date(Value *value, const char* v)
   int dv = y * 10000 + m * 100 + d;
   value->data = std::malloc(sizeof(int));
   bool b = check_date(y, m, d);
-  printf("%d\n", b+0);
   if (!b) {
     dv = -1;
   }

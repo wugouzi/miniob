@@ -1,3 +1,53 @@
+create table t(id int,name char(4),da date);
+insert into t values(1,'lige','2021-10-30');
+insert into t values(11,'lige','2021-10-31');
+insert into t values(2,'aset','2000-2-29');
+insert into t values(4,'deft','1976-2-29');
+insert into t values(5,'ghit','2035-1-1');
+insert into t values(6,'jklt','2021-6-30');
+insert into t values(233,'nowt','2021-10-31');
+create table s(id int,name char(4),da date);
+insert into s values(7,'lige','2021-10-30');
+insert into s values(8,'lige','2021-10-31');
+insert into s values(9,'aset','2000-2-29');
+insert into s values(10,'deft','1976-2-29');
+insert into s values(11,'ghit','2035-1-1');
+insert into s values(12,'jklt','2021-6-30');
+insert into s values(233,'nowt','2021-10-31');
+select s.name from s,t where s.name=t.name;
+select s.name,t.id,t.name from s,t where s.id=t.id;
+select * from s,t where s.name=t.name;
+select * from s,t where s.id=t.id and s.da>'2021-10-30' and t.da<'2021-10-31' and t.id>1;
+select * from s,t where s.id=t.id;
+select * from s,t where s.id=t.id and t.da>'2021-10-30';
+drop table t;
+drop table s;
+exit;
+
+/* update */
+
+create table t(id int,name char,da date);
+create index da_t on t(da);
+insert into t values(1,'ligen','2021-10-30');
+insert into t values(11,'ligen','2021-10-31');
+insert into t values(2,'aset','2000-2-29');
+insert into t values(4,'deft','1976-2-29');
+insert into t values(5,'ghit','2035-1-1');
+insert into t values(6,'jklt','2021-6-30');
+insert into t values(233,'nowt','2021-10-31');
+select * from t;
+update t set name='aaa' where da='2021-10-31';
+select * from t;
+update t set name='bbb' where da='2021-10-32';
+select * from t;
+update t set name='ccc' where id=9;
+select * from t;
+update t set name="OK" where da>='1976-2-29';
+select * from t;
+drop table t;
+exit;
+
+
 /* date */
 drop table date_table;
 create table date_table(u_date date);
@@ -10,6 +60,8 @@ create table Drop_table_6(id int);
 DROP TABLE Drop_table_6;
 select * from Drop_table_6;
 SELECT * FROM DROP_TABLE_6;
+
+
 
 /* multi_table */
 drop table t1;

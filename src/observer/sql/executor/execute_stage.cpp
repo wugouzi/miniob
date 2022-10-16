@@ -483,7 +483,7 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
 
   std::stringstream ss;
   rc = RC::SUCCESS;
-  print_fields(ss, select_stmt->query_fields());
+  print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1);
   if (select_stmt->aggregate_num() > 0) {
     rc = res->aggregate(select_stmt->query_fields());
   } else {
@@ -809,7 +809,7 @@ void TupleSet::push(const std::pair<Table*, FieldMeta> &p, const TupleCell &cell
   cells_.push_back(cell);
 }
 
-int TupleSet::index(const Field &field)
+int TupleSet::index(const Field &field) const
 {
   if (!field.has_table()) {
     return -1;
@@ -913,7 +913,7 @@ RC Pretable::init(Table *table, FilterStmt *old_filter)
 
 const FieldMeta *Pretable::field(const Field &field) const {
   for (auto table : tables_) {
-    if (std::strcmp(table->name(), field.table_name())) {
+    if (std::strcmp(table->name(), field.table_name()) == 0) {
       const FieldMeta *tp = table->table_meta().field(field.field_name());
       if (tp != nullptr) {
         return tp;
@@ -1028,8 +1028,8 @@ RC Pretable::aggregate(const std::vector<Field> fields)
 
 RC Pretable::join(Pretable *pre2, FilterStmt *filter)
 {
-  const FieldMeta *left_field = nullptr;
-  const FieldMeta *right_field = nullptr;
+  Field *left_field = nullptr;
+  Field *right_field = nullptr;
   for (const FilterUnit *unit : filter->filter_units()) {
     Expression *left = unit->left();
     Expression *right = unit->right();
@@ -1038,11 +1038,15 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
     }
     FieldExpr *left_field_expr = dynamic_cast<FieldExpr*>(left);
     FieldExpr *right_field_expr = dynamic_cast<FieldExpr*>(right);
-    if ((left_field = this->field(left_field_expr->field())) != nullptr &&
-        (right_field = pre2->field(right_field_expr->field())) != nullptr) {
+    if (this->field(left_field_expr->field()) != nullptr &&
+        pre2->field(right_field_expr->field()) != nullptr) {
+      left_field = &left_field_expr->field();
+      right_field = &right_field_expr->field();
       break;
-    } else if ((left_field = this->field(right_field_expr->field())) != nullptr &&
-               (right_field = pre2->field(left_field_expr->field())) != nullptr) {
+    } else if (this->field(right_field_expr->field()) != nullptr &&
+               pre2->field(left_field_expr->field()) != nullptr) {
+      left_field = &right_field_expr->field();
+      right_field = &left_field_expr->field();
       break;
     } else {
       continue;
@@ -1056,11 +1060,23 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
   }
 
   std::vector<TupleSet> res;
-  for (const TupleSet &t1 : tuples_) {
-    for (const TupleSet &t2 : pre2->tuples_) {
-      res.push_back(t1.generate_combine(&t2));
+  if (left_field != nullptr && right_field != nullptr) {
+    for (TupleSet &t1 : tuples_) {
+      for (TupleSet &t2 : pre2->tuples_) {
+        int i1 = t1.index(*left_field), i2 = t2.index(*right_field);
+        if (t1.get_cell(i1).compare(t2.get_cell(i2)) == 0) {
+          res.push_back(t1.generate_combine(&t2));
+        }
+      }
+    }
+  } else {
+    for (const TupleSet &t1 : tuples_) {
+      for (const TupleSet &t2 : pre2->tuples_) {
+        res.push_back(t1.generate_combine(&t2));
+      }
     }
   }
+
   // need to write hash functions to support hash join
 
   // // hash join
@@ -1077,14 +1093,10 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
 
 
 // TODO: ALIAS
-void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> &fields) {
+void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi) {
   std::string s;
-  bool multi = false;
   for (const auto &field : fields) {
     if (field.has_table()) {
-      if (!s.empty() && s != field.table_name()) {
-        multi = true;
-      }
       s = field.table_name();
     }
   }

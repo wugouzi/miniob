@@ -163,7 +163,8 @@ RC Table::drop()
 
   for (int i = 0; i < table_meta_.index_num(); i++) {
     ((BplusTreeIndex*)indexes_[i])->close();
-    std::string index_file = path + TABLE_INDEX_SUFFIX;
+    const IndexMeta* index_meta = table_meta_.index(i);
+    std::string index_file = path + '-' + index_meta->name() + TABLE_INDEX_SUFFIX;
     if(unlink(index_file.c_str()) != 0) {
       LOG_ERROR("Failed to remove index file=%s, errno=%d", index_file.c_str(), errno);
       return RC::GENERIC_ERROR;

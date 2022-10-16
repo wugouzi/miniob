@@ -72,7 +72,7 @@ protected:
   RC do_select2(SQLStageEvent *sql_event);
   RC do_insert(SQLStageEvent *sql_event);
   RC do_delete(SQLStageEvent *sql_event);
-  void print_fields(std::stringstream &ss, const std::vector<Field> &fields);
+  void print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi);
 
 protected:
 private:
@@ -99,8 +99,7 @@ class TupleSet {
 
   const TupleCell &get_cell(int idx);
   const std::pair<Table *, FieldMeta> &get_meta(int idx);
-  int index(const Field &field);
-
+  int index(const Field &field) const;
 
  private:
   int table_num_ = 0;
@@ -123,7 +122,6 @@ class Pretable {
   RC join(Pretable *pre2, FilterStmt *filter);
   void print(std::stringstream &os);
   void filter_fields(const std::vector<Field> &fields);
-  void print_fields(std::stringstream &ss, const std::vector<Field> &fields);
   RC aggregate(const std::vector<Field> fields);
   RC aggregate_max(int idx, TupleCell *res);
   RC aggregate_min(int idx, TupleCell *res);
