@@ -773,7 +773,7 @@ void TupleSet::combine(const TupleSet *t2) {
 TupleSet *TupleSet::generate_combine(const TupleSet *t2) const {
   TupleSet *res = this->copy();
   res->table_num_ += t2->table_num_;
-  for (auto meta : metas_) {
+  for (auto meta : t2->metas_) {
     res->metas_.push_back(meta);
   }
   for (auto cell : t2->cells_) {

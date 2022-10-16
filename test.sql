@@ -11,6 +11,21 @@ DROP TABLE Drop_table_6;
 select * from Drop_table_6;
 SELECT * FROM DROP_TABLE_6;
 
+/* multi_table */
+drop table t1;
+drop table t2;
+drop table t3;
+create table t1(id int);
+create table t2(c char);
+create table t3(id int);
+insert into t1 values(1);
+insert into t2 values("A");
+insert into t3 values(2);
+insert into t1 values(2);
+insert into t2 values("B");
+insert into t3 values(4);
+select * from t1,t2,t3;
+
 
 drop table t1;
 drop table t2;
