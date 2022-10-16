@@ -12,7 +12,11 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi 
 //
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <mutex>
+#include <string>
 #include "sql/parser/parse.h"
 #include "rc.h"
 #include "common/log/log.h"
@@ -45,6 +49,52 @@ void value_init_integer(Value *value, int v)
   value->type = INTS;
   value->data = malloc(sizeof(v));
   memcpy(value->data, &v, sizeof(v));
+}
+
+bool is_leap(int y)
+{
+  return (((y % 4 == 0) &&
+           (y % 100 != 0)) ||
+           (y % 400 == 0));
+}
+
+bool check_date(int y, int m, int d)
+{
+  if (m < 1 || m > 12) {
+    return false;
+  }
+
+  if (d < 1 || d > 31) {
+    return false;
+  }
+
+  if (m == 2) {
+    if (is_leap(y))
+      return (d <= 29);
+    else
+      return (d <= 28);
+  }
+
+  if (m == 4 || m == 6 ||
+      m == 9 || m == 11) {
+    return (d <= 30);
+  }
+  return true;
+}
+
+int value_init_date(Value *value, const char* v)
+{
+  value->type = DATES;
+  int y, m, d;
+  std::sscanf(v, "'%d-%d-%d'", &y, &m, &d);
+  bool b = check_date(y, m, d);
+  if (!b) {
+    return -1;
+  }
+  int dv = y * 10000 + m * 100 + d;
+  value->data = std::malloc(sizeof(dv));
+  std::memcpy(value->data, &dv, sizeof(dv));
+  return 0;
 }
 void value_init_float(Value *value, float v)
 {

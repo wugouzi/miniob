@@ -1,12 +1,12 @@
 /* Copyright (c) 2021 Xie Meiyi(xiemeiyi@hust.edu.cn) and OceanBase and/or its affiliates. All rights reserved.
-miniob is licensed under Mulan PSL v2.
-You can use this software according to the terms and conditions of the Mulan PSL v2.
-You may obtain a copy of Mulan PSL v2 at:
-         http://license.coscl.org.cn/MulanPSL2
-THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
-EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
-MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
-See the Mulan PSL v2 for more details. */
+   miniob is licensed under Mulan PSL v2.
+   You can use this software according to the terms and conditions of the Mulan PSL v2.
+   You may obtain a copy of Mulan PSL v2 at:
+   http://license.coscl.org.cn/MulanPSL2
+   THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+   EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+   MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+   See the Mulan PSL v2 for more details. */
 
 //
 //
@@ -23,6 +23,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "storage/record/record_manager.h"
 #include "storage/default/disk_buffer_pool.h"
+#include "sql/parser/date.cpp"
 #include "sql/parser/parse_defs.h"
 #include "util/comparator.h"
 
@@ -31,7 +32,7 @@ See the Mulan PSL v2 for more details. */
 
 class AttrComparator
 {
-public:
+ public:
   void init(AttrType type, int length)
   {
     attr_type_ = type;
@@ -44,30 +45,33 @@ public:
 
   int operator()(const char *v1, const char *v2) const {
     switch (attr_type_) {
-    case INTS: {
-      return compare_int((void *)v1, (void *)v2);
-    }
-      break;
-    case FLOATS: {
-      return compare_float((void *)v1, (void *)v2);
-    }
-    case CHARS: {
-      return compare_string((void *)v1, attr_length_, (void *)v2, attr_length_);
-    }
-    default:{
-      LOG_ERROR("unknown attr type. %d", attr_type_);
-      abort();
-    }
+      case INTS: {
+        return compare_int((void *)v1, (void *)v2);
+      }
+        break;
+      case FLOATS: {
+        return compare_float((void *)v1, (void *)v2);
+      }
+      case CHARS: {
+        return compare_string((void *)v1, attr_length_, (void *)v2, attr_length_);
+      }
+      case DATES: {
+        return compare_date((void *)v1, (void *)v2);
+      }
+      default:{
+        LOG_ERROR("unknown attr type. %d", attr_type_);
+        abort();
+      }
     }
   }
-private:
+ private:
   AttrType attr_type_;
   int attr_length_;
 };
 
 class KeyComparator
 {
-public:
+ public:
   void init(AttrType type, int length)
   {
     attr_comparator_.init(type, length);
@@ -88,13 +92,13 @@ public:
     return RID::compare(rid1, rid2);
   }
 
-private:
+ private:
   AttrComparator attr_comparator_;
 };
 
 class AttrPrinter
 {
-public:
+ public:
   void init(AttrType type, int length)
   {
     attr_type_ = type;
@@ -107,37 +111,40 @@ public:
 
   std::string operator()(const char *v) const {
     switch (attr_type_) {
-    case INTS: {
-      return std::to_string(*(int*)v);
-    }
-      break;
-    case FLOATS: {
-      return std::to_string(*(float*)v);
-    }
-    case CHARS: {
-      std::string str;
-      for (int i = 0; i < attr_length_; i++) {
-	if (v[i] == 0) {
-	  break;
-	}
-	str.push_back(v[i]);
+      case INTS: {
+        return std::to_string(*(int*)v);
       }
-      return str;
-    }
-    default:{
-      LOG_ERROR("unknown attr type. %d", attr_type_);
-      abort();
-    }
+        break;
+      case FLOATS: {
+        return std::to_string(*(float*)v);
+      }
+      case CHARS: {
+        std::string str;
+        for (int i = 0; i < attr_length_; i++) {
+          if (v[i] == 0) {
+            break;
+          }
+          str.push_back(v[i]);
+        }
+        return str;
+      }
+      case DATES: {
+        return date_to_string(*(int*)v);
+      }
+      default:{
+        LOG_ERROR("unknown attr type. %d", attr_type_);
+        abort();
+      }
     }
   }
-private:
+ private:
   AttrType attr_type_;
   int attr_length_;
 };
 
 class KeyPrinter
 {
-public:
+ public:
   void init(AttrType type, int length)
   {
     attr_printer_.init(type, length);
@@ -156,7 +163,7 @@ public:
     return ss.str();
   }
 
-private:
+ private:
   AttrPrinter attr_printer_;
 };
 
@@ -248,7 +255,7 @@ struct InternalIndexNode : public IndexNode {
 };
 
 class IndexNodeHandler {
-public:
+ public:
   IndexNodeHandler(const IndexFileHeader &header, Frame *frame);
 
   void init_empty(bool leaf);
@@ -269,14 +276,14 @@ public:
 
   friend std::string to_string(const IndexNodeHandler &handler);
 
-protected:
+ protected:
   const IndexFileHeader &header_;
   PageNum page_num_;
   IndexNode *node_;
 };
 
 class LeafIndexNodeHandler : public IndexNodeHandler {
-public: 
+ public:
   LeafIndexNodeHandler(const IndexFileHeader &header, Frame *frame);
 
   void init_empty();
@@ -312,7 +319,7 @@ public:
   bool validate(const KeyComparator &comparator, DiskBufferPool *bp) const;
 
   friend std::string to_string(const LeafIndexNodeHandler &handler, const KeyPrinter &printer);
-private:
+ private:
   char *__item_at(int index) const;
   char *__key_at(int index) const;
   char *__value_at(int index) const;
@@ -320,12 +327,12 @@ private:
   void append(const char *item);
   void preappend(const char *item);
 
-private:
+ private:
   LeafIndexNode *leaf_node_;
 };
 
 class InternalIndexNodeHandler : public IndexNodeHandler {
-public:
+ public:
   InternalIndexNodeHandler(const IndexFileHeader &header, Frame *frame);
 
   void init_empty();
@@ -349,7 +356,7 @@ public:
    * NOTE: 查找效率不高，你可以优化它吗?
    */
   int lookup(const KeyComparator &comparator, const char *key,
-	     bool *found = nullptr, int *insert_position = nullptr) const;
+             bool *found = nullptr, int *insert_position = nullptr) const;
   
   int max_size() const;
   int min_size() const;
@@ -362,12 +369,12 @@ public:
   bool validate(const KeyComparator &comparator, DiskBufferPool *bp) const;
 
   friend std::string to_string(const InternalIndexNodeHandler &handler, const KeyPrinter &printer);
-private:
+ private:
   RC copy_from(const char *items, int num, DiskBufferPool *disk_buffer_pool);
   RC append(const char *item, DiskBufferPool *bp);
   RC preappend(const char *item, DiskBufferPool *bp);
 
-private:
+ private:
   char *__item_at(int index) const;
   char *__key_at(int index) const;
   char *__value_at(int index) const;
@@ -375,18 +382,18 @@ private:
   int value_size() const;
   int item_size() const;
 
-private:
+ private:
   InternalIndexNode *internal_node_;
 };
 
 class BplusTreeHandler {
-public:
+ public:
   /**
    * 此函数创建一个名为fileName的索引。
    * attrType描述被索引属性的类型，attrLength描述被索引属性的长度
    */
   RC create(const char *file_name, AttrType attr_type, int attr_length,
-	    int internal_max_size = -1, int leaf_max_size = -1);
+            int internal_max_size = -1, int leaf_max_size = -1);
 
   /**
    * 打开名为fileName的索引文件。
@@ -433,11 +440,11 @@ public:
    */
   bool validate_tree();
 
-public:
+ public:
   RC print_tree();
   RC print_leafs();
 
-private:
+ private:
   RC print_leaf(Frame *frame);
   RC print_internal_node_recursive(Frame *frame);
 
@@ -445,12 +452,12 @@ private:
   bool validate_leaf_link();
   bool validate_node_recursive(Frame *frame);
 
-protected:
+ protected:
   RC find_leaf(const char *key, Frame *&frame);
   RC left_most_page(Frame *&frame);
   RC right_most_page(Frame *&frame);
   RC find_leaf_internal(const std::function<PageNum(InternalIndexNodeHandler &)> &child_page_getter,
-			Frame *&frame);
+                        Frame *&frame);
 
   RC insert_into_parent(
       PageNum parent_page, Frame *left_frame, const char *pkey, Frame &right_frame);
@@ -475,10 +482,10 @@ protected:
 
   RC adjust_root(Frame *root_frame);
 
-private:
+ private:
   char *make_key(const char *user_key, const RID &rid);
   void  free_key(char *key);
-protected:
+ protected:
   DiskBufferPool *disk_buffer_pool_ = nullptr;
   bool header_dirty_ = false;
   IndexFileHeader file_header_;
@@ -488,13 +495,13 @@ protected:
 
   common::MemPoolItem *mem_pool_item_ = nullptr;
 
-private:
+ private:
   friend class BplusTreeScanner;
   friend class BplusTreeTester;
 };
 
 class BplusTreeScanner {
-public:
+ public:
   BplusTreeScanner(BplusTreeHandler &tree_handler);
   ~BplusTreeScanner();
 
@@ -508,19 +515,19 @@ public:
    * @param right_inclusive 右边界的值是否包含在内
    */
   RC open(const char *left_user_key, int left_len, bool left_inclusive,
-	  const char *right_user_key, int right_len, bool right_inclusive);
+          const char *right_user_key, int right_len, bool right_inclusive);
 
   RC next_entry(RID *rid);
 
   RC close();
 
-private:
+ private:
   /**
    * 如果key的类型是CHARS, 扩展或缩减user_key的大小刚好是schema中定义的大小
    */
   RC fix_user_key(const char *user_key, int key_len, bool want_greater,
-		  char **fixed_key, bool *should_inclusive);
-private:
+                  char **fixed_key, bool *should_inclusive);
+ private:
   bool inited_ = false;
   BplusTreeHandler &tree_handler_;
 

@@ -42,7 +42,13 @@ QUOTE            [\'\"]
 {DOT}                                                RETURN_TOKEN(DOT);
 "*"                                                  RETURN_TOKEN(STAR);
 [Ee][Xx][Ii][Tt]                                     RETURN_TOKEN(EXIT);
+[Dd][Aa][Tt][Ee]                                     RETURN_TOKEN(DATE_T);
+{QUOTE}[0-9]{4}\-(0?[1-9]|1[012])\-(0?[1-9]|[12][0-9]|3[01]){QUOTE} yylval->string=strdup(yytext); RETURN_TOKEN(DATE_STR);  // 使用正则表达式过滤DATE。需要在yacc文件中增加
 [Hh][Ee][Ll][Pp]                                     RETURN_TOKEN(HELP);
+[Mm][Aa][Xx]                                         RETURN_TOKEN(MAX);
+[Cc][Oo][Uu][Nn][Tt]                                 RETURN_TOKEN(COUNT);
+[Mm][Ii][Nn]                                         RETURN_TOKEN(MIN);
+[Aa][Vv][Gg]                                         RETURN_TOKEN(AVG);
 [Dd][Ee][Ss][Cc]                                     RETURN_TOKEN(DESC);
 [Cc][Rr][Ee][Aa][Tt][Ee]                             RETURN_TOKEN(CREATE);
 [Dd][Rr][Oo][Pp]                                     RETURN_TOKEN(DROP);

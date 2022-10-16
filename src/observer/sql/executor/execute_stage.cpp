@@ -493,28 +493,7 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
 }
 
 
-/*
-drop table t1;
-drop table t2;
-create table t1(id int, age int);
-create table t2(id int, sb int);
-insert into t1 values(1,1);
-insert into t1 values(2,2);
-insert into t2 values(1,2);
-insert into t2 values(2,4);
-select * from t1,t2 where t1.id=t2.id and t1.age=1;
-select * from t1,t2;
-select * from t1,t2,t3;
- */
 
-/*
-drop table t;
-create table t(id int, age int);
-insert into t values(1,1);
-insert into t values(2,2);
-insert into t values(3,3);
-select * from t;
- */
 RC ExecuteStage::do_select(SQLStageEvent *sql_event)
 {
   SelectStmt *select_stmt = (SelectStmt *)(sql_event->stmt());
