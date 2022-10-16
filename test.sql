@@ -25,14 +25,18 @@ select * from t where not_exists_col=1;
 COUNT(*) counts all rows
 COUNT(column) counts non-NULLs only
 */
+drop table t;
 create table t(id int, age int);
 insert into t values(1,1);
 insert into t values(2,2);
-insert into t values(3,3);
-select max(age) from t;
-select count(*) from t;
+insert into t values(3,4);
+select min(age) from t;
 select count(1) from t;
+select count(*) from t;
+select max(age) from t;
+select avg(age) from t;
 select count(id) from t;
+select avg(age), max(age) from t;
 
 /* dates */
 drop table t;

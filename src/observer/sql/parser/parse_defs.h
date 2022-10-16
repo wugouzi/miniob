@@ -23,10 +23,21 @@ See the Mulan PSL v2 for more details. */
 #define MAX_ERROR_MESSAGE 20
 #define MAX_DATA 50
 
+typedef enum
+{
+  A_NO,
+  A_MAX,
+  A_MIN,
+  A_AVG,
+  A_COUNT
+} AggreType;
+
 //属性结构体
 typedef struct {
   char *relation_name;   // relation name (may be NULL) 表名
   char *attribute_name;  // attribute name              属性名
+  char *aggregate_func;
+  AggreType type;
 } RelAttr;
 
 typedef enum {
@@ -75,6 +86,7 @@ typedef struct {
   char *relations[MAX_NUM];       // relations in From clause
   size_t condition_num;           // Length of conditions in Where clause
   Condition conditions[MAX_NUM];  // conditions in Where clause
+  int aggregate_num;
 } Selects;
 
 // struct of insert
@@ -185,6 +197,7 @@ extern "C" {
 #endif  // __cplusplus
 
 void relation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name);
+void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, const char *aggregate_name, AggreType type);
 void relation_attr_destroy(RelAttr *relation_attr);
 
 void value_init_integer(Value *value, int v);

@@ -27,6 +27,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/lang/defer.h"
 #include "common/seda/timer_stage.h"
 #include "common/lang/string.h"
+#include "rc.h"
 #include "session/session.h"
 #include "event/storage_event.h"
 #include "event/sql_event.h"
@@ -481,12 +482,18 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
   }
 
   std::stringstream ss;
-  res->print(ss, select_stmt->query_fields());
-  // if (rc != RC::RECORD_EOF) {
-  //   LOG_WARN("something wrong while iterate operator. rc=%s", strrc(rc));
-  // } else {
-  //   rc = RC::SUCCESS;
-  // }
+  rc = RC::SUCCESS;
+  print_fields(ss, select_stmt->query_fields());
+  if (select_stmt->aggregate_num() > 0) {
+    rc = res->aggregate(select_stmt->query_fields());
+  } else {
+    res->filter_fields(select_stmt->query_fields());
+  }
+  if (rc != RC::SUCCESS) {
+    LOG_ERROR("aggregate error");
+    return rc;
+  }
+  res->print(ss);
 
   session_event->set_response(ss.str());
   return rc;
@@ -796,6 +803,35 @@ void TupleSet::filter_fields(const std::vector<Field> &fields) {
   }
 }
 
+void TupleSet::push(const std::pair<Table*, FieldMeta> &p, const TupleCell &cell)
+{
+  metas_.push_back(p);
+  cells_.push_back(cell);
+}
+
+int TupleSet::index(const Field &field)
+{
+  if (!field.has_table()) {
+    return -1;
+  }
+  for (int i = 0; i < metas_.size(); i++) {
+    if (strcmp(metas_[i].first->name(), field.table_name()) == 0 &&
+        strcmp(metas_[i].second.name(), field.field_name()) == 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+const TupleCell &TupleSet::get_cell(int idx)
+{
+  return cells_[idx];
+}
+const std::pair<Table *, FieldMeta> &TupleSet::get_meta(int idx)
+{
+  return metas_[idx];
+}
+
 const FieldMeta &TupleSet::meta(int idx) const {
   return metas_[idx].second;
 }
@@ -887,6 +923,109 @@ const FieldMeta *Pretable::field(const Field &field) const {
   return nullptr;
 }
 
+RC Pretable::aggregate_max(int idx, TupleCell *res)
+{
+  *res = tuples_[0].get_cell(idx);
+  for (TupleSet &tuple : tuples_) {
+    const TupleCell &cell = tuple.get_cell(idx);
+    int comp = cell.compare(*res);
+    if (comp > 0) {
+      *res = cell;
+    }
+  }
+  return RC::SUCCESS;
+}
+
+RC Pretable::aggregate_min(int idx, TupleCell *res)
+{
+  *res = tuples_[0].get_cell(idx);
+  for (TupleSet &tuple : tuples_) {
+    const TupleCell &cell = tuple.get_cell(idx);
+    int comp = res->compare(cell);
+    if (comp > 0) {
+      *res = cell;
+    }
+  }
+  return RC::SUCCESS;
+}
+
+RC Pretable::aggregate_avg(int idx, TupleCell *res)
+{
+  float *ans = new float();
+  *ans = 0;
+  for (TupleSet &tuple : tuples_) {
+    const TupleCell &cell = tuple.get_cell(idx);
+    switch (cell.attr_type()) {
+      case INTS: {
+        *ans += *(int *)cell.data();
+      } break;
+      case FLOATS: {
+        *ans += *(float *)cell.data();
+      } break;
+      case DATES: case CHARS:
+      default: {
+        return RC::INTERNAL;
+      }
+    }
+  }
+  res->set_type(FLOATS);
+  res->set_length(sizeof(float));
+  *ans = *ans / tuples_.size();
+  // TODO: dangerous
+  res->set_data((char *)ans);
+  return RC::SUCCESS;
+}
+
+// TODO: invisible
+RC Pretable::aggregate_count(int idx, TupleCell *res)
+{
+  int *ans = new int();
+  *ans = tuples_.size();
+
+  res->set_type(INTS);
+  res->set_length(sizeof(int));
+  res->set_data((char *)ans);
+  return RC::SUCCESS;
+}
+
+
+
+RC Pretable::aggregate(const std::vector<Field> fields)
+{
+  if (tuples_.size() == 0) {
+    return RC::SUCCESS;
+  }
+  TupleSet res;
+  RC rc = RC::SUCCESS;
+  for (const auto &field : fields) {
+    int idx = tuples_[0].index(field);
+    TupleCell cell;
+    switch (field.aggr_type()) {
+      case A_NO:
+        res.push(tuples_[0].get_meta(idx), tuples_[0].get_cell(idx));
+        continue;
+        break;
+      case A_MAX:
+        rc = aggregate_max(idx, &cell);break;
+      case A_MIN:
+        rc = aggregate_min(idx, &cell);break;
+      case A_AVG:
+        rc = aggregate_avg(idx, &cell);break;
+      case A_COUNT:
+        rc = aggregate_count(idx, &cell);break;
+    }
+    if (rc != SUCCESS) {
+      LOG_ERROR("wrong wrong wrong");
+      return rc;
+    }
+    res.push(tuples_[0].get_meta(idx), cell);
+  }
+
+  tuples_.clear();
+  tuples_.push_back(res);
+  return RC::SUCCESS;
+}
+
 RC Pretable::join(Pretable *pre2, FilterStmt *filter)
 {
   const FieldMeta *left_field = nullptr;
@@ -938,17 +1077,26 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
 
 
 // TODO: ALIAS
-void Pretable::print_fields(std::stringstream &ss, const std::vector<Field> &fields) {
+void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> &fields) {
+  std::string s;
   bool multi = false;
-  std::string s = fields.back().table_name();
-  int idx = fields.size() - 1;
-  while (idx >= 0 && fields[idx].field_name() == s) {
-    idx--;
+  for (const auto &field : fields) {
+    if (field.has_table()) {
+      if (!s.empty() && s != field.table_name()) {
+        multi = true;
+      }
+      s = field.table_name();
+    }
   }
-  if (idx > -1) {
-    multi = true;
+
+  int idx = 0;
+  if (multi) {
+    idx = fields.size()-1;
+    while (idx >= 0 && (!fields[idx].has_table() || fields[idx].table_name() != s)) {
+      idx--;
+    }
+    idx++;
   }
-  idx++;
 
   bool first = true;
   int last_idx = fields.size();
@@ -956,9 +1104,12 @@ void Pretable::print_fields(std::stringstream &ss, const std::vector<Field> &fie
     for (int i = idx; i < last_idx; i++) {
       ss << (first ? "" : " | ");
       first = false;
-      std::string tp = fields[i].field_name();
-      if (multi) {
+      std::string tp = fields[i].has_table() ? fields[i].field_name() : fields[i].count_str();
+      if (multi && fields[i].has_table()) {
         tp = fields[i].table_name() + ("." + tp);
+      }
+      if (fields[i].aggr_type() != AggreType::A_NO) {
+        tp = fields[i].aggr_name() + '(' + tp + ')';
       }
       ss << tp;
     }
@@ -968,7 +1119,7 @@ void Pretable::print_fields(std::stringstream &ss, const std::vector<Field> &fie
       break;
     }
     s = fields[idx].table_name();
-    while (idx >= 0 && s == fields[idx].table_name()) {
+    while (idx >= 0 && (!fields[idx].has_table() || s == fields[idx].table_name())) {
       idx--;
     }
     idx++;
@@ -979,14 +1130,14 @@ void Pretable::print_fields(std::stringstream &ss, const std::vector<Field> &fie
   }
 }
 
-void Pretable::print(std::stringstream &ss, const std::vector<Field> &fields)
-{
+void Pretable::filter_fields(const std::vector<Field> &fields) {
   for (auto &tuple : tuples_) {
-    tuple.filter_fields(fields);
+      tuple.filter_fields(fields);
   }
+}
 
-  print_fields(ss, fields);
-
+void Pretable::print(std::stringstream &ss)
+{
   for (const TupleSet &tuple : tuples_) {
     bool first = true;
     for (const TupleCell &cell : tuple.cells()) {

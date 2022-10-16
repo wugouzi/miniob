@@ -72,6 +72,7 @@ protected:
   RC do_select2(SQLStageEvent *sql_event);
   RC do_insert(SQLStageEvent *sql_event);
   RC do_delete(SQLStageEvent *sql_event);
+  void print_fields(std::stringstream &ss, const std::vector<Field> &fields);
 
 protected:
 private:
@@ -92,8 +93,14 @@ class TupleSet {
   TupleSet *generate_combine(const TupleSet *t2) const;
   void filter_fields(const std::vector<Field> &fields);
   const std::vector<TupleCell> &cells() const;
-
   const FieldMeta &meta(int idx) const;
+
+  void push(const std::pair<Table*, FieldMeta> &p, const TupleCell &cell);
+
+  const TupleCell &get_cell(int idx);
+  const std::pair<Table *, FieldMeta> &get_meta(int idx);
+  int index(const Field &field);
+
 
  private:
   int table_num_ = 0;
@@ -101,6 +108,9 @@ class TupleSet {
   std::vector<TupleCell> cells_;
 };
 
+
+// TODO: save the aggregates info
+// TODO: let Pretable to save the meta info
 class Pretable {
  public:
   Pretable() = default;
@@ -111,8 +121,14 @@ class Pretable {
 
   RC init(Table *table, FilterStmt *filter);
   RC join(Pretable *pre2, FilterStmt *filter);
-  void print(std::stringstream &os, const std::vector<Field> &fields);
+  void print(std::stringstream &os);
+  void filter_fields(const std::vector<Field> &fields);
   void print_fields(std::stringstream &ss, const std::vector<Field> &fields);
+  RC aggregate(const std::vector<Field> fields);
+  RC aggregate_max(int idx, TupleCell *res);
+  RC aggregate_min(int idx, TupleCell *res);
+  RC aggregate_avg(int idx, TupleCell *res);
+  RC aggregate_count(int idx, TupleCell *res);
   const FieldMeta *field(const Field &field) const;
 
 
@@ -123,27 +139,6 @@ class Pretable {
   std::vector<Table*> tables_;
 };
 
-// class TupleSetIterator {
-// public:
-//   TupleSetIterator(TupleSet *t, int i) : tuple_set_(t), idx_(i) {}
 
-//   TupleSetIterator &operator++() {
-
-//     return *this;
-//   }
-
-//   TupleCell *operator*() {
-//     TupleCell *cell = new TupleCell();
-//     const FieldMeta &meta = *tuple_set_->meta(field_idx_);
-//     cell->set_type(meta.type());
-//     cell->set_length(meta.len());
-//     cell->set_data()
-//   }
-
-
-//  private:
-//   int field_idx_ = 0;
-//   TupleSet *tuple_set_ = nullptr;
-// }
 
 #endif  //__OBSERVER_SQL_EXECUTE_STAGE_H__

@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi 
 //
 
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -20,6 +21,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/parser/parse.h"
 #include "rc.h"
 #include "common/log/log.h"
+#include "sql/parser/parse_defs.h"
 
 RC parse(char *st, Query *sqln);
 
@@ -34,6 +36,20 @@ void relation_attr_init(RelAttr *relation_attr, const char *relation_name, const
     relation_attr->relation_name = nullptr;
   }
   relation_attr->attribute_name = strdup(attribute_name);
+  relation_attr->type = A_NO;
+  relation_attr->aggregate_func = nullptr;
+}
+
+void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, const char *aggregate_name, AggreType type)
+{
+  if (relation_name != nullptr) {
+    relation_attr->relation_name = strdup(relation_name);
+  } else {
+    relation_attr->relation_name = nullptr;
+  }
+  relation_attr->attribute_name = strdup(attribute_name);
+  relation_attr->type = type;
+  relation_attr->aggregate_func = strdup(aggregate_name);
 }
 
 void relation_attr_destroy(RelAttr *relation_attr)
@@ -162,6 +178,7 @@ void selects_init(Selects *selects, ...);
 void selects_append_attribute(Selects *selects, RelAttr *rel_attr)
 {
   selects->attributes[selects->attr_num++] = *rel_attr;
+  selects->aggregate_num += (rel_attr->type != A_NO);
 }
 void selects_append_relation(Selects *selects, const char *relation_name)
 {
