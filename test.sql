@@ -1,3 +1,17 @@
+/* date */
+drop table date_table;
+create table date_table(u_date date);
+SELECT * FROM date_table WHERE u_date='2017-12-29';
+SELECT * FROM date_table WHERE u_date='2017-21-29';
+SELECT * FROM date_table WHERE u_date='2017-12-32';
+
+/* drop table */
+create table Drop_table_6(id int);
+DROP TABLE Drop_table_6;
+select * from Drop_table_6;
+SELECT * FROM DROP_TABLE_6;
+
+
 drop table t1;
 drop table t2;
 create table t1(id int, age int);

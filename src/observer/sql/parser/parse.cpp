@@ -103,13 +103,15 @@ int value_init_date(Value *value, const char* v)
   value->type = DATES;
   int y, m, d;
   std::sscanf(v, "'%d-%d-%d'", &y, &m, &d);
-  bool b = check_date(y, m, d);
-  if (!b) {
-    return -1;
-  }
+
   int dv = y * 10000 + m * 100 + d;
-  value->data = std::malloc(sizeof(dv));
-  std::memcpy(value->data, &dv, sizeof(dv));
+  value->data = std::malloc(sizeof(int));
+  bool b = check_date(y, m, d);
+  printf("%d\n", b+0);
+  if (!b) {
+    dv = -1;
+  }
+  std::memcpy(value->data, &dv, sizeof(int));
   return 0;
 }
 void value_init_float(Value *value, float v)

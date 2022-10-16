@@ -107,6 +107,9 @@ RC Db::update_table(const char *relation_name, const char *attribute_name, const
     LOG_WARN("there is no table %s", relation_name);
     return RC::SCHEMA_TABLE_NOT_EXIST;
   }
+  if (value->type == DATES && *(int *)value->data == -1) {
+    return RC::RECORD_INVALID_KEY;
+  }
   Table *table = opened_tables_[relation_name];
   int updated_cnt;
   rc = table->update_record(nullptr, attribute_name, value, condition_num, conditions, &updated_cnt);

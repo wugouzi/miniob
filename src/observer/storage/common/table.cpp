@@ -20,6 +20,7 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 
 #include "common/defs.h"
+#include "sql/parser/parse_defs.h"
 #include "storage/common/field_meta.h"
 #include "storage/common/table.h"
 #include "storage/common/table_meta.h"
@@ -452,6 +453,9 @@ RC Table::make_record(int value_num, const Value *values, char *&record_out)
           field->type(),
           value.type);
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
+    if (value.type == AttrType::DATES && *(int *)value.data == -1) {
+      return RC::RECORD_INVALID_KEY;
     }
   }
 

@@ -319,10 +319,7 @@ NUMBER{
   value_init_float(&CONTEXT->values[CONTEXT->value_length++], $1);
 }
 |DATE_STR{
-  if (value_init_date(&CONTEXT->values[CONTEXT->value_length++], $1) < 0) {
-    CONTEXT->ssql->flag = SCF_ERROR;
-    return -1;
-  }
+  value_init_date(&CONTEXT->values[CONTEXT->value_length++], $1);
 }
 |SSS {
   $1 = substr($1,1,strlen($1)-2);
