@@ -710,22 +710,39 @@ RC check_updates(Db *db, const Updates &updates)
   }
 
   const TableMeta &meta = table->table_meta();
-  if (meta.field(attr_name) == nullptr) {
+  const FieldMeta *fmeta = meta.field(attr_name);
+  if (fmeta == nullptr) {
     return RC::SCHEMA_FIELD_MISSING;
+  }
+  if (fmeta->type() != value->type) {
+    return RC::SCHEMA_FIELD_TYPE_MISMATCH;
   }
   for (int i = 0; i < condition_num; i++) {
     const Condition &c = conditions[i];
-    if (!c.left_is_attr && c.left_value.type == DATES && *(int*)c.left_value.data == -1) {
+    if (!c.left_is_attr && !c.right_is_attr) {
       return RC::INVALID_ARGUMENT;
     }
-    if (!c.right_is_attr && c.right_value.type == DATES && *(int*)c.right_value.data == -1) {
-      return RC::INVALID_ARGUMENT;
-    }
-    if (c.left_is_attr && !check_attr_in_table(table, c.left_attr)) {
-      return RC::SCHEMA_FIELD_NAME_ILLEGAL;
-    }
-    if (c.right_is_attr && !check_attr_in_table(table, c.right_attr)) {
-      return RC::SCHEMA_FIELD_NAME_ILLEGAL;
+    if (c.left_is_attr) {
+      if (!check_attr_in_table(table, c.left_attr)) {
+        return RC::SCHEMA_FIELD_NAME_ILLEGAL;
+      }
+      if (c.right_value.type == DATES && *(int*)c.right_value.data == -1) {
+        return RC::INVALID_ARGUMENT;
+      }
+      printf("%d\n", c.right_value.type);
+      if (c.right_value.type != meta.field(c.left_attr.attribute_name)->type()) {
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+    } else {
+      if (!check_attr_in_table(table, c.right_attr)) {
+        return RC::SCHEMA_FIELD_NAME_ILLEGAL;
+      }
+      if (c.left_value.type == DATES && *(int*)c.left_value.data == -1) {
+        return RC::INVALID_ARGUMENT;
+      }
+      if (c.left_value.type != meta.field(c.right_attr.attribute_name)->type()) {
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
     }
   }
   return RC::SUCCESS;

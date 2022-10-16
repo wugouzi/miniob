@@ -170,8 +170,11 @@ select * from t1,t2;
 drop table t;
 create table t(id int, age int);
 insert into t values(1,1);
-update t set g=3 where id=1;
+update t set id='2' where age=1;
 update t set id=2 where g=3;
+update t set g=3 where id=1;
+
+
 
 /* multi multi */
 drop table t1;
@@ -196,6 +199,8 @@ insert into t3 values(4, '2004-10-1');
 insert into t3 values(5, '1555-10-1');
 insert into t3 values(6, '2333-10-1');
 select * from t1,t2,t3 where t1.id=t2.id and t2.id=t3.id;
+select * from t2,t3 where t2.id=t3.id;
+select * from t1,t2,t3 where t1.id=t2.id;
 
 
 1 | 2 | A | 1 | 11 | F
