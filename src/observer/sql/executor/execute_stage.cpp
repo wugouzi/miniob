@@ -1051,6 +1051,11 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
 {
   Field *left_field = nullptr;
   Field *right_field = nullptr;
+
+  for (Table *t : pre2->tables_) {
+    tables_.push_back(t);
+  }
+
   for (const FilterUnit *unit : filter->filter_units()) {
     Expression *left = unit->left();
     Expression *right = unit->right();

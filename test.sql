@@ -1,14 +1,3 @@
-drop table t;
-create table t(id int,name char(4),da date);
-insert into t values(1,'lige','2021-10-30');
-insert into t values(11,'lige','2021-10-31');
-insert into t values(2,'aset','2000-2-29');
-insert into t values(4,'deft','1976-2-29');
-insert into t values(5,'ghit','2035-1-1');
-insert into t values(6,'jklt','2021-6-30');
-insert into t values(233,'nowt','2021-10-31');
-select count(hh) from t;
-
 /* aggregate */
 create table t(id int,name char(4),da date);
 insert into t values(1,'lige','2021-10-30');
@@ -175,3 +164,42 @@ insert into t2 values(12,14);
 update t2 set sb=100 where id=12;
 select * from t1,t2 where t1.id=t2.id and t1.age=1;
 select * from t1,t2;
+
+
+drop table t1;
+drop table t2;
+drop table t3;
+create table t1(id int, age int);
+create table t2(id int, c char);
+create table t3(id int, d date);
+insert into t1 values(1, 1);
+insert into t1 values(2, 2);
+insert into t2 values(1, 'A');
+insert into t2 values(2, 'B');
+insert into t3 values(1, '1666-10-1');
+insert into t3 values(2, '2000-10-1');
+select * from t1,t2,t3 where t1.id=t2.id and t2.id=t3.id;
+
+/* multi multi */
+drop table t1;
+drop table t2;
+drop table t3;
+create table t1(id int, age int);
+create table t2(id int, c char);
+create table t3(id int, d date);
+insert into t1 values(1, 1);
+insert into t1 values(2, 2);
+insert into t1 values(3, 3);
+insert into t1 values(4, 4);
+insert into t1 values(5, 5);
+insert into t2 values(1, 'A');
+insert into t2 values(2, 'B');
+insert into t2 values(3, 'C');
+insert into t2 values(4, 'D');
+insert into t3 values(1, '1666-10-1');
+insert into t3 values(2, '2000-10-1');
+insert into t3 values(3, '2001-10-1');
+insert into t3 values(4, '2004-10-1');
+insert into t3 values(5, '1555-10-1');
+insert into t3 values(6, '2333-10-1');
+select * from t1,t2,t3 where t1.id=t2.id and t2.id=t3.id;
