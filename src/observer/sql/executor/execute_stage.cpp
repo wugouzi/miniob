@@ -436,6 +436,18 @@ RC check_cond(SelectStmt *select_stmt) {
 // {
 
 // }
+//
+void reorder_fields(std::vector<Field> &fields)
+{
+  if (fields[0].aggr_type() != A_NO) {
+    std::vector<Field> tp;
+    for (int i = fields.size()-1; i >= 0; i--) {
+      tp.push_back(fields[i]);
+    }
+    fields.swap(tp);
+    return;
+  }
+}
 
 RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
 {
@@ -447,7 +459,7 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
 
   RC rc = RC::SUCCESS;
 
-  for (int i = select_stmt->tables().size() - 1; i >= 0; i--) {
+  for (int i = 0; i < select_stmt->tables().size(); i++) {
     Pretable *pre = new Pretable;
     rc = pre->init(select_stmt->tables()[i], filter_stmt);
     if (rc != RC::RECORD_EOF) {
@@ -483,6 +495,7 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
 
   std::stringstream ss;
   rc = RC::SUCCESS;
+  reorder_fields(select_stmt->query_fields());
   print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1);
   if (select_stmt->aggregate_num() > 0) {
     rc = res->aggregate(select_stmt->query_fields());
@@ -783,24 +796,26 @@ TupleSet *TupleSet::generate_combine(const TupleSet *t2) const {
 }
 
 void TupleSet::filter_fields(const std::vector<Field> &fields) {
-  std::unordered_map<std::string, std::unordered_map<std::string, bool>> mp;
-  for (const Field &field : fields) {
-    mp[field.table_name()][field.field_name()] = true;
+  std::unordered_map<std::string, std::unordered_map<std::string, int>> mp;
+  std::vector<std::pair<Table*, FieldMeta>> metas(fields.size());
+  std::vector<TupleCell> cells(fields.size());
+  for (int i = 0; i < fields.size(); i++) {
+    mp[fields[i].table_name()][fields[i].field_name()] = i+1;
   }
 
   table_num_ = mp.size();
 
-  auto meta_iter = metas_.begin();
-  auto cell_iter = cells_.begin();
-  for (; meta_iter != metas_.end();) {
-    if (!mp[meta_iter->first->name()][meta_iter->second.name()]) {
-      meta_iter = metas_.erase(meta_iter);
-      cell_iter = cells_.erase(cell_iter);
-    } else {
-      meta_iter++;
-      cell_iter++;
+  for (int i = 0; i < metas_.size(); i++) {
+    auto &p = metas_[i];
+    int j = mp[p.first->name()][p.second.name()];
+    if (j > 0) {
+      cells[j-1] = cells_[i];
+      metas[j-1] = metas_[i];
     }
   }
+
+  cells_.swap(cells);
+  metas_.swap(metas);
 }
 
 void TupleSet::push(const std::pair<Table*, FieldMeta> &p, const TupleCell &cell)
@@ -1026,7 +1041,6 @@ RC Pretable::aggregate(const std::vector<Field> fields)
     }
     res.push(tuples_[0].get_meta(idx), cell);
   }
-  res.reverse();
   tuples_.clear();
   tuples_.push_back(res);
   return RC::SUCCESS;
@@ -1100,61 +1114,76 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
 
 // TODO: ALIAS
 void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi) {
-  bool is_aggr = false;
-  for (const auto &field : fields) {
-    if (field.aggr_type() != AggreType::A_NO) {
-      is_aggr = true;
-      break;
-    }
-  }
   bool first = true;
-  if (is_aggr) {
-    for (int i = fields.size() - 1; i >= 0; i--) {
-      ss << (first ? "" : " | ");
-      first = false;
-      std::string tp = fields[i].has_table() ? fields[i].field_name() : fields[i].count_str();
-      if (multi && fields[i].has_table()) {
-        tp = fields[i].table_name() + ("." + tp);
-      }
-      tp = fields[i].aggr_name() + '(' + tp + ')';
-      ss << tp;
+  for (auto &field : fields) {
+    ss << (first ? "" : " | ");
+    first = false;
+    std::string tp = field.has_table() ? field.field_name() : field.count_str();
+    if (multi && field.has_table()) {
+      tp = field.table_name() + ("." + tp);
     }
-  } else {
-    int idx = 0;
-    std::string s;
-    if (multi) {
-      idx = fields.size()-1;
-      while (idx >= 0 && fields[idx].table_name() != s) {
-        idx--;
-      }
-      idx++;
+    if (field.aggr_type() != A_NO) {
+      tp = field.aggr_name() + '(' + tp + ')';
     }
-    int last_idx = fields.size();
-    while (1) {
-      for (int i = idx; i < last_idx; i++) {
-        ss << (first ? "" : " | ");
-        first = false;
-        std::string tp = fields[i].field_name();
-        if (multi && fields[i].has_table()) {
-          tp = fields[i].table_name() + ("." + tp);
-        }
-        ss << tp;
-      }
-      last_idx = idx;
-      idx--;
-      if (idx < 0) {
-        break;
-      }
-      s = fields[idx].table_name();
-      while (idx >= 0 && (!fields[idx].has_table() || s == fields[idx].table_name())) {
-        idx--;
-      }
-      idx++;
-    }
+    ss << tp;
   }
+
   if (!first) {
     ss << '\n';
   }
+  // bool is_aggr = false;
+  // for (const auto &field : fields) {
+  //   if (field.aggr_type() != AggreType::A_NO) {
+  //     is_aggr = true;
+  //     break;
+  //   }
+  // }
+  // bool first = true;
+  // if (is_aggr) {
+  //   for (int i = fields.size() - 1; i >= 0; i--) {
+  //     ss << (first ? "" : " | ");
+  //     first = false;
+  //     std::string tp = fields[i].has_table() ? fields[i].field_name() : fields[i].count_str();
+  //     if (multi && fields[i].has_table()) {
+  //       tp = fields[i].table_name() + ("." + tp);
+  //     }
+  //     tp = fields[i].aggr_name() + '(' + tp + ')';
+  //     ss << tp;
+  //   }
+  // } else {
+  //   int idx = 0;
+  //   std::string s;
+  //   if (multi) {
+  //     idx = fields.size()-1;
+  //     while (idx >= 0 && fields[idx].table_name() != s) {
+  //       idx--;
+  //     }
+  //     idx++;
+  //   }
+  //   int last_idx = fields.size();
+  //   while (1) {
+  //     for (int i = idx; i < last_idx; i++) {
+  //       ss << (first ? "" : " | ");
+  //       first = false;
+  //       std::string tp = fields[i].field_name();
+  //       if (multi && fields[i].has_table()) {
+  //         tp = fields[i].table_name() + ("." + tp);
+  //       }
+  //       ss << tp;
+  //     }
+  //     last_idx = idx;
+  //     idx--;
+  //     if (idx < 0) {
+  //       break;
+  //     }
+  //     s = fields[idx].table_name();
+  //     while (idx >= 0 && (!fields[idx].has_table() || s == fields[idx].table_name())) {
+  //       idx--;
+  //     }
+  //     idx++;
+  //   }
+  // }
+
 }
 
 void Pretable::filter_fields(const std::vector<Field> &fields) {

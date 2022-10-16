@@ -176,6 +176,14 @@ void attr_info_destroy(AttrInfo *attr_info)
 }
 
 void selects_init(Selects *selects, ...);
+void selects_reverse_relations(Selects *selects)
+{
+  for (int i = 0; i < selects->relation_num / 2; i++) {
+    char *tp = selects->relations[i];
+    selects->relations[i] = selects->relations[selects->relation_num-1-i];
+    selects->relations[selects->relation_num-1-i] = tp;
+  }
+}
 void selects_append_attribute(Selects *selects, RelAttr *rel_attr)
 {
   selects->attributes[selects->attr_num++] = *rel_attr;
