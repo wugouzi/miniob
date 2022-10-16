@@ -1,3 +1,37 @@
+drop table t;
+create table t(id int,name char(4),da date);
+insert into t values(1,'lige','2021-10-30');
+insert into t values(11,'lige','2021-10-31');
+insert into t values(2,'aset','2000-2-29');
+insert into t values(4,'deft','1976-2-29');
+insert into t values(5,'ghit','2035-1-1');
+insert into t values(6,'jklt','2021-6-30');
+insert into t values(233,'nowt','2021-10-31');
+select count(hh) from t;
+
+/* aggregate */
+create table t(id int,name char(4),da date);
+insert into t values(1,'lige','2021-10-30');
+insert into t values(11,'lige','2021-10-31');
+insert into t values(2,'aset','2000-2-29');
+insert into t values(4,'deft','1976-2-29');
+insert into t values(5,'ghit','2035-1-1');
+insert into t values(6,'jklt','2021-6-30');
+insert into t values(233,'nowt','2021-10-31');
+select count(1),avg(id) from t;
+select count(*),max(id),min(da),avg(id) from t where t.id<233;
+select max(id),min(da),avg(id) from t where t.id<233;
+select count(1),count(2),count(id),count(*),max(da),min(da) from t;
+select count() from t;
+select count(id,name) from t;
+select count(hh) from t;
+select count(*),count(hh) from t;
+select max(id),count(id,name) from t;
+drop table t;
+exit;
+
+select count(id,name) from t;
+
 create table t(id int,name char(4),da date);
 insert into t values(1,'lige','2021-10-30');
 insert into t values(11,'lige','2021-10-31');
@@ -47,13 +81,6 @@ select * from t;
 drop table t;
 exit;
 
-
-/* date */
-drop table date_table;
-create table date_table(u_date date);
-SELECT * FROM date_table WHERE u_date='2017-12-29';
-SELECT * FROM date_table WHERE u_date='2017-21-29';
-SELECT * FROM date_table WHERE u_date='2017-12-32';
 
 /* drop table */
 create table Drop_table_6(id int);

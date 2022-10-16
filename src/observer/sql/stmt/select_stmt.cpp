@@ -124,7 +124,7 @@ RC SelectStmt::create(Db *db, const Selects &select_sql, Stmt *&stmt)
 
       Table *table = tables[0];
       const FieldMeta *field_meta = table->table_meta().field(relation_attr.attribute_name);
-      if (nullptr == field_meta && relation_attr.type == AggreType::A_NO) {
+      if (nullptr == field_meta && !isdigit(relation_attr.attribute_name[0])) {
         LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), relation_attr.attribute_name);
         return RC::SCHEMA_FIELD_MISSING;
       }

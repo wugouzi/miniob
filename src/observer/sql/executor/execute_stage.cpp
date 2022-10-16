@@ -840,6 +840,12 @@ const std::vector<TupleCell> &TupleSet::cells() const {
   return cells_;
 }
 
+void TupleSet::reverse()
+{
+  std::reverse(metas_.begin(), metas_.end());
+  std::reverse(cells_.begin(), cells_.end());
+}
+
 // filter table with table-specific conditions
 FilterStmt *get_sub_filter(Table *table, FilterStmt *old_filter)
 {
@@ -1020,7 +1026,7 @@ RC Pretable::aggregate(const std::vector<Field> fields)
     }
     res.push(tuples_[0].get_meta(idx), cell);
   }
-
+  res.reverse();
   tuples_.clear();
   tuples_.push_back(res);
   return RC::SUCCESS;
@@ -1094,49 +1100,58 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
 
 // TODO: ALIAS
 void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi) {
-  std::string s;
+  bool is_aggr = false;
   for (const auto &field : fields) {
-    if (field.has_table()) {
-      s = field.table_name();
+    if (field.aggr_type() != AggreType::A_NO) {
+      is_aggr = true;
+      break;
     }
   }
-
-  int idx = 0;
-  if (multi) {
-    idx = fields.size()-1;
-    while (idx >= 0 && (!fields[idx].has_table() || fields[idx].table_name() != s)) {
-      idx--;
-    }
-    idx++;
-  }
-
   bool first = true;
-  int last_idx = fields.size();
-  while (1) {
-    for (int i = idx; i < last_idx; i++) {
+  if (is_aggr) {
+    for (int i = fields.size() - 1; i >= 0; i--) {
       ss << (first ? "" : " | ");
       first = false;
       std::string tp = fields[i].has_table() ? fields[i].field_name() : fields[i].count_str();
       if (multi && fields[i].has_table()) {
         tp = fields[i].table_name() + ("." + tp);
       }
-      if (fields[i].aggr_type() != AggreType::A_NO) {
-        tp = fields[i].aggr_name() + '(' + tp + ')';
-      }
+      tp = fields[i].aggr_name() + '(' + tp + ')';
       ss << tp;
     }
-    last_idx = idx;
-    idx--;
-    if (idx < 0) {
-      break;
+  } else {
+    int idx = 0;
+    std::string s;
+    if (multi) {
+      idx = fields.size()-1;
+      while (idx >= 0 && fields[idx].table_name() != s) {
+        idx--;
+      }
+      idx++;
     }
-    s = fields[idx].table_name();
-    while (idx >= 0 && (!fields[idx].has_table() || s == fields[idx].table_name())) {
+    int last_idx = fields.size();
+    while (1) {
+      for (int i = idx; i < last_idx; i++) {
+        ss << (first ? "" : " | ");
+        first = false;
+        std::string tp = fields[i].field_name();
+        if (multi && fields[i].has_table()) {
+          tp = fields[i].table_name() + ("." + tp);
+        }
+        ss << tp;
+      }
+      last_idx = idx;
       idx--;
+      if (idx < 0) {
+        break;
+      }
+      s = fields[idx].table_name();
+      while (idx >= 0 && (!fields[idx].has_table() || s == fields[idx].table_name())) {
+        idx--;
+      }
+      idx++;
     }
-    idx++;
   }
-
   if (!first) {
     ss << '\n';
   }

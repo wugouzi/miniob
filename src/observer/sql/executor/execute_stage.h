@@ -100,6 +100,7 @@ class TupleSet {
   const TupleCell &get_cell(int idx);
   const std::pair<Table *, FieldMeta> &get_meta(int idx);
   int index(const Field &field) const;
+  void reverse();
 
  private:
   int table_num_ = 0;
