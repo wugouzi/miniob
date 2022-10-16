@@ -103,8 +103,7 @@ insert into t3 values(2);
 insert into t1 values(2, 2);
 insert into t2 values("B");
 insert into t3 values(4);
-select * from t1,t2;
-select t1.id, t2.c, t1.age, t3.id from t1,t2,t3;
+select * from t1,t2,t3;
 
 
 drop table t1;

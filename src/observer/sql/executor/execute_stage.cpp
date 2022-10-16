@@ -875,7 +875,8 @@ FilterStmt *get_sub_filter(Table *table, FilterStmt *old_filter)
       std::swap(left, right);
     }
     FieldExpr &left_field_expr = *(FieldExpr *)left;
-    if (table->table_meta().field(left_field_expr.field_name()) == nullptr) {
+    if (strcmp(table->name(), left_field_expr.field_name()) != 0 ||
+        table->table_meta().field(left_field_expr.field_name()) == nullptr) {
       continue;
     }
     filter->push(unit);
