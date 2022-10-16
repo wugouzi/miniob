@@ -687,14 +687,61 @@ update t set age=20 where id>1;
 select * from t;
 drop table t;
  */
+bool check_attr_in_table(Table *table, const RelAttr &attr)
+{
+  if (attr.relation_name != nullptr && strcmp(table->name(), attr.relation_name) != 0) {
+    return false;
+  }
+  return table->table_meta().field(attr.attribute_name) != nullptr;
+}
+RC check_updates(Db *db, const Updates &updates)
+{
+  const char *table_name = updates.relation_name;
+  int condition_num = updates.condition_num;
+  const Condition *conditions = updates.conditions;
+  const char *attr_name = updates.attribute_name;
+  const Value *value = &updates.value;
+  Table *table = db->find_table(table_name);
+  if (table == nullptr) {
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+  if (value->type == DATES && *(int *)value->data == -1) {
+    return RC::RECORD_INVALID_KEY;
+  }
+
+  const TableMeta &meta = table->table_meta();
+  if (meta.field(attr_name) == nullptr) {
+    return RC::SCHEMA_FIELD_MISSING;
+  }
+  for (int i = 0; i < condition_num; i++) {
+    const Condition &c = conditions[i];
+    if (!c.left_is_attr && c.left_value.type == DATES && *(int*)c.left_value.data == -1) {
+      return RC::INVALID_ARGUMENT;
+    }
+    if (!c.right_is_attr && c.right_value.type == DATES && *(int*)c.right_value.data == -1) {
+      return RC::INVALID_ARGUMENT;
+    }
+    if (c.left_is_attr && !check_attr_in_table(table, c.left_attr)) {
+      return RC::SCHEMA_FIELD_NAME_ILLEGAL;
+    }
+    if (c.right_is_attr && !check_attr_in_table(table, c.right_attr)) {
+      return RC::SCHEMA_FIELD_NAME_ILLEGAL;
+    }
+  }
+  return RC::SUCCESS;
+}
 
 RC ExecuteStage::do_update_table(SQLStageEvent *sql_event)
 {
   const Updates &updates = sql_event->query()->sstr.update;
   SessionEvent *session_event = sql_event->session_event();
   Db *db = session_event->session()->get_current_db();
-  RC rc = db->update_table(updates.relation_name, updates.attribute_name, &updates.value,
+  RC rc = check_updates(db, updates);
+  if (rc == RC::SUCCESS) {
+    rc = db->update_table(updates.relation_name, updates.attribute_name, &updates.value,
                            updates.condition_num, updates.conditions);
+  }
+
   if (rc == RC::SUCCESS) {
     session_event->set_response("SUCCESS\n");
   } else {

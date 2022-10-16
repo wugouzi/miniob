@@ -166,19 +166,12 @@ select * from t1,t2 where t1.id=t2.id and t1.age=1;
 select * from t1,t2;
 
 
-drop table t1;
-drop table t2;
-drop table t3;
-create table t1(id int, age int);
-create table t2(id int, c char);
-create table t3(id int, d date);
-insert into t1 values(1, 1);
-insert into t1 values(2, 2);
-insert into t2 values(1, 'A');
-insert into t2 values(2, 'B');
-insert into t3 values(1, '1666-10-1');
-insert into t3 values(2, '2000-10-1');
-select * from t1,t2,t3 where t1.id=t2.id and t2.id=t3.id;
+/* update */
+drop table t;
+create table t(id int, age int);
+insert into t values(1,1);
+update t set g=3 where id=1;
+update t set id=2 where g=3;
 
 /* multi multi */
 drop table t1;
@@ -203,3 +196,15 @@ insert into t3 values(4, '2004-10-1');
 insert into t3 values(5, '1555-10-1');
 insert into t3 values(6, '2333-10-1');
 select * from t1,t2,t3 where t1.id=t2.id and t2.id=t3.id;
+
+
+1 | 2 | A | 1 | 11 | F
+1 | 3 | B | 1 | 10 | G
+1 | 3 | B | 1 | 11 | F
+-2 | 2 | C | 1 | 10 | G
+-2 | 2 | C | 1 | 11 | F
+2 | 2 | C | 2 | 12 | C
+-2 | 4 | D | 1 | 10 | G
+-2 | 4 | D | 1 | 11 | F
+2 | 4 | D | 2 | 12 | C
+SELECT_TABLES_4.ID | SELECT_TABLES_4.AGE | SELECT_TABLES_4.U_NAME | SELECT_TABLES_5.ID | SELECT_TABLES_5.RES | SELECT_TABLES_5.U_NAME
