@@ -17,6 +17,8 @@ GRTAGS
 GPATH
 GTAGS
 .cache/
-cmake-build-debug/
-cmake-build-debug-miniob/
+cmake-build-debug-clang/
+cmake-build-debug-gcc/
+test/
+run_test.sh
 #*#
