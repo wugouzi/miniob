@@ -120,6 +120,38 @@ RC Table::create(
   return rc;
 }
 
+RC Table::drop()
+{
+  data_buffer_pool_->close_file();
+
+  RC rc = RC::SUCCESS;
+  std::string path = base_dir_ + "/" + table_meta_.name();
+  std::string file1 = path + TABLE_META_SUFFIX;
+  std::string file2 = path + TABLE_DATA_SUFFIX;
+
+  if (std::remove(file1.c_str())) {
+    LOG_ERROR("Cannot delete %s", file1.c_str());
+    return RC::GENERIC_ERROR;
+  }
+
+  if (std::remove(file2.c_str())) {
+    LOG_ERROR("Cannot delete %s", file2.c_str());
+    return RC::GENERIC_ERROR;
+  }
+
+  for (int i = 0; i < table_meta_.index_num(); i++) {
+    ((BplusTreeIndex*)indexes_[i])->close();
+    const IndexMeta* index_meta = table_meta_.index(i);
+    std::string index_file = path + '-' + index_meta->name() + TABLE_INDEX_SUFFIX;
+    if(unlink(index_file.c_str()) != 0) {
+      LOG_ERROR("Failed to remove index file=%s, errno=%d", index_file.c_str(), errno);
+      return RC::GENERIC_ERROR;
+    }
+  }
+
+  return rc;
+}
+
 RC Table::open(const char *meta_file, const char *base_dir, CLogManager *clog_manager)
 {
   // 加载元数据文件
