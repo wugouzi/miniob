@@ -202,14 +202,20 @@ select * from t1,t2,t3 where t1.id=t2.id and t2.id=t3.id;
 select * from t2,t3 where t2.id=t3.id;
 select * from t1,t2,t3 where t1.id=t2.id;
 
-
-1 | 2 | A | 1 | 11 | F
-1 | 3 | B | 1 | 10 | G
-1 | 3 | B | 1 | 11 | F
--2 | 2 | C | 1 | 10 | G
--2 | 2 | C | 1 | 11 | F
-2 | 2 | C | 2 | 12 | C
--2 | 4 | D | 1 | 10 | G
--2 | 4 | D | 1 | 11 | F
-2 | 4 | D | 2 | 12 | C
-SELECT_TABLES_4.ID | SELECT_TABLES_4.AGE | SELECT_TABLES_4.U_NAME | SELECT_TABLES_5.ID | SELECT_TABLES_5.RES | SELECT_TABLES_5.U_NAME
+--another multi
+drop table t1;
+drop table t2;
+create table t1(a int, b float, c char, d date);
+create table t2(a int, b float, c char, d date);
+insert into t1 values(1, 1.1, 'lyq', '2020-10-22');
+insert into t1 values(11.1, 111, 'com', '2020-10-9');
+insert into t2 values(2, 2.2, 'lhc', '2000-1-22');
+insert into t2 values(22, 22.22, 'com', '2000-1-1');
+insert into t2 values(22.2, 222, 'cn', '2000-12-12');
+select t1.a, t2.b, t1.c, t2.d from t1, t2;
+select t1.a, t1.*, t2.*, *, t1.a, *, t2.b from t1, t2;
+select * from t2, t1;
+select a, b, c, d from t1, t2;
+select t3.a, t1.b, t4.c, t2.d from t1, t2;
+select t3.* from t1, t2;
+select t1.a, t1.b, t2.c, t2.d from t1, t2 where t1.a > t2.b and t1.a < 100000 and t2.b < 30000;
