@@ -74,6 +74,7 @@ protected:
   RC do_clog_sync(SQLStageEvent *sql_event);
   RC do_select2(SQLStageEvent *sql_event);
   RC do_drop_table(SQLStageEvent *sql_event);
+  void print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi);
 
 protected:
 private:

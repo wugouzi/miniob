@@ -4,57 +4,57 @@
 #include "sql/parser/parse_defs.h"
 #include "sql/parser/yacc_sql.tab.h"
 #include "sql/parser/lex.yy.h"
-// #include "common/log/log.h" // 包含C++中的头文件
+  // #include "common/log/log.h" // 包含C++中的头文件
 
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 
-typedef struct ParserContext {
-  Query * ssql;
-  size_t select_length;
-  size_t condition_length;
-  size_t from_length;
-  size_t value_length;
-  Value values[MAX_NUM];
-  Condition conditions[MAX_NUM];
-  CompOp comp;
+  typedef struct ParserContext {
+    Query * ssql;
+    size_t select_length;
+    size_t condition_length;
+    size_t from_length;
+    size_t value_length;
+    Value values[MAX_NUM];
+    Condition conditions[MAX_NUM];
+    CompOp comp;
 	char id[MAX_NUM];
-} ParserContext;
+  } ParserContext;
 
-//获取子串
-char *substr(const char *s,int n1,int n2)/*从s中提取下标为n1~n2的字符组成一个新字符串，然后返回这个新串的首地址*/
-{
-  char *sp = malloc(sizeof(char) * (n2 - n1 + 2));
-  int i, j = 0;
-  for (i = n1; i <= n2; i++) {
-    sp[j++] = s[i];
+  //获取子串
+  char *substr(const char *s,int n1,int n2)/*从s中提取下标为n1~n2的字符组成一个新字符串，然后返回这个新串的首地址*/
+  {
+    char *sp = malloc(sizeof(char) * (n2 - n1 + 2));
+    int i, j = 0;
+    for (i = n1; i <= n2; i++) {
+      sp[j++] = s[i];
+    }
+    sp[j] = 0;
+    return sp;
   }
-  sp[j] = 0;
-  return sp;
-}
 
-void yyerror(yyscan_t scanner, const char *str)
-{
-  ParserContext *context = (ParserContext *)(yyget_extra(scanner));
-  query_reset(context->ssql);
-  context->ssql->flag = SCF_ERROR;
-  context->condition_length = 0;
-  context->from_length = 0;
-  context->select_length = 0;
-  context->value_length = 0;
-  context->ssql->sstr.insertion.value_num = 0;
-  printf("parse sql failed. error=%s", str);
-}
+  void yyerror(yyscan_t scanner, const char *str)
+  {
+    ParserContext *context = (ParserContext *)(yyget_extra(scanner));
+    query_reset(context->ssql);
+    context->ssql->flag = SCF_ERROR;
+    context->condition_length = 0;
+    context->from_length = 0;
+    context->select_length = 0;
+    context->value_length = 0;
+    context->ssql->sstr.insertion.value_num = 0;
+    printf("parse sql failed. error=%s", str);
+  }
 
-ParserContext *get_context(yyscan_t scanner)
-{
-  return (ParserContext *)yyget_extra(scanner);
-}
+  ParserContext *get_context(yyscan_t scanner)
+  {
+    return (ParserContext *)yyget_extra(scanner);
+  }
 
 #define CONTEXT get_context(scanner)
 
-%}
+      %}
 
 %define api.pure full
 %lex-param { yyscan_t scanner }
@@ -104,7 +104,6 @@ ParserContext *get_context(yyscan_t scanner)
         NE
         DATE_T
 
-
 %union {
   struct _Attr *attr;
   struct _Condition *condition1;
@@ -112,21 +111,21 @@ ParserContext *get_context(yyscan_t scanner)
   char *string;
   int number;
   float floats;
-	char *position;
+  char *position;
 }
 
 %token <number> NUMBER
-%token <floats> FLOAT 
-%token <string> ID
-%token <string> PATH
-%token <string> SSS
-%token <string> STAR
-%token <string> STRING_V
 %token <string> DATE_STR
 %token <string> MAX
 %token <string> MIN
 %token <string> COUNT
 %token <string> AVG
+%token <floats> FLOAT
+%token <string> ID
+%token <string> PATH
+%token <string> SSS
+%token <string> STAR
+%token <string> STRING_V
 //非终结符
 
 %type <number> type;
@@ -161,7 +160,7 @@ select
 | exit
 ;
 
-exit:			
+exit:
 EXIT SEMICOLON {
   CONTEXT->ssql->flag=SCF_EXIT;//"exit";
 };
@@ -236,14 +235,14 @@ CREATE TABLE ID LBRACE attr_def attr_def_list RBRACE SEMICOLON
   // CONTEXT->ssql->sstr.create_table.attribute_count = CONTEXT->value_length;
   create_table_init_name(&CONTEXT->ssql->sstr.create_table, $3);
   //临时变量清零
-        CONTEXT->value_length = 0;
+  CONTEXT->value_length = 0;
 }
 ;
 attr_def_list:
 /* empty */
 | COMMA attr_def attr_def_list {    }
 ;
-    
+
 attr_def:
 ID_get type LBRACE number RBRACE
 {
@@ -285,7 +284,7 @@ ID
 }
 ;
 
-	
+
 insert:				/*insert   语句的语法解析树*/
 INSERT INTO ID VALUES LBRACE value value_list RBRACE SEMICOLON
 {
@@ -324,7 +323,7 @@ NUMBER{
   value_init_string(&CONTEXT->values[CONTEXT->value_length++], $1);
 }
 ;
-    
+
 delete:		/*  delete 语句的语法解析树*/
 DELETE FROM ID where SEMICOLON
 {
@@ -558,11 +557,11 @@ ID comOp value
   // $$->left_attr.attribute_name=NULL;
   // $$->left_value = *$1;
   // $$->comp=CONTEXT->comp;
-			
+
   // $$->right_is_attr = 1;
   // $$->right_attr.relation_name=NULL;
   // $$->right_attr.attribute_name=$3;
-		
+
 }
 |ID DOT ID comOp value
 {
@@ -583,7 +582,7 @@ ID comOp value
   // $$->right_attr.relation_name=NULL;
   // $$->right_attr.attribute_name=NULL;
   // $$->right_value =*$5;
-							
+
 }
 |value comOp ID DOT ID
 {
@@ -604,7 +603,7 @@ ID comOp value
   // $$->right_is_attr = 1;//属性
   // $$->right_attr.relation_name = $3;
   // $$->right_attr.attribute_name = $5;
-									
+
 }
 |ID DOT ID comOp ID DOT ID
 {

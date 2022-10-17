@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi & Wangyunlai on 2021/5/13.
 //
 
+#include <cstdio>
 #include <limits.h>
 #include <string.h>
 #include <algorithm>
@@ -142,8 +143,8 @@ RC Table::drop()
   for (int i = 0; i < table_meta_.index_num(); i++) {
     ((BplusTreeIndex*)indexes_[i])->close();
     const IndexMeta* index_meta = table_meta_.index(i);
-    std::string index_file = path + '-' + index_meta->name() + TABLE_INDEX_SUFFIX;
-    if(unlink(index_file.c_str()) != 0) {
+    std::string index_file = table_index_file(base_dir_.c_str(), name(), index_meta->name());
+    if(std::remove(index_file.c_str()) != 0) {
       LOG_ERROR("Failed to remove index file=%s, errno=%d", index_file.c_str(), errno);
       return RC::GENERIC_ERROR;
     }
@@ -381,6 +382,9 @@ RC Table::make_record(int value_num, const Value *values, char *&record_out)
           field->type(),
           value.type);
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
+    if (value.type == AttrType::DATES && *(int *)value.data == -1) {
+      return RC::RECORD_INVALID_KEY;
     }
   }
 

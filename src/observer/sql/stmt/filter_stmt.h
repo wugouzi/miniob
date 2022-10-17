@@ -85,6 +85,8 @@ public:
     return filter_units_;
   }
 
+  void push(FilterUnit *unit) { filter_units_.push_back(unit); }
+
 public:
   static RC create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
 			const Condition *conditions, int condition_num,

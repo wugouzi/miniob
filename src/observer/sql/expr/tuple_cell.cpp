@@ -32,7 +32,7 @@ void TupleCell::to_string(std::ostream &os) const
     } break;
     case DATES: {
       os << date_to_string(*(int *)data_);
-    }
+    } break;
     case CHARS: {
       for (int i = 0; i < length_; i++) {
         if (data_[i] == '\0') {

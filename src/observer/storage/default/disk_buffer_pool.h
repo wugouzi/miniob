@@ -23,6 +23,7 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "rc.h"
 #include "defs.h"
@@ -311,6 +312,7 @@ private:
   Frame *            hdr_frame_ = nullptr;
   BPFileHeader *     file_header_ = nullptr;
   std::set<PageNum>  disposed_pages;
+  std::set<PageNum> allocated_pages_;
 
 private:
   friend class BufferPoolIterator;

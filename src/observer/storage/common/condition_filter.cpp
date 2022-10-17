@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include <stddef.h>
 #include <math.h>
 #include "condition_filter.h"
+#include "sql/parser/parse_defs.h"
 #include "storage/record/record_manager.h"
 #include "common/log/log.h"
 #include "storage/common/table.h"
@@ -56,6 +57,18 @@ RC DefaultConditionFilter::init(const ConDesc &left, const ConDesc &right, AttrT
   attr_type_ = attr_type;
   comp_op_ = comp_op;
   return RC::SUCCESS;
+}
+
+bool field_type_compare_compatible(AttrType type1, AttrType type2)
+{
+  if (type1 == type2) {
+    return true;
+  }
+  if ((type1 == INTS && type2 == FLOATS) ||
+      (type1 == FLOATS && type2 == INTS)) {
+    return true;
+  }
+  return false;
 }
 
 RC DefaultConditionFilter::init(Table &table, const Condition &condition)
@@ -111,10 +124,10 @@ RC DefaultConditionFilter::init(Table &table, const Condition &condition)
   }
 
   // 校验和转换
-  //  if (!field_type_compare_compatible_table[type_left][type_right]) {
-  //    // 不能比较的两个字段， 要把信息传给客户端
-  //    return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-  //  }
+   if (!field_type_compare_compatible(type_left, type_right)) {
+     // 不能比较的两个字段， 要把信息传给客户端
+     return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+   }
   // NOTE：这里没有实现不同类型的数据比较，比如整数跟浮点数之间的对比
   // 但是选手们还是要实现。这个功能在预选赛中会出现
   if (type_left != type_right) {

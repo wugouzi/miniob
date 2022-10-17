@@ -227,10 +227,16 @@ RC DiskBufferPool::close_file()
 
   hdr_frame_->pin_count_--;
   // TODO: 理论上是在回放时回滚未提交事务，但目前没有undo log，因此不下刷数据page，只通过redo log回放
-  if ((rc = purge_page(0)) != RC::SUCCESS) {
-    hdr_frame_->pin_count_++;
-    LOG_ERROR("Failed to close %s, due to failed to purge all pages.", file_name_.c_str());
-    return rc;
+  for (int i = 0; i <= file_header_->page_count/8; i++) {
+    for (int j = 0; j < 8; j++) {
+      if (file_header_->bitmap[i] & (1 << j)) {
+        if ((rc = purge_page(i*8+j)) != RC::SUCCESS) {
+          hdr_frame_->pin_count_++;
+          LOG_ERROR("Failed to close %s, due to failed to purge all pages.", file_name_.c_str());
+          return rc;
+        }
+      }
+    }
   }
 
   disposed_pages.clear();
@@ -296,7 +302,7 @@ RC DiskBufferPool::allocate_page(Frame **frame)
         (file_header_->allocated_pages)++;
         file_header_->bitmap[byte] |= (1 << bit);
         // TODO,  do we need clean the loaded page's data?
-	hdr_frame_->mark_dirty();
+        hdr_frame_->mark_dirty();
         return get_this_page(i, frame);
       }
     }

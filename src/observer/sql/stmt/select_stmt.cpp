@@ -69,10 +69,17 @@ RC SelectStmt::create(Db *db, const Selects &select_sql, Stmt *&stmt)
     const RelAttr &relation_attr = select_sql.attributes[i];
 
     if (common::is_blank(relation_attr.relation_name) && 0 == strcmp(relation_attr.attribute_name, "*")) {
-      for (Table *table : tables) {
-        wildcard_fields(table, query_fields);
+      if (relation_attr.type == AggreType::A_NO) {
+        for (Table *table : tables) {
+          wildcard_fields(table, query_fields);
+        }
       }
-
+      else {
+        Field field;
+        field.set_count(relation_attr.attribute_name);
+        field.set_aggr(relation_attr.type, relation_attr.aggregate_func);
+        query_fields.push_back(field);
+      }
     } else if (!common::is_blank(relation_attr.relation_name)) { // TODO
       const char *table_name = relation_attr.relation_name;
       const char *field_name = relation_attr.attribute_name;
@@ -113,12 +120,23 @@ RC SelectStmt::create(Db *db, const Selects &select_sql, Stmt *&stmt)
 
       Table *table = tables[0];
       const FieldMeta *field_meta = table->table_meta().field(relation_attr.attribute_name);
-      if (nullptr == field_meta) {
+      if (nullptr == field_meta && !isdigit(relation_attr.attribute_name[0])) {
         LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), relation_attr.attribute_name);
         return RC::SCHEMA_FIELD_MISSING;
       }
 
-      query_fields.push_back(Field(table, field_meta));
+      if (relation_attr.type == AggreType::A_COUNT && std::isdigit(relation_attr.attribute_name[0])) {
+        Field field;
+        field.set_aggr(relation_attr.type, relation_attr.aggregate_func);
+        field.set_count(relation_attr.attribute_name);
+        query_fields.push_back(field);
+      } else {
+        Field field(table, field_meta);
+        if (relation_attr.type != A_NO) {
+          field.set_aggr(relation_attr.type, relation_attr.aggregate_func);
+        }
+        query_fields.push_back(field);
+      }
     }
   }
 

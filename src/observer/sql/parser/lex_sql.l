@@ -13,7 +13,9 @@ extern double atof();
 #else
 #define debug_printf(...)
 #endif // YYDEBUG
+/*
 
+*/
 #define RETURN_TOKEN(token) debug_printf("%s\n",#token);return token
 %}
 
@@ -41,13 +43,13 @@ QUOTE            [\'\"]
 ";"                                                  RETURN_TOKEN(SEMICOLON);
 {DOT}                                                RETURN_TOKEN(DOT);
 "*"                                                  RETURN_TOKEN(STAR);
-[Ee][Xx][Ii][Tt]                                     RETURN_TOKEN(EXIT)
-[Dd][Aa][Tt][Ee]                                     RETURN_TOKEN(DATE_T);
-{QUOTE}[0-9][0-9]?[0-9]?[0-9]?\-(0?[0-9]|[1-9][0-9])\-(0?[1-9]|[0-9][0-9]){QUOTE} yylval->string=strdup(yytext); RETURN_TOKEN(DATE_STR);  // 使用正则表达式过滤DATE。需要在yacc文件中增加
+{QUOTE}[0-9][0-9]?[0-9]?[0-9]?\-([0-9]?[0-9])\-([0-9]?[0-9]){QUOTE} yylval->string=strdup(yytext); RETURN_TOKEN(DATE_STR);  // 使用正则表达式过滤DATE。需要在yacc文件中增加
 [Mm][Aa][Xx]                                         yylval->string=strdup(yytext);RETURN_TOKEN(MAX);
 [Cc][Oo][Uu][Nn][Tt]                                 yylval->string=strdup(yytext);RETURN_TOKEN(COUNT);
 [Mm][Ii][Nn]                                         yylval->string=strdup(yytext);RETURN_TOKEN(MIN);
 [Aa][Vv][Gg]                                         yylval->string=strdup(yytext);RETURN_TOKEN(AVG);
+[Dd][Aa][Tt][Ee]                                     RETURN_TOKEN(DATE_T);
+[Ee][Xx][Ii][Tt]                                     RETURN_TOKEN(EXIT);
 [Hh][Ee][Ll][Pp]                                     RETURN_TOKEN(HELP);
 [Dd][Ee][Ss][Cc]                                     RETURN_TOKEN(DESC);
 [Cc][Rr][Ee][Aa][Tt][Ee]                             RETURN_TOKEN(CREATE);
@@ -73,6 +75,7 @@ QUOTE            [\'\"]
 [Rr][Oo][Ll][Ll][Bb][Aa][Cc][Kk]                     RETURN_TOKEN(TRX_ROLLBACK);
 [Ii][Nn][Tt]                                         RETURN_TOKEN(INT_T);
 [Cc][Hh][Aa][Rr]                                     RETURN_TOKEN(STRING_T);
+[Cc][Hh][Aa][Rr][Ss]                                 RETURN_TOKEN(STRING_T);
 [Ff][Ll][Oo][Aa][Tt]                                 RETURN_TOKEN(FLOAT_T);
 [Ll][Oo][Aa][Dd]                                     RETURN_TOKEN(LOAD);
 [Dd][Aa][Tt][Aa]                                     RETURN_TOKEN(DATA);

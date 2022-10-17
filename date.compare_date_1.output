@@ -1,4 +1,3 @@
-Failed to parse sql
 FAILURE
 FAILURE
 FAILURE
@@ -10,17 +9,18 @@ FAILURE
 FAILURE
 FAILURE
 FAILURE
+a | b | c
+a | b | c
+b
+a | b | c
+a | b | c
+a | b | c
+a | b | c
+a | b | c
 FAILURE
 FAILURE
-FAILURE
-FAILURE
-FAILURE
-FAILURE
-FAILURE
-FAILURE
-FAILURE
-FAILURE
-FAILURE
-FAILURE
-FAILURE
-FAILURE
+SUCCESS
+a | b | c
+a | b | c
+a | b | c
+SUCCESS

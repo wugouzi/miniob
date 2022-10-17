@@ -39,7 +39,7 @@
 # define YY_YY_YACC_SQL_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
-# define YYDEBUG 1
+# define YYDEBUG 0
 #endif
 #if YYDEBUG
 extern int yydebug;
@@ -97,17 +97,17 @@ extern int yydebug;
     NE = 298,                      /* NE  */
     DATE_T = 299,                  /* DATE_T  */
     NUMBER = 300,                  /* NUMBER  */
-    FLOAT = 301,                   /* FLOAT  */
-    ID = 302,                      /* ID  */
-    PATH = 303,                    /* PATH  */
-    SSS = 304,                     /* SSS  */
-    STAR = 305,                    /* STAR  */
-    STRING_V = 306,                /* STRING_V  */
-    DATE_STR = 307,                /* DATE_STR  */
-    MAX = 308,                     /* MAX  */
-    MIN = 309,                     /* MIN  */
-    COUNT = 310,                   /* COUNT  */
-    AVG = 311                      /* AVG  */
+    DATE_STR = 301,                /* DATE_STR  */
+    MAX = 302,                     /* MAX  */
+    MIN = 303,                     /* MIN  */
+    COUNT = 304,                   /* COUNT  */
+    AVG = 305,                     /* AVG  */
+    FLOAT = 306,                   /* FLOAT  */
+    ID = 307,                      /* ID  */
+    PATH = 308,                    /* PATH  */
+    SSS = 309,                     /* SSS  */
+    STAR = 310,                    /* STAR  */
+    STRING_V = 311                 /* STRING_V  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -116,7 +116,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 108 "yacc_sql.y"
+#line 107 "yacc_sql.y"
 
   struct _Attr *attr;
   struct _Condition *condition1;
@@ -124,7 +124,7 @@ union YYSTYPE
   char *string;
   int number;
   float floats;
-	char *position;
+  char *position;
 
 #line 130 "yacc_sql.tab.h"
 
