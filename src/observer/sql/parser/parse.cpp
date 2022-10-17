@@ -32,6 +32,18 @@ void relation_attr_init(RelAttr *relation_attr, const char *relation_name, const
   relation_attr->attribute_name = strdup(attribute_name);
 }
 
+void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, const char *aggregate_name, AggreType type)
+{
+  if (relation_name != nullptr) {
+    relation_attr->relation_name = strdup(relation_name);
+  } else {
+    relation_attr->relation_name = nullptr;
+  }
+  relation_attr->attribute_name = strdup(attribute_name);
+  relation_attr->type = type;
+  relation_attr->aggregate_func = strdup(aggregate_name);
+}
+
 void relation_attr_destroy(RelAttr *relation_attr)
 {
   free(relation_attr->relation_name);
@@ -45,6 +57,51 @@ void value_init_integer(Value *value, int v)
   value->type = INTS;
   value->data = malloc(sizeof(v));
   memcpy(value->data, &v, sizeof(v));
+}
+bool is_leap(int y)
+{
+  return (((y % 4 == 0) &&
+           (y % 100 != 0)) ||
+           (y % 400 == 0));
+}
+
+bool check_date(int y, int m, int d)
+{
+  if (m < 1 || m > 12) {
+    return false;
+  }
+
+  if (d < 1 || d > 31) {
+    return false;
+  }
+
+  if (m == 2) {
+    if (is_leap(y))
+      return (d <= 29);
+    else
+      return (d <= 28);
+  }
+
+  if (m == 4 || m == 6 ||
+      m == 9 || m == 11) {
+    return (d <= 30);
+  }
+  return true;
+}
+
+void value_init_date(Value *value, const char* v)
+{
+  value->type = DATES;
+  int y, m, d;
+  std::sscanf(v, "'%d-%d-%d'", &y, &m, &d);
+
+  int dv = y * 10000 + m * 100 + d;
+  value->data = std::malloc(sizeof(int));
+  bool b = check_date(y, m, d);
+  if (!b) {
+    dv = -1;
+  }
+  std::memcpy(value->data, &dv, sizeof(int));
 }
 void value_init_float(Value *value, float v)
 {
@@ -109,6 +166,14 @@ void attr_info_destroy(AttrInfo *attr_info)
 }
 
 void selects_init(Selects *selects, ...);
+void selects_reverse_relations(Selects *selects)
+{
+  for (int i = 0; i < selects->relation_num / 2; i++) {
+    char *tp = selects->relations[i];
+    selects->relations[i] = selects->relations[selects->relation_num-1-i];
+    selects->relations[selects->relation_num-1-i] = tp;
+  }
+}
 void selects_append_attribute(Selects *selects, RelAttr *rel_attr)
 {
   selects->attributes[selects->attr_num++] = *rel_attr;

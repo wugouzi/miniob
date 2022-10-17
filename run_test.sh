@@ -12,7 +12,7 @@ function run_single_test {
     fi
 
     cat $input_file | ./cmake-build-debug/bin/obclient > $output_file
-    sed -i 's/^miniob\ >\ //' $output_file
+    #sed -i 's/^miniob\ >\ //' $output_file
     
     a=$(diff $output_file $ans)
     if [ $(echo $a | wc -w) -gt 0 ]
