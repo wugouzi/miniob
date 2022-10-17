@@ -16,4 +16,7 @@ compile_commands.json
 GRTAGS
 GPATH
 GTAGS
+cmake-build-debug/
+.cache/
+cmake-build-miniob/
 #*#
