@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include <string.h>
 #include <string>
 
+#include "sql/parser/parse_defs.h"
 #include "storage/default/default_storage_stage.h"
 
 #include "common/conf/ini.h"
@@ -168,6 +169,9 @@ void DefaultStorageStage::handle_event(StageEvent *event)
       std::string result = load_data(dbname, table_name, file_name);
       snprintf(response, sizeof(response), "%s", result.c_str());
     } break;
+    case SCF_DROP_TABLE: {
+      // drop table
+    }
     default:
       snprintf(response, sizeof(response), "Unsupported sql: %d\n", sql->flag);
       break;
@@ -225,7 +229,7 @@ RC insert_record_from_file(
     }
 
     switch (field->type()) {
-      case INTS: {
+      case INTS: case DATES: {
         deserialize_stream.clear();  // 清理stream的状态，防止多次解析出现异常
         deserialize_stream.str(file_value);
 
@@ -239,7 +243,6 @@ RC insert_record_from_file(
           value_init_integer(&record_values[i], int_value);
         }
       }
-
       break;
       case FLOATS: {
         deserialize_stream.clear();

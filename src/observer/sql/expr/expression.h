@@ -43,6 +43,10 @@ public:
   FieldExpr(const Table *table, const FieldMeta *field) : field_(table, field)
   {}
 
+  FieldExpr(FieldExpr& expr) {
+    field_ = expr.field_;
+  }
+
   virtual ~FieldExpr() = default;
 
   ExprType type() const override

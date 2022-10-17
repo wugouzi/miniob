@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "storage/common/db.h"
 
+#include <cstddef>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <vector>
@@ -21,6 +22,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include "common/os/path.h"
 #include "common/lang/string.h"
+#include "sql/parser/parse_defs.h"
 #include "storage/common/table_meta.h"
 #include "storage/common/table.h"
 #include "storage/common/meta_util.h"
@@ -72,7 +74,8 @@ RC Db::create_table(const char *table_name, int attribute_count, const AttrInfo 
   // 文件路径可以移到Table模块
   std::string table_file_path = table_meta_file(path_.c_str(), table_name);
   Table *table = new Table();
-  rc = table->create(table_file_path.c_str(), table_name, path_.c_str(), attribute_count, attributes, get_clog_manager());
+  rc = table->create(
+      table_file_path.c_str(), table_name, path_.c_str(), attribute_count, attributes, get_clog_manager());
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Failed to create table %s.", table_name);
     delete table;
@@ -82,6 +85,47 @@ RC Db::create_table(const char *table_name, int attribute_count, const AttrInfo 
   opened_tables_[table_name] = table;
   LOG_INFO("Create table success. table name=%s", table_name);
   return RC::SUCCESS;
+}
+
+RC Db::drop_table(const char *table_name)
+{
+  RC rc = RC::SUCCESS;
+  // check table name
+  if (opened_tables_.count(table_name) == 0) {
+    LOG_WARN("there is no table %s", table_name);
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+  Table *table = opened_tables_[table_name];
+  rc = table->drop();
+  if (rc != RC::SUCCESS) {
+    LOG_ERROR("Failed to drop table %s", table_name);
+    return rc;
+  }
+
+  opened_tables_.erase(table_name);
+  delete table;
+  LOG_INFO("Drop table success. table name=%s", table_name);
+  return rc;
+}
+
+RC Db::update_table(const char *relation_name, const char *attribute_name, const Value *value,
+    const size_t condition_num, const Condition *conditions)
+{
+  RC rc = RC::SUCCESS;
+  if (opened_tables_.count(relation_name) == 0) {
+    LOG_WARN("there is no table %s", relation_name);
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+
+  Table *table = opened_tables_[relation_name];
+  int updated_cnt;
+  rc = table->update_record(nullptr, attribute_name, value, condition_num, conditions, &updated_cnt);
+  if (rc != RC::SUCCESS) {
+    LOG_ERROR("Failed to update table %s", relation_name);
+    return rc;
+  }
+  LOG_INFO("Update table success. table name=%s", relation_name);
+  return rc;
 }
 
 Table *Db::find_table(const char *table_name) const
@@ -164,16 +208,17 @@ RC Db::recover()
     CLogMTRManager *mtr_manager = clog_manager_->get_mtr_manager();
     for (auto it = mtr_manager->log_redo_list.begin(); it != mtr_manager->log_redo_list.end(); it++) {
       CLogRecord *clog_record = *it;
-      if (clog_record->get_log_type() != CLogType::REDO_INSERT && clog_record->get_log_type() != CLogType::REDO_DELETE) {
+      if (clog_record->get_log_type() != CLogType::REDO_INSERT &&
+          clog_record->get_log_type() != CLogType::REDO_DELETE) {
         delete clog_record;
         continue;
       }
       auto find_iter = mtr_manager->trx_commited.find(clog_record->get_trx_id());
       if (find_iter == mtr_manager->trx_commited.end()) {
-        LOG_ERROR("CLog record without commit message! "); // unexpected error
+        LOG_ERROR("CLog record without commit message! ");  // unexpected error
         delete clog_record;
         return RC::GENERIC_ERROR;
-      } else if (find_iter->second == false ) {
+      } else if (find_iter->second == false) {
         delete clog_record;
         continue;
       }
@@ -184,7 +229,7 @@ RC Db::recover()
         continue;
       }
 
-      switch(clog_record->get_log_type()) {
+      switch (clog_record->get_log_type()) {
         case CLogType::REDO_INSERT: {
           char *record_data = new char[clog_record->log_record_.ins.data_len_];
           memcpy(record_data, clog_record->log_record_.ins.data_, clog_record->log_record_.ins.data_len_);
@@ -209,7 +254,7 @@ RC Db::recover()
         LOG_ERROR("Failed to recover. rc=%d:%s", rc, strrc(rc));
         break;
       }
-      
+
       if (max_trx_id < clog_record->get_trx_id()) {
         max_trx_id = clog_record->get_trx_id();
       }
@@ -224,6 +269,7 @@ RC Db::recover()
   return rc;
 }
 
-CLogManager *Db::get_clog_manager() {
+CLogManager *Db::get_clog_manager()
+{
   return clog_manager_;
 }

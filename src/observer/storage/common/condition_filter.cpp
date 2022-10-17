@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include <stddef.h>
 #include <math.h>
 #include "condition_filter.h"
+#include "sql/parser/parse_defs.h"
 #include "storage/record/record_manager.h"
 #include "common/log/log.h"
 #include "storage/common/table.h"
@@ -41,7 +42,7 @@ DefaultConditionFilter::~DefaultConditionFilter()
 
 RC DefaultConditionFilter::init(const ConDesc &left, const ConDesc &right, AttrType attr_type, CompOp comp_op)
 {
-  if (attr_type < CHARS || attr_type > FLOATS) {
+  if (attr_type < CHARS || attr_type > DATES) {
     LOG_ERROR("Invalid condition with unsupported attribute type: %d", attr_type);
     return RC::INVALID_ARGUMENT;
   }
@@ -160,6 +161,11 @@ bool DefaultConditionFilter::filter(const Record &rec) const
       float result = left - right;
       cmp_result = result >= 0 ? ceil(result) : floor(result);
     } break;
+    case DATES: {
+      int left = *(int *)left_value;
+      int right = *(int *)right_value;
+      cmp_result = left - right;
+    }
     default: {
     }
   }

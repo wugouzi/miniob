@@ -12,8 +12,13 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi & Longda on 2021/4/13.
 //
 
+#include <algorithm>
+#include <cstring>
+#include <iterator>
 #include <string>
 #include <sstream>
+#include <unordered_map>
+#include <vector>
 
 #include "execute_stage.h"
 
@@ -22,24 +27,24 @@ See the Mulan PSL v2 for more details. */
 #include "common/lang/defer.h"
 #include "common/seda/timer_stage.h"
 #include "common/lang/string.h"
+#include "rc.h"
 #include "session/session.h"
 #include "event/storage_event.h"
 #include "event/sql_event.h"
 #include "event/session_event.h"
+#include "sql/expr/expression.h"
 #include "sql/expr/tuple.h"
-#include "sql/operator/table_scan_operator.h"
-#include "sql/operator/index_scan_operator.h"
+#include "sql/expr/tuple_cell.h"
 #include "sql/operator/predicate_operator.h"
-#include "sql/operator/delete_operator.h"
+#include "sql/operator/pretable_scan_operator.h"
 #include "sql/operator/project_operator.h"
-#include "sql/stmt/stmt.h"
-#include "sql/stmt/select_stmt.h"
-#include "sql/stmt/update_stmt.h"
-#include "sql/stmt/delete_stmt.h"
-#include "sql/stmt/insert_stmt.h"
+#include "sql/operator/table_scan_operator.h"
+#include "sql/parser/parse_defs.h"
 #include "sql/stmt/filter_stmt.h"
+#include "storage/common/field_meta.h"
 #include "storage/common/table.h"
 #include "storage/common/field.h"
+#include "storage/common/table_meta.h"
 #include "storage/index/index.h"
 #include "storage/default/default_handler.h"
 #include "storage/common/condition_filter.h"
@@ -48,8 +53,8 @@ See the Mulan PSL v2 for more details. */
 
 using namespace common;
 
-//RC create_selection_executor(
-//   Trx *trx, const Selects &selects, const char *db, const char *table_name, SelectExeNode &select_node);
+// RC create_selection_executor(
+//    Trx *trx, const Selects &selects, const char *db, const char *table_name, SelectExeNode &select_node);
 
 //! Constructor
 ExecuteStage::ExecuteStage(const char *tag) : Stage(tag)
@@ -136,83 +141,87 @@ void ExecuteStage::handle_request(common::StageEvent *event)
 
   if (stmt != nullptr) {
     switch (stmt->type()) {
-    case StmtType::SELECT: {
-      do_select(sql_event);
-    } break;
-    case StmtType::INSERT: {
-      do_insert(sql_event);
-    } break;
-    case StmtType::UPDATE: {
-      //do_update((UpdateStmt *)stmt, session_event);
-    } break;
-    case StmtType::DELETE: {
-      do_delete(sql_event);
-    } break;
-    default: {
-      LOG_WARN("should not happen. please implenment");
-    } break;
+      case StmtType::SELECT: {
+        do_select2(sql_event);
+      } break;
+      case StmtType::INSERT: {
+        do_insert(sql_event);
+      } break;
+      case StmtType::UPDATE: {
+        // do_update(sql_event);
+      } break;
+      case StmtType::DELETE: {
+        do_delete(sql_event);
+      } break;
+      default: {
+        LOG_WARN("should not happen. please implenment");
+      } break;
     }
   } else {
     switch (sql->flag) {
-    case SCF_HELP: {
-      do_help(sql_event);
-    } break;
-    case SCF_CREATE_TABLE: {
-      do_create_table(sql_event);
-    } break;
-    case SCF_CREATE_INDEX: {
-      do_create_index(sql_event);
-    } break;
-    case SCF_SHOW_TABLES: {
-      do_show_tables(sql_event);
-    } break;
-    case SCF_DESC_TABLE: {
-      do_desc_table(sql_event);
-    } break;
-
-    case SCF_DROP_TABLE:
-    case SCF_DROP_INDEX:
-    case SCF_LOAD_DATA: {
-      default_storage_stage_->handle_event(event);
-    } break;
-    case SCF_SYNC: {
-      /*
-      RC rc = DefaultHandler::get_default().sync();
-      session_event->set_response(strrc(rc));
-      */
-    } break;
-    case SCF_BEGIN: {
-      do_begin(sql_event);
-      /*
-      session_event->set_response("SUCCESS\n");
-      */
-    } break;
-    case SCF_COMMIT: {
-      do_commit(sql_event);
-      /*
-      Trx *trx = session->current_trx();
-      RC rc = trx->commit();
-      session->set_trx_multi_operation_mode(false);
-      session_event->set_response(strrc(rc));
-      */
-    } break;
-    case SCF_CLOG_SYNC: {
-      do_clog_sync(sql_event);
-    }
-    case SCF_ROLLBACK: {
-      Trx *trx = session_event->get_client()->session->current_trx();
-      RC rc = trx->rollback();
-      session->set_trx_multi_operation_mode(false);
-      session_event->set_response(strrc(rc));
-    } break;
-    case SCF_EXIT: {
-      // do nothing
-      const char *response = "Unsupported\n";
-      session_event->set_response(response);
-    } break;
-    default: {
-      LOG_ERROR("Unsupported command=%d\n", sql->flag);
-    }
+      case SCF_HELP: {
+        do_help(sql_event);
+      } break;
+      case SCF_CREATE_TABLE: {
+        do_create_table(sql_event);
+      } break;
+      case SCF_CREATE_INDEX: {
+        do_create_index(sql_event);
+      } break;
+      case SCF_SHOW_TABLES: {
+        do_show_tables(sql_event);
+      } break;
+      case SCF_DESC_TABLE: {
+        do_desc_table(sql_event);
+      } break;
+      case SCF_UPDATE: {
+        do_update_table(sql_event);
+      } break;
+      case SCF_DROP_TABLE: {
+        do_drop_table(sql_event);
+      } break;
+      case SCF_DROP_INDEX:
+      case SCF_LOAD_DATA: {
+        default_storage_stage_->handle_event(event);
+      } break;
+      case SCF_SYNC: {
+        /*
+        RC rc = DefaultHandler::get_default().sync();
+        session_event->set_response(strrc(rc));
+        */
+      } break;
+      case SCF_BEGIN: {
+        do_begin(sql_event);
+        /*
+        session_event->set_response("SUCCESS\n");
+        */
+      } break;
+      case SCF_COMMIT: {
+        do_commit(sql_event);
+        /*
+        Trx *trx = session->current_trx();
+        RC rc = trx->commit();
+        session->set_trx_multi_operation_mode(false);
+        session_event->set_response(strrc(rc));
+        */
+      } break;
+      case SCF_CLOG_SYNC: {
+        do_clog_sync(sql_event);
+      }
+      case SCF_ROLLBACK: {
+        Trx *trx = session_event->get_client()->session->current_trx();
+        RC rc = trx->rollback();
+        session->set_trx_multi_operation_mode(false);
+        session_event->set_response(strrc(rc));
+      } break;
+      case SCF_EXIT: {
+        // do nothing
+        const char *response = "Unsupported\n";
+        session_event->set_response(response);
+      } break;
+      default: {
+        LOG_ERROR("Unsupported command=%d\n", sql->flag);
+      }
     }
   }
 }
@@ -271,7 +280,7 @@ void tuple_to_string(std::ostream &os, const Tuple &tuple)
 IndexScanOperator *try_to_create_index_scan_operator(FilterStmt *filter_stmt)
 {
   const std::vector<FilterUnit *> &filter_units = filter_stmt->filter_units();
-  if (filter_units.empty() ) {
+  if (filter_units.empty()) {
     return nullptr;
   }
 
@@ -280,7 +289,7 @@ IndexScanOperator *try_to_create_index_scan_operator(FilterStmt *filter_stmt)
   // 这里的查找规则是比较简单的，就是尽量找到使用相等比较的索引
   // 如果没有就找范围比较的，但是直接排除不等比较的索引查询. (你知道为什么?)
   const FilterUnit *better_filter = nullptr;
-  for (const FilterUnit * filter_unit : filter_units) {
+  for (const FilterUnit *filter_unit : filter_units) {
     if (filter_unit->comp() == NOT_EQUAL) {
       continue;
     }
@@ -300,7 +309,7 @@ IndexScanOperator *try_to_create_index_scan_operator(FilterStmt *filter_stmt)
         better_filter = filter_unit;
       } else if (filter_unit->comp() == EQUAL_TO) {
         better_filter = filter_unit;
-    	break;
+        break;
       }
     }
   }
@@ -315,18 +324,29 @@ IndexScanOperator *try_to_create_index_scan_operator(FilterStmt *filter_stmt)
   if (left->type() == ExprType::VALUE && right->type() == ExprType::FIELD) {
     std::swap(left, right);
     switch (comp) {
-    case EQUAL_TO:    { comp = EQUAL_TO; }    break;
-    case LESS_EQUAL:  { comp = GREAT_THAN; }  break;
-    case NOT_EQUAL:   { comp = NOT_EQUAL; }   break;
-    case LESS_THAN:   { comp = GREAT_EQUAL; } break;
-    case GREAT_EQUAL: { comp = LESS_THAN; }   break;
-    case GREAT_THAN:  { comp = LESS_EQUAL; }  break;
-    default: {
-    	LOG_WARN("should not happen");
-    }
+      case EQUAL_TO: {
+        comp = EQUAL_TO;
+      } break;
+      case LESS_EQUAL: {
+        comp = GREAT_THAN;
+      } break;
+      case NOT_EQUAL: {
+        comp = NOT_EQUAL;
+      } break;
+      case LESS_THAN: {
+        comp = GREAT_EQUAL;
+      } break;
+      case GREAT_EQUAL: {
+        comp = LESS_THAN;
+      } break;
+      case GREAT_THAN: {
+        comp = LESS_EQUAL;
+      } break;
+      default: {
+        LOG_WARN("should not happen");
+      }
     }
   }
-
 
   FieldExpr &left_field_expr = *(FieldExpr *)left;
   const Field &field = left_field_expr.field();
@@ -344,51 +364,176 @@ IndexScanOperator *try_to_create_index_scan_operator(FilterStmt *filter_stmt)
   bool right_inclusive = false;
 
   switch (comp) {
-  case EQUAL_TO: {
-    left_cell = &value;
-    right_cell = &value;
-    left_inclusive = true;
-    right_inclusive = true;
-  } break;
+    case EQUAL_TO: {
+      left_cell = &value;
+      right_cell = &value;
+      left_inclusive = true;
+      right_inclusive = true;
+    } break;
 
-  case LESS_EQUAL: {
-    left_cell = nullptr;
-    left_inclusive = false;
-    right_cell = &value;
-    right_inclusive = true;
-  } break;
+    case LESS_EQUAL: {
+      left_cell = nullptr;
+      left_inclusive = false;
+      right_cell = &value;
+      right_inclusive = true;
+    } break;
 
-  case LESS_THAN: {
-    left_cell = nullptr;
-    left_inclusive = false;
-    right_cell = &value;
-    right_inclusive = false;
-  } break;
+    case LESS_THAN: {
+      left_cell = nullptr;
+      left_inclusive = false;
+      right_cell = &value;
+      right_inclusive = false;
+    } break;
 
-  case GREAT_EQUAL: {
-    left_cell = &value;
-    left_inclusive = true;
-    right_cell = nullptr;
-    right_inclusive = false;
-  } break;
+    case GREAT_EQUAL: {
+      left_cell = &value;
+      left_inclusive = true;
+      right_cell = nullptr;
+      right_inclusive = false;
+    } break;
 
-  case GREAT_THAN: {
-    left_cell = &value;
-    left_inclusive = false;
-    right_cell = nullptr;
-    right_inclusive = false;
-  } break;
+    case GREAT_THAN: {
+      left_cell = &value;
+      left_inclusive = false;
+      right_cell = nullptr;
+      right_inclusive = false;
+    } break;
 
-  default: {
-    LOG_WARN("should not happen. comp=%d", comp);
-  } break;
+    default: {
+      LOG_WARN("should not happen. comp=%d", comp);
+    } break;
   }
 
-  IndexScanOperator *oper = new IndexScanOperator(table, index,
-       left_cell, left_inclusive, right_cell, right_inclusive);
+  IndexScanOperator *oper = new IndexScanOperator(table, index, left_cell, left_inclusive, right_cell, right_inclusive);
 
   LOG_INFO("use index for scan: %s in table %s", index->index_meta().name(), table->name());
   return oper;
+}
+
+RC check_attr(SelectStmt *expr)
+{
+  Table *table = expr->tables()[0];
+  const TableMeta &meta = table->table_meta();
+  for (const auto &field : expr->query_fields()) {
+    if (meta.field(field.field_name()) == nullptr) {
+      LOG_ERROR("wrong field %s", field.field_name());
+      return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+  }
+  return RC::SUCCESS;
+}
+
+RC check_cond(SelectStmt *select_stmt)
+{
+  Table *table = select_stmt->tables()[0];
+  const TableMeta &meta = table->table_meta();
+
+  auto check = [&](Expression *expr) {
+    if (expr->type() != ExprType::FIELD) {
+      return true;
+    }
+    FieldExpr &field_expr = *(FieldExpr *)expr;
+    const Field &field = field_expr.field();
+    if (meta.field(field.field_name()) == nullptr) {
+      return false;
+    }
+    return true;
+  };
+
+  for (const auto &filter_units : select_stmt->filter_stmt()->filter_units()) {
+    Expression *left = filter_units->left();
+    Expression *right = filter_units->right();
+
+    if (!check(left)) {
+      LOG_ERROR("left expr has wrong field");
+      return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+    if (!check(right)) {
+      LOG_ERROR("right expr has wrong field");
+      return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+  }
+  return RC::SUCCESS;
+}
+
+// RC do_select_subset(Table *table, SelectStmt *select_stmt, std::vector<Tuple> &tuples)
+// {
+
+// }
+//
+void reorder_fields(std::vector<Field> &fields)
+{
+  if (fields[0].aggr_type() != A_NO) {
+    std::vector<Field> tp;
+    for (int i = fields.size() - 1; i >= 0; i--) {
+      tp.push_back(fields[i]);
+    }
+    fields.swap(tp);
+    return;
+  }
+}
+
+RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
+{
+  SelectStmt *select_stmt = (SelectStmt *)(sql_event->stmt());
+  SessionEvent *session_event = sql_event->session_event();
+  FilterStmt *filter_stmt = select_stmt->filter_stmt();
+
+  std::vector<Pretable *> pretables;
+
+  RC rc = RC::SUCCESS;
+
+  for (int i = 0; i < select_stmt->tables().size(); i++) {
+    Pretable *pre = new Pretable;
+    rc = pre->init(select_stmt->tables()[i], filter_stmt);
+    if (rc != RC::RECORD_EOF) {
+      delete pre;
+      for (auto &t : pretables)
+        delete t;
+      return rc;
+    }
+    pretables.push_back(pre);
+  }
+
+  // no relevant field or something
+  if (pretables.empty()) {
+    LOG_ERROR("No table or No relevant condition");
+    return RC::INTERNAL;
+  }
+
+  Pretable *res = pretables[0];
+  auto iter = std::next(pretables.begin());
+  while (iter != pretables.end()) {
+    rc = res->join(*iter, filter_stmt);
+    delete *iter;
+    iter = pretables.erase(iter);
+    if (rc != RC::SUCCESS) {
+      while (iter != pretables.end()) {
+        delete *iter;
+        iter = pretables.erase(iter);
+      }
+      LOG_ERROR("join fails");
+      return rc;
+    }
+  }
+
+  std::stringstream ss;
+  rc = RC::SUCCESS;
+  reorder_fields(select_stmt->query_fields());
+  print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1);
+  if (select_stmt->aggregate_num() > 0) {
+    rc = res->aggregate(select_stmt->query_fields());
+  } else {
+    res->filter_fields(select_stmt->query_fields());
+  }
+  if (rc != RC::SUCCESS) {
+    LOG_ERROR("aggregate error");
+    return rc;
+  }
+  res->print(ss);
+
+  session_event->set_response(ss.str());
+  return rc;
 }
 
 RC ExecuteStage::do_select(SQLStageEvent *sql_event)
@@ -402,12 +547,21 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
     return rc;
   }
 
+  // // check fields
+  // if ((rc = check_attr(select_stmt)) != RC::SUCCESS) {
+  //   return rc;
+  // }
+
+  // if ((rc = check_cond(select_stmt)) != RC::SUCCESS) {
+  //   return rc;
+  // }
+
   Operator *scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt());
   if (nullptr == scan_oper) {
     scan_oper = new TableScanOperator(select_stmt->tables()[0]);
   }
 
-  DEFER([&] () {delete scan_oper;});
+  DEFER([&]() { delete scan_oper; });
 
   PredicateOperator pred_oper(select_stmt->filter_stmt());
   pred_oper.add_child(scan_oper);
@@ -427,7 +581,7 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
   while ((rc = project_oper.next()) == RC::SUCCESS) {
     // get current record
     // write to response
-    Tuple * tuple = project_oper.current_tuple();
+    Tuple *tuple = project_oper.current_tuple();
     if (nullptr == tuple) {
       rc = RC::INTERNAL;
       LOG_WARN("failed to get current record. rc=%s", strrc(rc));
@@ -468,8 +622,7 @@ RC ExecuteStage::do_create_table(SQLStageEvent *sql_event)
   const CreateTable &create_table = sql_event->query()->sstr.create_table;
   SessionEvent *session_event = sql_event->session_event();
   Db *db = session_event->session()->get_current_db();
-  RC rc = db->create_table(create_table.relation_name,
-			create_table.attribute_count, create_table.attributes);
+  RC rc = db->create_table(create_table.relation_name, create_table.attribute_count, create_table.attributes);
   if (rc == RC::SUCCESS) {
     session_event->set_response("SUCCESS\n");
   } else {
@@ -477,6 +630,21 @@ RC ExecuteStage::do_create_table(SQLStageEvent *sql_event)
   }
   return rc;
 }
+
+RC ExecuteStage::do_drop_table(SQLStageEvent *sql_event)
+{
+  const DropTable &drop_table = sql_event->query()->sstr.drop_table;
+  SessionEvent *session_event = sql_event->session_event();
+  Db *db = session_event->session()->get_current_db();
+  RC rc = db->drop_table(drop_table.relation_name);
+  if (rc == RC::SUCCESS) {
+    session_event->set_response("SUCCESS\n");
+  } else {
+    session_event->set_response("FAILURE\n");
+  }
+  return rc;
+}
+
 RC ExecuteStage::do_create_index(SQLStageEvent *sql_event)
 {
   SessionEvent *session_event = sql_event->session_event();
@@ -527,6 +695,97 @@ RC ExecuteStage::do_desc_table(SQLStageEvent *sql_event)
   return RC::SUCCESS;
 }
 
+/*
+create table t(id int, age int);
+insert into t values(1,1);
+insert into t values(2,3);
+select * from t;
+update t set age =100 where id=1;
+select * from t;
+update t set age=20 where id>1;
+select * from t;
+drop table t;
+ */
+bool check_attr_in_table(Table *table, const RelAttr &attr)
+{
+  if (attr.relation_name != nullptr && strcmp(table->name(), attr.relation_name) != 0) {
+    return false;
+  }
+  return table->table_meta().field(attr.attribute_name) != nullptr;
+}
+RC check_updates(Db *db, const Updates &updates)
+{
+  const char *table_name = updates.relation_name;
+  int condition_num = updates.condition_num;
+  const Condition *conditions = updates.conditions;
+  const char *attr_name = updates.attribute_name;
+  const Value *value = &updates.value;
+  Table *table = db->find_table(table_name);
+  if (table == nullptr) {
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+  if (value->type == DATES && *(int *)value->data == -1) {
+    return RC::RECORD_INVALID_KEY;
+  }
+
+  const TableMeta &meta = table->table_meta();
+  const FieldMeta *fmeta = meta.field(attr_name);
+  if (fmeta == nullptr) {
+    return RC::SCHEMA_FIELD_MISSING;
+  }
+  if (fmeta->type() != value->type) {
+    return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+  }
+  for (int i = 0; i < condition_num; i++) {
+    const Condition &c = conditions[i];
+    if (!c.left_is_attr && !c.right_is_attr) {
+      return RC::INVALID_ARGUMENT;
+    }
+    if (c.left_is_attr) {
+      if (!check_attr_in_table(table, c.left_attr)) {
+        return RC::SCHEMA_FIELD_NAME_ILLEGAL;
+      }
+      if (c.right_value.type == DATES && *(int *)c.right_value.data == -1) {
+        return RC::INVALID_ARGUMENT;
+      }
+      printf("%d\n", c.right_value.type);
+      if (c.right_value.type != meta.field(c.left_attr.attribute_name)->type()) {
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+    } else {
+      if (!check_attr_in_table(table, c.right_attr)) {
+        return RC::SCHEMA_FIELD_NAME_ILLEGAL;
+      }
+      if (c.left_value.type == DATES && *(int *)c.left_value.data == -1) {
+        return RC::INVALID_ARGUMENT;
+      }
+      if (c.left_value.type != meta.field(c.right_attr.attribute_name)->type()) {
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+    }
+  }
+  return RC::SUCCESS;
+}
+
+RC ExecuteStage::do_update_table(SQLStageEvent *sql_event)
+{
+  const Updates &updates = sql_event->query()->sstr.update;
+  SessionEvent *session_event = sql_event->session_event();
+  Db *db = session_event->session()->get_current_db();
+  RC rc = check_updates(db, updates);
+  if (rc == RC::SUCCESS) {
+    rc = db->update_table(
+        updates.relation_name, updates.attribute_name, &updates.value, updates.condition_num, updates.conditions);
+  }
+
+  if (rc == RC::SUCCESS) {
+    session_event->set_response("SUCCESS\n");
+  } else {
+    session_event->set_response("FAILURE\n");
+  }
+  return rc;
+}
+
 RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
 {
   Stmt *stmt = sql_event->stmt();
@@ -558,7 +817,7 @@ RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
       if (rc != RC::SUCCESS) {
         session_event->set_response("FAILURE\n");
         return rc;
-      } 
+      }
 
       trx->next_current_id();
       session_event->set_response("SUCCESS\n");
@@ -609,7 +868,7 @@ RC ExecuteStage::do_delete(SQLStageEvent *sql_event)
       if (rc != RC::SUCCESS) {
         session_event->set_response("FAILURE\n");
         return rc;
-      } 
+      }
 
       trx->next_current_id();
       session_event->set_response("SUCCESS\n");
@@ -691,4 +950,470 @@ RC ExecuteStage::do_clog_sync(SQLStageEvent *sql_event)
   }
 
   return rc;
+}
+
+TupleSet::TupleSet(const Tuple *t, Table *table)
+{
+  table_num_ = 1;
+  for (const FieldMeta &meta : *table->table_meta().field_metas()) {
+    metas_.emplace_back(table, meta);
+  }
+  for (int i = 0; i < t->cell_num(); i++) {
+    TupleCell cell;
+    t->cell_at(i, cell);
+    cells_.push_back(cell);
+  }
+}
+
+TupleSet::TupleSet(const TupleSet *t)
+{
+  cells_ = t->cells_;
+  metas_ = t->metas_;
+  table_num_ = t->table_num_;
+}
+
+TupleSet *TupleSet::copy() const
+{
+  return new TupleSet(this);
+}
+
+void TupleSet::combine(const TupleSet *t2)
+{
+  table_num_ += t2->table_num_;
+  for (auto meta : metas_)
+    metas_.push_back(meta);
+  for (auto cell : t2->cells_)
+    cells_.push_back(cell);
+}
+
+TupleSet *TupleSet::generate_combine(const TupleSet *t2) const
+{
+  TupleSet *res = this->copy();
+  res->table_num_ += t2->table_num_;
+  for (auto meta : t2->metas_) {
+    res->metas_.push_back(meta);
+  }
+  for (auto cell : t2->cells_) {
+    res->cells_.push_back(cell);
+  }
+  return res;
+}
+
+void TupleSet::filter_fields(const std::vector<Field> &fields)
+{
+  std::unordered_map<std::string, std::unordered_map<std::string, int>> mp;
+  std::vector<std::pair<Table *, FieldMeta>> metas(fields.size());
+  std::vector<TupleCell> cells(fields.size());
+  for (int i = 0; i < fields.size(); i++) {
+    mp[fields[i].table_name()][fields[i].field_name()] = i + 1;
+  }
+
+  table_num_ = mp.size();
+
+  for (int i = 0; i < metas_.size(); i++) {
+    auto &p = metas_[i];
+    int j = mp[p.first->name()][p.second.name()];
+    if (j > 0) {
+      cells[j - 1] = cells_[i];
+      metas[j - 1] = metas_[i];
+    }
+  }
+
+  cells_.swap(cells);
+  metas_.swap(metas);
+}
+
+void TupleSet::push(const std::pair<Table *, FieldMeta> &p, const TupleCell &cell)
+{
+  metas_.push_back(p);
+  cells_.push_back(cell);
+}
+
+int TupleSet::index(const Field &field) const
+{
+  if (!field.has_table()) {
+    return -1;
+  }
+  for (int i = 0; i < metas_.size(); i++) {
+    if (strcmp(metas_[i].first->name(), field.table_name()) == 0 &&
+        strcmp(metas_[i].second.name(), field.field_name()) == 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+const TupleCell &TupleSet::get_cell(int idx)
+{
+  return cells_[idx];
+}
+const std::pair<Table *, FieldMeta> &TupleSet::get_meta(int idx)
+{
+  return metas_[idx];
+}
+
+const FieldMeta &TupleSet::meta(int idx) const
+{
+  return metas_[idx].second;
+}
+
+const std::vector<TupleCell> &TupleSet::cells() const
+{
+  return cells_;
+}
+
+void TupleSet::reverse()
+{
+  std::reverse(metas_.begin(), metas_.end());
+  std::reverse(cells_.begin(), cells_.end());
+}
+
+// filter table with table-specific conditions
+FilterStmt *get_sub_filter(Table *table, FilterStmt *old_filter)
+{
+  FilterStmt *filter = new FilterStmt();
+  for (FilterUnit *unit : old_filter->filter_units()) {
+    Expression *left = unit->left();
+    Expression *right = unit->right();
+    if (left->type() == ExprType::FIELD && right->type() == ExprType::FIELD) {
+      continue;
+    }
+    if (left->type() == ExprType::VALUE && right->type() == ExprType::FIELD) {
+      std::swap(left, right);
+    }
+    FieldExpr &left_field_expr = *(FieldExpr *)left;
+    if (strcmp(table->name(), left_field_expr.table_name()) != 0 ||
+        table->table_meta().field(left_field_expr.field_name()) == nullptr) {
+      continue;
+    }
+    filter->push(unit);
+  }
+  return filter;
+}
+
+Pretable::Pretable(Pretable &&t) : tuples_(std::move(t.tuples_)), tables_(std::move(t.tables_))
+{}
+Pretable &Pretable::operator=(Pretable &&t)
+{
+  tuples_ = std::move(t.tuples_);
+  tables_ = std::move(t.tables_);
+  return *this;
+}
+
+// TODO: delete filters
+RC Pretable::init(Table *table, FilterStmt *old_filter)
+{
+  // TODO: check how to use index scan
+  FilterStmt *filter = get_sub_filter(table, old_filter);
+  tables_.push_back(table);
+
+  Operator *scan_oper = new TableScanOperator(table);
+  DEFER([&]() { delete scan_oper; });
+
+  // first get a subset of filter
+  PredicateOperator pred_oper(filter);
+  pred_oper.add_child(scan_oper);
+
+  RC rc = RC::SUCCESS;
+  rc = pred_oper.open();
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to open operator");
+    return rc;
+  }
+  while ((rc = pred_oper.next()) == RC::SUCCESS) {
+    // get current record
+    // write to response
+    Tuple *tuple = pred_oper.current_tuple();
+    if (nullptr == tuple) {
+      rc = RC::INTERNAL;
+      LOG_WARN("failed to get current record. rc=%s", strrc(rc));
+      break;
+    }
+    tuples_.push_back(new TupleSet(tuple, table));
+  }
+  // delete filter;
+
+  return rc;
+}
+
+const FieldMeta *Pretable::field(const Field &field) const
+{
+  for (auto table : tables_) {
+    if (std::strcmp(table->name(), field.table_name()) == 0) {
+      const FieldMeta *tp = table->table_meta().field(field.field_name());
+      if (tp != nullptr) {
+        return tp;
+      }
+    }
+  }
+  return nullptr;
+}
+
+RC Pretable::aggregate_max(int idx, TupleCell *res)
+{
+  *res = tuples_[0].get_cell(idx);
+  for (TupleSet &tuple : tuples_) {
+    const TupleCell &cell = tuple.get_cell(idx);
+    int comp = cell.compare(*res);
+    if (comp > 0) {
+      *res = cell;
+    }
+  }
+  return RC::SUCCESS;
+}
+
+RC Pretable::aggregate_min(int idx, TupleCell *res)
+{
+  *res = tuples_[0].get_cell(idx);
+  for (TupleSet &tuple : tuples_) {
+    const TupleCell &cell = tuple.get_cell(idx);
+    int comp = res->compare(cell);
+    if (comp > 0) {
+      *res = cell;
+    }
+  }
+  return RC::SUCCESS;
+}
+
+RC Pretable::aggregate_avg(int idx, TupleCell *res)
+{
+  float *ans = new float();
+  *ans = 0;
+  for (TupleSet &tuple : tuples_) {
+    const TupleCell &cell = tuple.get_cell(idx);
+    switch (cell.attr_type()) {
+      case INTS: {
+        *ans += *(int *)cell.data();
+      } break;
+      case FLOATS: {
+        *ans += *(float *)cell.data();
+      } break;
+      case DATES:
+      case CHARS:
+      default: {
+        return RC::INTERNAL;
+      }
+    }
+  }
+  res->set_type(FLOATS);
+  res->set_length(sizeof(float));
+  *ans = *ans / tuples_.size();
+  // TODO: dangerous
+  res->set_data((char *)ans);
+  return RC::SUCCESS;
+}
+
+// TODO: invisible
+RC Pretable::aggregate_count(int idx, TupleCell *res)
+{
+  int *ans = new int();
+  *ans = tuples_.size();
+
+  res->set_type(INTS);
+  res->set_length(sizeof(int));
+  res->set_data((char *)ans);
+  return RC::SUCCESS;
+}
+
+RC Pretable::aggregate(const std::vector<Field> fields)
+{
+  if (tuples_.size() == 0) {
+    return RC::SUCCESS;
+  }
+  TupleSet res;
+  RC rc = RC::SUCCESS;
+  for (const auto &field : fields) {
+    int idx = tuples_[0].index(field);
+    TupleCell cell;
+    switch (field.aggr_type()) {
+      case A_NO:
+        res.push(tuples_[0].get_meta(idx), tuples_[0].get_cell(idx));
+        continue;
+        break;
+      case A_MAX:
+        rc = aggregate_max(idx, &cell);
+        break;
+      case A_MIN:
+        rc = aggregate_min(idx, &cell);
+        break;
+      case A_AVG:
+        rc = aggregate_avg(idx, &cell);
+        break;
+      case A_COUNT:
+        rc = aggregate_count(idx, &cell);
+        break;
+    }
+    if (rc != SUCCESS) {
+      LOG_ERROR("wrong wrong wrong");
+      return rc;
+    }
+    res.push(tuples_[0].get_meta(idx), cell);
+  }
+  tuples_.clear();
+  tuples_.push_back(res);
+  return RC::SUCCESS;
+}
+
+RC Pretable::join(Pretable *pre2, FilterStmt *filter)
+{
+  Field *left_field = nullptr;
+  Field *right_field = nullptr;
+
+  for (Table *t : pre2->tables_) {
+    tables_.push_back(t);
+  }
+
+  for (const FilterUnit *unit : filter->filter_units()) {
+    Expression *left = unit->left();
+    Expression *right = unit->right();
+    if (left->type() == ExprType::VALUE || right->type() == ExprType::VALUE) {
+      continue;
+    }
+    FieldExpr *left_field_expr = dynamic_cast<FieldExpr *>(left);
+    FieldExpr *right_field_expr = dynamic_cast<FieldExpr *>(right);
+    if (this->field(left_field_expr->field()) != nullptr && pre2->field(right_field_expr->field()) != nullptr) {
+      left_field = &left_field_expr->field();
+      right_field = &right_field_expr->field();
+      break;
+    } else if (this->field(right_field_expr->field()) != nullptr && pre2->field(left_field_expr->field()) != nullptr) {
+      left_field = &right_field_expr->field();
+      right_field = &left_field_expr->field();
+      break;
+    } else {
+      continue;
+    }
+  }
+
+  if (pre2->tuples_.size() == 0 || tuples_.size() == 0) {
+    tuples_.clear();
+    return RC::SUCCESS;
+  }
+
+  std::vector<TupleSet> res;
+  if (left_field != nullptr && right_field != nullptr) {
+    for (TupleSet &t1 : tuples_) {
+      for (TupleSet &t2 : pre2->tuples_) {
+        int i1 = t1.index(*left_field), i2 = t2.index(*right_field);
+        if (t1.get_cell(i1).compare(t2.get_cell(i2)) == 0) {
+          res.push_back(t1.generate_combine(&t2));
+        }
+      }
+    }
+  } else {
+    for (const TupleSet &t1 : tuples_) {
+      for (const TupleSet &t2 : pre2->tuples_) {
+        res.push_back(t1.generate_combine(&t2));
+      }
+    }
+  }
+
+  // need to write hash functions to support hash join
+
+  // // hash join
+  // if (left_field != nullptr && right_field != nullptr) {
+  //   std::unordered_map<std::string, class _Tp>
+  // } else {
+  //   // nested loop join
+
+  // }
+
+  tuples_.swap(res);
+  return RC::SUCCESS;
+}
+
+// TODO: ALIAS
+void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi)
+{
+  bool first = true;
+  for (auto &field : fields) {
+    ss << (first ? "" : " | ");
+    first = false;
+    std::string tp = field.has_table() ? field.field_name() : field.count_str();
+    if (multi && field.has_table()) {
+      tp = field.table_name() + ("." + tp);
+    }
+    if (field.aggr_type() != A_NO) {
+      tp = field.aggr_name() + '(' + tp + ')';
+    }
+    ss << tp;
+  }
+
+  if (!first) {
+    ss << '\n';
+  }
+  // bool is_aggr = false;
+  // for (const auto &field : fields) {
+  //   if (field.aggr_type() != AggreType::A_NO) {
+  //     is_aggr = true;
+  //     break;
+  //   }
+  // }
+  // bool first = true;
+  // if (is_aggr) {
+  //   for (int i = fields.size() - 1; i >= 0; i--) {
+  //     ss << (first ? "" : " | ");
+  //     first = false;
+  //     std::string tp = fields[i].has_table() ? fields[i].field_name() : fields[i].count_str();
+  //     if (multi && fields[i].has_table()) {
+  //       tp = fields[i].table_name() + ("." + tp);
+  //     }
+  //     tp = fields[i].aggr_name() + '(' + tp + ')';
+  //     ss << tp;
+  //   }
+  // } else {
+  //   int idx = 0;
+  //   std::string s;
+  //   if (multi) {
+  //     idx = fields.size()-1;
+  //     while (idx >= 0 && fields[idx].table_name() != s) {
+  //       idx--;
+  //     }
+  //     idx++;
+  //   }
+  //   int last_idx = fields.size();
+  //   while (1) {
+  //     for (int i = idx; i < last_idx; i++) {
+  //       ss << (first ? "" : " | ");
+  //       first = false;
+  //       std::string tp = fields[i].field_name();
+  //       if (multi && fields[i].has_table()) {
+  //         tp = fields[i].table_name() + ("." + tp);
+  //       }
+  //       ss << tp;
+  //     }
+  //     last_idx = idx;
+  //     idx--;
+  //     if (idx < 0) {
+  //       break;
+  //     }
+  //     s = fields[idx].table_name();
+  //     while (idx >= 0 && (!fields[idx].has_table() || s == fields[idx].table_name())) {
+  //       idx--;
+  //     }
+  //     idx++;
+  //   }
+  // }
+}
+
+void Pretable::filter_fields(const std::vector<Field> &fields)
+{
+  for (auto &tuple : tuples_) {
+    tuple.filter_fields(fields);
+  }
+}
+
+void Pretable::print(std::stringstream &ss)
+{
+  for (const TupleSet &tuple : tuples_) {
+    bool first = true;
+    for (const TupleCell &cell : tuple.cells()) {
+      if (!first) {
+        ss << " | ";
+      } else {
+        first = false;
+      }
+      cell.to_string(ss);
+    }
+    ss << '\n';
+  }
 }

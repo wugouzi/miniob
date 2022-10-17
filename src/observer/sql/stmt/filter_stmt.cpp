@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include "rc.h"
 #include "common/log/log.h"
 #include "common/lang/string.h"
+#include "sql/parser/parse_defs.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/common/db.h"
 #include "storage/common/table.h"
@@ -101,6 +102,9 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     }
     left = new FieldExpr(table, field);
   } else {
+    if (condition.left_value.type == DATES && *(int *)condition.left_value.data == -1) {
+      return RC::INVALID_ARGUMENT;
+    }
     left = new ValueExpr(condition.left_value);
   }
 
@@ -115,6 +119,9 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     }
     right = new FieldExpr(table, field);
   } else {
+    if (condition.right_value.type == DATES && *(int *)condition.right_value.data == -1) {
+      return RC::INVALID_ARGUMENT;
+    }
     right = new ValueExpr(condition.right_value);
   }
 

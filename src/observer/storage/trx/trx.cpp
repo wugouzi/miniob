@@ -93,6 +93,21 @@ RC Trx::insert_record(Table *table, Record *record)
   return rc;
 }
 
+// TODO: consider
+RC Trx::update_record(Table *table, Record *record)
+{
+  RC rc = RC::SUCCESS;
+  // check if there is the tuple
+  Operation *old_oper = find_operation(table, record->rid());
+  if (old_oper == nullptr) {
+    return RC::GENERIC_ERROR;  // error code
+  }
+  start_if_not_started();
+  set_record_trx_id(table, *record, trx_id_, true);
+  insert_operation(table, Operation::Type::UPDATE, record->rid());
+  return rc;
+}
+
 RC Trx::delete_record(Table *table, Record *record)
 {
   RC rc = RC::SUCCESS;

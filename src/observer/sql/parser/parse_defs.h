@@ -23,10 +23,21 @@ See the Mulan PSL v2 for more details. */
 #define MAX_ERROR_MESSAGE 20
 #define MAX_DATA 50
 
+typedef enum
+{
+  A_NO,
+  A_MAX,
+  A_MIN,
+  A_AVG,
+  A_COUNT
+} AggreType;
+
 //属性结构体
 typedef struct {
   char *relation_name;   // relation name (may be NULL) 表名
   char *attribute_name;  // attribute name              属性名
+  char *aggregate_func;
+  AggreType type;
 } RelAttr;
 
 typedef enum {
@@ -45,7 +56,8 @@ typedef enum
   UNDEFINED,
   CHARS,
   INTS,
-  FLOATS
+  FLOATS,
+  DATES
 } AttrType;
 
 //属性值
@@ -74,6 +86,7 @@ typedef struct {
   char *relations[MAX_NUM];       // relations in From clause
   size_t condition_num;           // Length of conditions in Where clause
   Condition conditions[MAX_NUM];  // conditions in Where clause
+  int aggregate_num;
 } Selects;
 
 // struct of insert
@@ -185,11 +198,13 @@ extern "C" {
 #endif  // __cplusplus
 
 void relation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name);
+void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, const char *aggregate_name, AggreType type);
 void relation_attr_destroy(RelAttr *relation_attr);
 
 void value_init_integer(Value *value, int v);
 void value_init_float(Value *value, float v);
 void value_init_string(Value *value, const char *v);
+int value_init_date(Value *value, const char* v);
 void value_destroy(Value *value);
 
 void condition_init(Condition *condition, CompOp comp, int left_is_attr, RelAttr *left_attr, Value *left_value,
@@ -200,6 +215,7 @@ void attr_info_init(AttrInfo *attr_info, const char *name, AttrType type, size_t
 void attr_info_destroy(AttrInfo *attr_info);
 
 void selects_init(Selects *selects, ...);
+void selects_reverse_relations(Selects *selects);
 void selects_append_attribute(Selects *selects, RelAttr *rel_attr);
 void selects_append_relation(Selects *selects, const char *relation_name);
 void selects_append_conditions(Selects *selects, Condition conditions[], size_t condition_num);
