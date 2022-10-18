@@ -150,6 +150,11 @@ bool DefaultConditionFilter::filter(const Record &rec) const
   char *left_value = nullptr;
   char *right_value = nullptr;
 
+  for (int i = 0; i < right_.attr_offset + right_.attr_length; i++) {
+    std::cout << rec.data()[i] << ' ';
+  }
+  std::cout << std::endl;
+
   if (left_.is_attr) {  // value
     left_value = (char *)(rec.data() + left_.attr_offset);
   } else {

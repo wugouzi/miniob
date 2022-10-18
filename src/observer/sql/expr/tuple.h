@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
+#include <cstring>
 #include <memory>
 #include <vector>
 
@@ -70,6 +71,7 @@ public:
   virtual RC  find_cell(const Field &field, TupleCell &cell) const = 0;
 
   virtual RC  cell_spec_at(int index, const TupleCellSpec *&spec) const = 0;
+  virtual const Record &get_record() const = 0;
 };
 
 class RowTuple : public Tuple
@@ -87,6 +89,10 @@ public:
   void set_record(Record *record)
   {
     this->record_ = record;
+  }
+
+  const Record &get_record() const override {
+    return *record_;
   }
 
   void set_schema(const Table *table, const std::vector<FieldMeta> *fields)
@@ -189,6 +195,10 @@ public:
   void set_tuple(Tuple *tuple)
   {
     this->tuple_ = tuple;
+  }
+
+  const Record &get_record() const override {
+    return tuple_->get_record();
   }
 
   void add_cell_spec(TupleCellSpec *spec)

@@ -12,8 +12,11 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi & Longda on 2021/4/13.
 //
 
+#include <cstring>
+#include <iostream>
 #include <string>
 #include <sstream>
+#include <vector>
 
 #include "execute_stage.h"
 
@@ -26,15 +29,19 @@ See the Mulan PSL v2 for more details. */
 #include "event/storage_event.h"
 #include "event/sql_event.h"
 #include "event/session_event.h"
+#include "sql/expr/expression.h"
+#include "sql/expr/tuple_cell.h"
 #include "sql/operator/table_scan_operator.h"
 #include "sql/operator/index_scan_operator.h"
 #include "sql/operator/predicate_operator.h"
 #include "sql/operator/delete_operator.h"
 #include "sql/operator/project_operator.h"
 #include "sql/parser/parse_defs.h"
+#include "sql/stmt/filter_stmt.h"
 #include "storage/index/index.h"
 #include "storage/default/default_handler.h"
 #include "storage/common/condition_filter.h"
+#include "storage/record/record.h"
 #include "storage/trx/trx.h"
 #include "storage/clog/clog.h"
 
@@ -129,7 +136,7 @@ void ExecuteStage::handle_request(common::StageEvent *event)
   if (stmt != nullptr) {
     switch (stmt->type()) {
     case StmtType::SELECT: {
-      do_select(sql_event);
+      do_select2(sql_event);
     } break;
     case StmtType::INSERT: {
       do_insert(sql_event);
@@ -386,6 +393,83 @@ IndexScanOperator *try_to_create_index_scan_operator(FilterStmt *filter_stmt)
   LOG_INFO("use index for scan: %s in table %s", index->index_meta().name(), table->name());
   return oper;
 }
+
+void reorder_fields(std::vector<Field> &fields)
+{
+  if (fields[0].aggr_type() != A_NO) {
+    std::vector<Field> tp;
+    for (int i = fields.size()-1; i >= 0; i--) {
+      tp.push_back(fields[i]);
+    }
+    fields.swap(tp);
+    return;
+  }
+}
+
+
+RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
+{
+  SelectStmt *select_stmt = (SelectStmt *)(sql_event->stmt());
+  SessionEvent *session_event = sql_event->session_event();
+  FilterStmt *filter_stmt = select_stmt->filter_stmt();
+
+  std::vector<Pretable*> pretables;
+
+  RC rc = RC::SUCCESS;
+
+  for (int i = 0; i < select_stmt->tables().size(); i++) {
+    Pretable *pre = new Pretable;
+    rc = pre->init(select_stmt->tables()[i], filter_stmt);
+    if (rc != RC::RECORD_EOF) {
+      delete pre;
+      for (auto &t : pretables)
+        delete t;
+      return rc;
+    }
+    pretables.push_back(pre);
+  }
+
+  // no relevant field or something
+  if (pretables.empty()) {
+    LOG_ERROR("No table or No relevant condition");
+    return RC::INTERNAL;
+  }
+
+  Pretable *res = pretables[0];
+  auto iter = std::next(pretables.begin());
+  while (iter != pretables.end()) {
+    rc = res->join(*iter, filter_stmt);
+    delete *iter;
+    iter = pretables.erase(iter);
+    if (rc != RC::SUCCESS) {
+      while (iter != pretables.end()) {
+        delete *iter;
+        iter = pretables.erase(iter);
+      }
+      LOG_ERROR("join fails");
+      return rc;
+    }
+  }
+
+  std::stringstream ss;
+  rc = RC::SUCCESS;
+  reorder_fields(select_stmt->query_fields());
+  print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1);
+  if (select_stmt->aggregate_num() > 0) {
+    rc = res->aggregate(select_stmt->query_fields());
+  } else {
+    res->filter_fields(select_stmt->query_fields());
+  }
+  if (rc != RC::SUCCESS) {
+    LOG_ERROR("aggregate error");
+    return rc;
+  }
+  res->print(ss);
+
+  session_event->set_response(ss.str());
+  return rc;
+}
+
 
 RC ExecuteStage::do_select(SQLStageEvent *sql_event)
 {
@@ -802,6 +886,7 @@ RC ExecuteStage::do_clog_sync(SQLStageEvent *sql_event)
 
 TupleSet::TupleSet(const Tuple *t, Table *table) {
   table_num_ = 1;
+  data_ = std::string(t->get_record().data(), table->table_meta().record_size());
   for (const FieldMeta &meta : *table->table_meta().field_metas()) {
     metas_.emplace_back(table, meta);
   }
@@ -816,24 +901,43 @@ TupleSet::TupleSet(const TupleSet *t) {
   cells_ = t->cells_;
   metas_ = t->metas_;
   table_num_ = t->table_num_;
+  data_ = t->data_;
 }
 
 TupleSet *TupleSet::copy() const {
   return new TupleSet(this);
 }
 
-void TupleSet::combine(const TupleSet *t2) {
-  table_num_ += t2->table_num_;
-  for (auto meta : metas_)
-    metas_.push_back(meta);
-  for (auto cell : t2->cells_)
-    cells_.push_back(cell);
-}
+// void TupleSet::combine(const TupleSet *t2) {
+//   table_num_ += t2->table_num_;
+//   for (auto meta : metas_)
+//     metas_.push_back(meta);
+//   for (auto cell : t2->cells_)
+//     cells_.push_back(cell);
+// }
 
-TupleSet *TupleSet::generate_combine(const TupleSet *t2) const {
+TupleSet *TupleSet::generate_combine(const TupleSet *t2) {
   TupleSet *res = this->copy();
   res->table_num_ += t2->table_num_;
+  res->data_ += t2->data();
+  int off = 0;
+  for (int i = 0; i < data_.size(); i++) {
+    std::cout << (int)(data_[i]) << ' ';
+  }
+  std::cout << '#';
+  for (int i = 0; i < t2->data_.size(); i++) {
+    std::cout << (int)(t2->data_[i]) << ' ';
+  }
+  std::cout << '#';
+  for (int i = 0; i < res->data_.size(); i++) {
+    std::cout << (int)(res->data_[i]) << ' ';
+  }
+  std::cout << std::endl;
+  for (auto &meta : res->metas_) {
+    off += meta.second.len();
+  }
   for (auto meta : t2->metas_) {
+    meta.second.set_offset(off + meta.second.offset());
     res->metas_.push_back(meta);
   }
   for (auto cell : t2->cells_) {
@@ -865,10 +969,13 @@ void TupleSet::filter_fields(const std::vector<Field> &fields) {
   metas_.swap(metas);
 }
 
+// used for aggregate, and they have 4 bytes
 void TupleSet::push(const std::pair<Table*, FieldMeta> &p, const TupleCell &cell)
 {
   metas_.push_back(p);
+  metas_.back().second.set_offset(4 + metas_.back().second.offset());
   cells_.push_back(cell);
+  data_ += cell.data();
 }
 
 int TupleSet::index(const Field &field) const
@@ -892,6 +999,17 @@ const TupleCell &TupleSet::get_cell(int idx)
 const std::pair<Table *, FieldMeta> &TupleSet::get_meta(int idx)
 {
   return metas_[idx];
+}
+
+int TupleSet::get_offset(const char *table_name, const char *field_name) const
+{
+  for (auto &meta : metas_) {
+    if (strcmp(table_name, meta.first->name()) == 0 &&
+        strcmp(field_name, meta.second.name()) == 0) {
+      return meta.second.offset();
+    }
+  }
+  return -1;
 }
 
 const FieldMeta &TupleSet::meta(int idx) const {
@@ -1088,58 +1206,107 @@ RC Pretable::aggregate(const std::vector<Field> fields)
   return RC::SUCCESS;
 }
 
+
+
+// if table is null, then it's this table, else its table outside
+ConDesc Pretable::make_cond_desc(Expression *expr, Pretable *t2)
+{
+  ConDesc desc;
+  if (expr->type() == ExprType::FIELD) {
+    desc.is_attr = true;
+    FieldExpr *field_expr = dynamic_cast<FieldExpr*>(expr);
+    desc.attr_length = field_expr->field().meta()->len();
+    if (field(field_expr->field()) != nullptr) {
+      desc.attr_offset = tuples_[0].get_offset(field_expr->table_name(), field_expr->field_name());
+    } else {
+      desc.attr_offset = tuples_[0].size() + t2->tuples_[0].get_offset(field_expr->table_name(), field_expr->field_name());
+    }
+
+  } else {
+    desc.is_attr = false;
+    ValueExpr *value_expr = dynamic_cast<ValueExpr*>(expr);
+    desc.value = value_expr->get_data();
+  }
+  return desc;
+}
+
+// combine two tupleset -> record, then filter
+CompositeConditionFilter *Pretable::make_cond_filter(std::vector<FilterUnit*> &units, Pretable *t2)
+{
+  int n = units.size();
+  if (n == 0) {
+    return nullptr;
+  }
+  ConditionFilter **filters = new ConditionFilter*[n];
+
+  for (int i = 0; i < n; i++) {
+    ConDesc left = make_cond_desc(units[i]->left(), t2);
+    ConDesc right = make_cond_desc(units[i]->right(), t2);
+    AttrType type;
+    if (units[i]->left()->type() == ExprType::FIELD) {
+      type = dynamic_cast<FieldExpr*>(units[i]->left())->field().attr_type();
+    } else if (units[i]->right()->type() == ExprType::FIELD) {
+      type = dynamic_cast<FieldExpr*>(units[i]->right())->field().attr_type();
+    } else {
+      return nullptr;
+    }
+
+    // incomparable type is checked in filter stmt
+    filters[i] = new DefaultConditionFilter();
+    dynamic_cast<DefaultConditionFilter*>(filters[i])->init(left, right, type, units[i]->comp());
+  }
+  CompositeConditionFilter *ans = new CompositeConditionFilter();
+
+  ans->init((const ConditionFilter**)filters, n);
+  return ans;
+}
+
 RC Pretable::join(Pretable *pre2, FilterStmt *filter)
 {
-  Field *left_field = nullptr;
-  Field *right_field = nullptr;
+  std::vector<FilterUnit*> units;
 
-  for (Table *t : pre2->tables_) {
-    tables_.push_back(t);
-  }
-
-  for (const FilterUnit *unit : filter->filter_units()) {
+  for (FilterUnit *unit : filter->filter_units()) {
     Expression *left = unit->left();
     Expression *right = unit->right();
     if (left->type() == ExprType::VALUE || right->type() == ExprType::VALUE) {
       continue;
-    }
+    } // TODO: NEED TO SWAP
     FieldExpr *left_field_expr = dynamic_cast<FieldExpr*>(left);
     FieldExpr *right_field_expr = dynamic_cast<FieldExpr*>(right);
     if (this->field(left_field_expr->field()) != nullptr &&
         pre2->field(right_field_expr->field()) != nullptr) {
-      left_field = &left_field_expr->field();
-      right_field = &right_field_expr->field();
-      break;
+      units.push_back(unit);
     } else if (this->field(right_field_expr->field()) != nullptr &&
                pre2->field(left_field_expr->field()) != nullptr) {
-      left_field = &right_field_expr->field();
-      right_field = &left_field_expr->field();
-      break;
-    } else {
-      continue;
+      units.push_back(unit);
     }
   }
-
 
   if (pre2->tuples_.size() == 0 || tuples_.size() == 0) {
     tuples_.clear();
     return RC::SUCCESS;
   }
 
+  CompositeConditionFilter *cond_filter = make_cond_filter(units, pre2);
+
   std::vector<TupleSet> res;
-  if (left_field != nullptr && right_field != nullptr) {
+  if (cond_filter != nullptr) {
     for (TupleSet &t1 : tuples_) {
       for (TupleSet &t2 : pre2->tuples_) {
-        int i1 = t1.index(*left_field), i2 = t2.index(*right_field);
-        if (t1.get_cell(i1).compare(t2.get_cell(i2)) == 0) {
-          res.push_back(t1.generate_combine(&t2));
+        TupleSet *tuple = t1.generate_combine(&t2);
+        Record rec;
+        char *buf = new char[tuple->data().size()];
+        memcpy(buf, tuple->data().c_str(), tuple->data().size());
+        rec.set_data(buf);
+        if (cond_filter->filter(rec)) {
+          res.push_back(*tuple);
         }
       }
     }
   } else {
-    for (const TupleSet &t1 : tuples_) {
-      for (const TupleSet &t2 : pre2->tuples_) {
-        res.push_back(t1.generate_combine(&t2));
+    for (TupleSet &t1 : tuples_) {
+      for (TupleSet &t2 : pre2->tuples_) {
+        res.push_back(*t1.generate_combine(&t2));
       }
     }
   }
@@ -1153,7 +1320,9 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
   //   // nested loop join
 
   // }
-
+  for (Table *t : pre2->tables_) {
+    tables_.push_back(t);
+  }
   tuples_.swap(res);
   return RC::SUCCESS;
 }

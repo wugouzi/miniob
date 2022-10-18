@@ -26,6 +26,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/expr/tuple.h"
 #include "storage/common/table.h"
 #include "storage/common/field.h"
+#include "storage/common/condition_filter.h"
 #include <string>
 #include <utility>
 #include <vector>
@@ -58,6 +59,7 @@ protected:
   RC do_show_tables(SQLStageEvent *sql_event);
   RC do_desc_table(SQLStageEvent *sql_event);
   RC do_select(SQLStageEvent *sql_event);
+  RC do_select2(SQLStageEvent *sql_event);
   RC do_insert(SQLStageEvent *sql_event);
   RC do_delete(SQLStageEvent *sql_event);
   RC do_begin(SQLStageEvent *sql_event);
@@ -82,8 +84,8 @@ class TupleSet {
   TupleSet(const Tuple *t, Table *table);
   TupleSet(const TupleSet *t);
   TupleSet *copy() const;
-  void combine(const TupleSet *t2);
-  TupleSet *generate_combine(const TupleSet *t2) const;
+  // void combine(const TupleSet *t2);
+  TupleSet *generate_combine(const TupleSet *t2);
   void filter_fields(const std::vector<Field> &fields);
   const std::vector<TupleCell> &cells() const;
   const FieldMeta &meta(int idx) const;
@@ -93,11 +95,15 @@ class TupleSet {
   const TupleCell &get_cell(int idx);
   const std::pair<Table *, FieldMeta> &get_meta(int idx);
   int index(const Field &field) const;
+  const std::string &data() const { return data_; }
+  int get_offset(const char *table_name, const char *field_name) const ;
+  int size() const { return data_.size(); }
 
  private:
   int table_num_ = 0;
   std::vector<std::pair<Table*, FieldMeta>> metas_;
   std::vector<TupleCell> cells_;
+  std::string data_;
 };
 
 
@@ -121,7 +127,8 @@ class Pretable {
   RC aggregate_avg(int idx, TupleCell *res);
   RC aggregate_count(int idx, TupleCell *res);
   const FieldMeta *field(const Field &field) const;
-
+  CompositeConditionFilter *make_cond_filter(std::vector<FilterUnit*> &units, Pretable *t2);
+  ConDesc make_cond_desc(Expression *expr, Pretable *t2);
 
   std::vector<TupleSet>::iterator begin() { return tuples_.begin(); }
   std::vector<TupleSet>::iterator end() { return tuples_.end(); }

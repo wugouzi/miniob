@@ -98,6 +98,10 @@ public:
     cell = tuple_cell_;
   }
 
+  char *get_data() {
+    return tuple_cell_.get_data();
+  }
+
 private:
   TupleCell tuple_cell_;
 };

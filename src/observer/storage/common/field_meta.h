@@ -36,6 +36,7 @@ public:
   const char *name() const;
   AttrType type() const;
   int offset() const;
+  void set_offset(int off);
   int len() const;
   bool visible() const;
 

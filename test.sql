@@ -1,5 +1,106 @@
 CREATE TABLE date_table(id int, u_date date);
-SELECT * FROM date_table WHERE u_date='2017-2-29';
+--selects
+CREATE TABLE Select_tables_1(id int, age int, u_name char);
+CREATE TABLE Select_tables_2(id int, age int, u_name char);
+CREATE TABLE Select_tables_3(id int, res int, u_name char);
+CREATE TABLE Select_tables_4(id int, age int, u_name char);
+CREATE TABLE Select_tables_5(id int, res int, u_name char);
+
+INSERT INTO Select_tables_1 VALUES (1,18,'a');
+INSERT INTO Select_tables_1 VALUES (2,15,'b');
+INSERT INTO Select_tables_2 VALUES (1,20,'a');
+INSERT INTO Select_tables_2 VALUES (2,21,'c');
+INSERT INTO Select_tables_3 VALUES (1,35,'a');
+INSERT INTO Select_tables_3 VALUES (2,37,'a');
+INSERT INTO Select_tables_4 VALUES (1, 2, 'a');
+INSERT INTO Select_tables_4 VALUES (1, 3, 'b');
+INSERT INTO Select_tables_4 VALUES (2, 2, 'c');
+INSERT INTO Select_tables_4 VALUES (2, 4, 'd');
+INSERT INTO Select_tables_5 VALUES (1, 10, 'g');
+INSERT INTO Select_tables_5 VALUES (1, 11, 'f');
+INSERT INTO Select_tables_5 VALUES (2, 12, 'c');
+
+SELECT * FROM Select_tables_1,Select_tables_2,Select_tables_3;
+SELECT Select_tables_1.id,Select_tables_2.u_name,Select_tables_3.res FROM Select_tables_1,Select_tables_2,Select_tables_3;
+Select Select_tables_1.res FROM Select_tables_1,Select_tables_2,Select_tables_3;
+SELECT * FROM Select_tables_1,Select_tables_2,Select_tables_3 WHERE Select_tables_1.u_name=Select_tables_2.u_name AND Select_tables_2.u_name=Select_tables_3.u_name;
+SELECT * FROM Select_tables_1,Select_tables_2,Select_tables_3 WHERE Select_tables_1.id=Select_tables_2.id AND Select_tables_3.res=35;
+SELECT * FROM Select_tables_1,Select_tables_2,Select_tables_3 WHERE Select_tables_1.age<18 AND Select_tables_2.u_name='c' AND Select_tables_3.res=35 AND Select_tables_1.id=Select_tables_2.id AND Select_tables_2.id=Select_tables_3.id;
+SELECT Select_tables_2.age FROM Select_tables_1,Select_tables_2 WHERE Select_tables_1.age<18 AND Select_tables_2.u_name='c' AND Select_tables_1.id=Select_tables_2.id;
+SELECT * from Select_tables_4, Select_tables_5 where Select_tables_4.id=Select_tables_5.id;
+select * from Select_tables_4, Select_tables_5 where Select_tables_4.id >= Select_tables_5.id;
+CREATE TABLE Select_tables_6(id int, res int);
+
+SELECT Select_tables_1.id,Select_tables_6.id from Select_tables_1, Select_tables_6 where Select_tables_1.id=Select_tables_6.id;
+
+drop table Select_tables_1;
+drop table Select_tables_2;
+drop table Select_tables_3;
+drop table Select_tables_4;
+drop table Select_tables_5;
+drop table Select_tables_6;
+
+/*
+1 | 18 | A | 1 | 20 | A | 1 | 35 | A
+1 | 18 | A | 1 | 20 | A | 2 | 37 | A
+1 | 18 | A | 2 | 21 | C | 1 | 35 | A
+1 | 18 | A | 2 | 21 | C | 2 | 37 | A
+2 | 15 | B | 1 | 20 | A | 1 | 35 | A
+2 | 15 | B | 1 | 20 | A | 2 | 37 | A
+2 | 15 | B | 2 | 21 | C | 1 | 35 | A
+2 | 15 | B | 2 | 21 | C | 2 | 37 | A
+SELECT_TABLES_1.ID | SELECT_TABLES_1.AGE | SELECT_TABLES_1.U_NAME | SELECT_TABLES_2.ID | SELECT_TABLES_2.AGE | SELECT_TABLES_2.U_NAME | SELECT_TABLES_3.ID | SELECT_TABLES_3.RES | SELECT_TABLES_3.U_NAME
+
+1 | A | 35
+1 | A | 37
+1 | C | 35
+1 | C | 37
+2 | A | 35
+2 | A | 37
+2 | C | 35
+2 | C | 37
+SELECT_TABLES_1.ID | SELECT_TABLES_2.U_NAME | SELECT_TABLES_3.RES
+
+FAILURE
+
+1 | 18 | A | 1 | 20 | A | 1 | 35 | A
+1 | 18 | A | 1 | 20 | A | 2 | 37 | A
+SELECT_TABLES_1.ID | SELECT_TABLES_1.AGE | SELECT_TABLES_1.U_NAME | SELECT_TABLES_2.ID | SELECT_TABLES_2.AGE | SELECT_TABLES_2.U_NAME | SELECT_TABLES_3.ID | SELECT_TABLES_3.RES | SELECT_TABLES_3.U_NAME
+
+1 | 18 | A | 1 | 20 | A | 1 | 35 | A
+2 | 15 | B | 2 | 21 | C | 1 | 35 | A
+SELECT_TABLES_1.ID | SELECT_TABLES_1.AGE | SELECT_TABLES_1.U_NAME | SELECT_TABLES_2.ID | SELECT_TABLES_2.AGE | SELECT_TABLES_2.U_NAME | SELECT_TABLES_3.ID | SELECT_TABLES_3.RES | SELECT_TABLES_3.U_NAME
+
+21
+SELECT_TABLES_2.AGE
+
+1 | 2 | A | 1 | 10 | G
+1 | 2 | A | 1 | 11 | F
+1 | 3 | B | 1 | 10 | G
+1 | 3 | B | 1 | 11 | F
+2 | 2 | C | 2 | 12 | C
+2 | 4 | D | 2 | 12 | C
+SELECT_TABLES_4.ID | SELECT_TABLES_4.AGE | SELECT_TABLES_4.U_NAME | SELECT_TABLES_5.ID | SELECT_TABLES_5.RES | SELECT_TABLES_5.U_NAME
+
+1 | 2 | A | 1 | 10 | G
+1 | 2 | A | 1 | 11 | F
+1 | 3 | B | 1 | 10 | G
+1 | 3 | B | 1 | 11 | F
+2 | 2 | C | 1 | 10 | G
+2 | 2 | C | 1 | 11 | F
+2 | 2 | C | 2 | 12 | C
+2 | 4 | D | 1 | 10 | G
+2 | 4 | D | 1 | 11 | F
+2 | 4 | D | 2 | 12 | C
+SELECT_TABLES_4.ID | SELECT_TABLES_4.AGE | SELECT_TABLES_4.U_NAME | SELECT_TABLES_5.ID | SELECT_TABLES_5.RES | SELECT_TABLES_5.U_NAME
+
+SUCCESS
+
+SELECT_TABLES_1.ID | SELECT_TABLES_6.ID
+
+*/
+
+
 --date
 CREATE TABLE date_table(id int, u_date date);
 CREATE INDEX index_id on date_table(u_date);

@@ -86,6 +86,11 @@ public:
     return filter_units_;
   }
 
+  std::vector<FilterUnit *> &filter_units()
+  {
+    return filter_units_;
+  }
+
   void push(FilterUnit *unit) { filter_units_.push_back(unit); }
 
 public:

@@ -44,6 +44,11 @@ public:
     return data_;
   }
 
+  char *get_data()
+  {
+    return data_;
+  }
+
   int length() const { return length_; }
 
   AttrType attr_type() const
