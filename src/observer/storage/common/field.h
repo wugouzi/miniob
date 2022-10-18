@@ -43,7 +43,21 @@ public:
   {
     this->field_ = field;
   }
+
+  bool has_table() const { return table_ != nullptr; }
+
+  void set_aggr(AggreType type, const char *name) {
+    aggr_type_ = type;
+    aggr_name_ = name;
+  }
+  const std::string &aggr_name() const { return aggr_name_; }
+  const std::string &count_str() const { return count_str_; }
+  void set_count(std::string cnt) { count_str_ = cnt; }
+  AggreType aggr_type() const { return aggr_type_; }
 private:
   const Table *table_ = nullptr;
   const FieldMeta *field_ = nullptr;
+  AggreType aggr_type_ = A_NO;
+  std::string aggr_name_;
+  std::string count_str_;
 };

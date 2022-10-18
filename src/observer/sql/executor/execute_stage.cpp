@@ -26,21 +26,12 @@ See the Mulan PSL v2 for more details. */
 #include "event/storage_event.h"
 #include "event/sql_event.h"
 #include "event/session_event.h"
-#include "sql/expr/tuple.h"
 #include "sql/operator/table_scan_operator.h"
 #include "sql/operator/index_scan_operator.h"
 #include "sql/operator/predicate_operator.h"
 #include "sql/operator/delete_operator.h"
 #include "sql/operator/project_operator.h"
 #include "sql/parser/parse_defs.h"
-#include "sql/stmt/stmt.h"
-#include "sql/stmt/select_stmt.h"
-#include "sql/stmt/update_stmt.h"
-#include "sql/stmt/delete_stmt.h"
-#include "sql/stmt/insert_stmt.h"
-#include "sql/stmt/filter_stmt.h"
-#include "storage/common/table.h"
-#include "storage/common/field.h"
 #include "storage/index/index.h"
 #include "storage/default/default_handler.h"
 #include "storage/common/condition_filter.h"
@@ -807,4 +798,465 @@ RC ExecuteStage::do_clog_sync(SQLStageEvent *sql_event)
   }
 
   return rc;
+}
+
+TupleSet::TupleSet(const Tuple *t, Table *table) {
+  table_num_ = 1;
+  for (const FieldMeta &meta : *table->table_meta().field_metas()) {
+    metas_.emplace_back(table, meta);
+  }
+  for (int i = 0; i < t->cell_num(); i++) {
+    TupleCell cell;
+    t->cell_at(i, cell);
+    cells_.push_back(cell);
+  }
+}
+
+TupleSet::TupleSet(const TupleSet *t) {
+  cells_ = t->cells_;
+  metas_ = t->metas_;
+  table_num_ = t->table_num_;
+}
+
+TupleSet *TupleSet::copy() const {
+  return new TupleSet(this);
+}
+
+void TupleSet::combine(const TupleSet *t2) {
+  table_num_ += t2->table_num_;
+  for (auto meta : metas_)
+    metas_.push_back(meta);
+  for (auto cell : t2->cells_)
+    cells_.push_back(cell);
+}
+
+TupleSet *TupleSet::generate_combine(const TupleSet *t2) const {
+  TupleSet *res = this->copy();
+  res->table_num_ += t2->table_num_;
+  for (auto meta : t2->metas_) {
+    res->metas_.push_back(meta);
+  }
+  for (auto cell : t2->cells_) {
+    res->cells_.push_back(cell);
+  }
+  return res;
+}
+
+void TupleSet::filter_fields(const std::vector<Field> &fields) {
+  std::unordered_map<std::string, std::unordered_map<std::string, int>> mp;
+  std::vector<std::pair<Table*, FieldMeta>> metas(fields.size());
+  std::vector<TupleCell> cells(fields.size());
+  for (int i = 0; i < fields.size(); i++) {
+    mp[fields[i].table_name()][fields[i].field_name()] = i+1;
+  }
+
+  table_num_ = mp.size();
+
+  for (int i = 0; i < metas_.size(); i++) {
+    auto &p = metas_[i];
+    int j = mp[p.first->name()][p.second.name()];
+    if (j > 0) {
+      cells[j-1] = cells_[i];
+      metas[j-1] = metas_[i];
+    }
+  }
+
+  cells_.swap(cells);
+  metas_.swap(metas);
+}
+
+void TupleSet::push(const std::pair<Table*, FieldMeta> &p, const TupleCell &cell)
+{
+  metas_.push_back(p);
+  cells_.push_back(cell);
+}
+
+int TupleSet::index(const Field &field) const
+{
+  if (!field.has_table()) {
+    return -1;
+  }
+  for (int i = 0; i < metas_.size(); i++) {
+    if (strcmp(metas_[i].first->name(), field.table_name()) == 0 &&
+        strcmp(metas_[i].second.name(), field.field_name()) == 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+const TupleCell &TupleSet::get_cell(int idx)
+{
+  return cells_[idx];
+}
+const std::pair<Table *, FieldMeta> &TupleSet::get_meta(int idx)
+{
+  return metas_[idx];
+}
+
+const FieldMeta &TupleSet::meta(int idx) const {
+  return metas_[idx].second;
+}
+
+const std::vector<TupleCell> &TupleSet::cells() const {
+  return cells_;
+}
+
+void TupleSet::reverse()
+{
+  std::reverse(metas_.begin(), metas_.end());
+  std::reverse(cells_.begin(), cells_.end());
+}
+
+// filter table with table-specific conditions
+FilterStmt *get_sub_filter(Table *table, FilterStmt *old_filter)
+{
+  FilterStmt *filter = new FilterStmt();
+  for (FilterUnit *unit : old_filter->filter_units()) {
+    Expression *left = unit->left();
+    Expression *right = unit->right();
+    if (left->type() == ExprType::FIELD && right->type() == ExprType::FIELD) {
+      continue;
+    }
+    if (left->type() == ExprType::VALUE && right->type() == ExprType::FIELD) {
+      std::swap(left, right);
+    }
+    FieldExpr &left_field_expr = *(FieldExpr *)left;
+    if (strcmp(table->name(), left_field_expr.table_name()) != 0 ||
+        table->table_meta().field(left_field_expr.field_name()) == nullptr) {
+      continue;
+    }
+    filter->push(unit);
+  }
+  return filter;
+}
+
+Pretable::Pretable(Pretable&& t)
+    :tuples_(std::move(t.tuples_)),
+     tables_(std::move(t.tables_))
+{
+
+}
+Pretable& Pretable::operator=(Pretable&& t)
+{
+  tuples_ = std::move(t.tuples_);
+  tables_ = std::move(t.tables_);
+  return *this;
+}
+
+// TODO: delete filters
+RC Pretable::init(Table *table, FilterStmt *old_filter)
+{
+  // TODO: check how to use index scan
+  FilterStmt *filter = get_sub_filter(table, old_filter);
+  tables_.push_back(table);
+
+  Operator *scan_oper = new TableScanOperator(table);
+  DEFER([&] () {delete scan_oper;});
+
+  // first get a subset of filter
+  PredicateOperator pred_oper(filter);
+  pred_oper.add_child(scan_oper);
+
+  RC rc = RC::SUCCESS;
+  rc = pred_oper.open();
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to open operator");
+    return rc;
+  }
+  while ((rc = pred_oper.next()) == RC::SUCCESS) {
+    // get current record
+    // write to response
+    Tuple *tuple = pred_oper.current_tuple();
+    if (nullptr == tuple) {
+      rc = RC::INTERNAL;
+      LOG_WARN("failed to get current record. rc=%s", strrc(rc));
+      break;
+    }
+    tuples_.push_back(new TupleSet(tuple, table));
+  }
+  // delete filter;
+
+  return rc;
+}
+
+const FieldMeta *Pretable::field(const Field &field) const {
+  for (auto table : tables_) {
+    if (std::strcmp(table->name(), field.table_name()) == 0) {
+      const FieldMeta *tp = table->table_meta().field(field.field_name());
+      if (tp != nullptr) {
+        return tp;
+      }
+    }
+  }
+  return nullptr;
+}
+
+RC Pretable::aggregate_max(int idx, TupleCell *res)
+{
+  *res = tuples_[0].get_cell(idx);
+  for (TupleSet &tuple : tuples_) {
+    const TupleCell &cell = tuple.get_cell(idx);
+    int comp = cell.compare(*res);
+    if (comp > 0) {
+      *res = cell;
+    }
+  }
+  return RC::SUCCESS;
+}
+
+RC Pretable::aggregate_min(int idx, TupleCell *res)
+{
+  *res = tuples_[0].get_cell(idx);
+  for (TupleSet &tuple : tuples_) {
+    const TupleCell &cell = tuple.get_cell(idx);
+    int comp = res->compare(cell);
+    if (comp > 0) {
+      *res = cell;
+    }
+  }
+  return RC::SUCCESS;
+}
+
+RC Pretable::aggregate_avg(int idx, TupleCell *res)
+{
+  float *ans = new float();
+  *ans = 0;
+  for (TupleSet &tuple : tuples_) {
+    const TupleCell &cell = tuple.get_cell(idx);
+    switch (cell.attr_type()) {
+      case INTS: {
+        *ans += *(int *)cell.data();
+      } break;
+      case FLOATS: {
+        *ans += *(float *)cell.data();
+      } break;
+      case DATES: case CHARS:
+      default: {
+        return RC::INTERNAL;
+      }
+    }
+  }
+  res->set_type(FLOATS);
+  res->set_length(sizeof(float));
+  *ans = *ans / tuples_.size();
+  // TODO: dangerous
+  res->set_data((char *)ans);
+  return RC::SUCCESS;
+}
+
+// TODO: invisible
+RC Pretable::aggregate_count(int idx, TupleCell *res)
+{
+  int *ans = new int();
+  *ans = tuples_.size();
+
+  res->set_type(INTS);
+  res->set_length(sizeof(int));
+  res->set_data((char *)ans);
+  return RC::SUCCESS;
+}
+
+
+
+RC Pretable::aggregate(const std::vector<Field> fields)
+{
+  if (tuples_.size() == 0) {
+    return RC::SUCCESS;
+  }
+  TupleSet res;
+  RC rc = RC::SUCCESS;
+  for (const auto &field : fields) {
+    int idx = tuples_[0].index(field);
+    TupleCell cell;
+    switch (field.aggr_type()) {
+      case A_NO:
+        res.push(tuples_[0].get_meta(idx), tuples_[0].get_cell(idx));
+        continue;
+        break;
+      case A_MAX:
+        rc = aggregate_max(idx, &cell);break;
+      case A_MIN:
+        rc = aggregate_min(idx, &cell);break;
+      case A_AVG:
+        rc = aggregate_avg(idx, &cell);break;
+      case A_COUNT:
+        rc = aggregate_count(idx, &cell);break;
+    }
+    if (rc != SUCCESS) {
+      LOG_ERROR("wrong wrong wrong");
+      return rc;
+    }
+    res.push(tuples_[0].get_meta(idx), cell);
+  }
+  tuples_.clear();
+  tuples_.push_back(res);
+  return RC::SUCCESS;
+}
+
+RC Pretable::join(Pretable *pre2, FilterStmt *filter)
+{
+  Field *left_field = nullptr;
+  Field *right_field = nullptr;
+
+  for (Table *t : pre2->tables_) {
+    tables_.push_back(t);
+  }
+
+  for (const FilterUnit *unit : filter->filter_units()) {
+    Expression *left = unit->left();
+    Expression *right = unit->right();
+    if (left->type() == ExprType::VALUE || right->type() == ExprType::VALUE) {
+      continue;
+    }
+    FieldExpr *left_field_expr = dynamic_cast<FieldExpr*>(left);
+    FieldExpr *right_field_expr = dynamic_cast<FieldExpr*>(right);
+    if (this->field(left_field_expr->field()) != nullptr &&
+        pre2->field(right_field_expr->field()) != nullptr) {
+      left_field = &left_field_expr->field();
+      right_field = &right_field_expr->field();
+      break;
+    } else if (this->field(right_field_expr->field()) != nullptr &&
+               pre2->field(left_field_expr->field()) != nullptr) {
+      left_field = &right_field_expr->field();
+      right_field = &left_field_expr->field();
+      break;
+    } else {
+      continue;
+    }
+  }
+
+
+  if (pre2->tuples_.size() == 0 || tuples_.size() == 0) {
+    tuples_.clear();
+    return RC::SUCCESS;
+  }
+
+  std::vector<TupleSet> res;
+  if (left_field != nullptr && right_field != nullptr) {
+    for (TupleSet &t1 : tuples_) {
+      for (TupleSet &t2 : pre2->tuples_) {
+        int i1 = t1.index(*left_field), i2 = t2.index(*right_field);
+        if (t1.get_cell(i1).compare(t2.get_cell(i2)) == 0) {
+          res.push_back(t1.generate_combine(&t2));
+        }
+      }
+    }
+  } else {
+    for (const TupleSet &t1 : tuples_) {
+      for (const TupleSet &t2 : pre2->tuples_) {
+        res.push_back(t1.generate_combine(&t2));
+      }
+    }
+  }
+
+  // need to write hash functions to support hash join
+
+  // // hash join
+  // if (left_field != nullptr && right_field != nullptr) {
+  //   std::unordered_map<std::string, class _Tp>
+  // } else {
+  //   // nested loop join
+
+  // }
+
+  tuples_.swap(res);
+  return RC::SUCCESS;
+}
+
+
+// TODO: ALIAS
+void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi) {
+  bool first = true;
+  for (auto &field : fields) {
+    ss << (first ? "" : " | ");
+    first = false;
+    std::string tp = field.has_table() ? field.field_name() : field.count_str();
+    if (multi && field.has_table()) {
+      tp = field.table_name() + ("." + tp);
+    }
+    if (field.aggr_type() != A_NO) {
+      tp = field.aggr_name() + '(' + tp + ')';
+    }
+    ss << tp;
+  }
+
+  if (!first) {
+    ss << '\n';
+  }
+  // bool is_aggr = false;
+  // for (const auto &field : fields) {
+  //   if (field.aggr_type() != AggreType::A_NO) {
+  //     is_aggr = true;
+  //     break;
+  //   }
+  // }
+  // bool first = true;
+  // if (is_aggr) {
+  //   for (int i = fields.size() - 1; i >= 0; i--) {
+  //     ss << (first ? "" : " | ");
+  //     first = false;
+  //     std::string tp = fields[i].has_table() ? fields[i].field_name() : fields[i].count_str();
+  //     if (multi && fields[i].has_table()) {
+  //       tp = fields[i].table_name() + ("." + tp);
+  //     }
+  //     tp = fields[i].aggr_name() + '(' + tp + ')';
+  //     ss << tp;
+  //   }
+  // } else {
+  //   int idx = 0;
+  //   std::string s;
+  //   if (multi) {
+  //     idx = fields.size()-1;
+  //     while (idx >= 0 && fields[idx].table_name() != s) {
+  //       idx--;
+  //     }
+  //     idx++;
+  //   }
+  //   int last_idx = fields.size();
+  //   while (1) {
+  //     for (int i = idx; i < last_idx; i++) {
+  //       ss << (first ? "" : " | ");
+  //       first = false;
+  //       std::string tp = fields[i].field_name();
+  //       if (multi && fields[i].has_table()) {
+  //         tp = fields[i].table_name() + ("." + tp);
+  //       }
+  //       ss << tp;
+  //     }
+  //     last_idx = idx;
+  //     idx--;
+  //     if (idx < 0) {
+  //       break;
+  //     }
+  //     s = fields[idx].table_name();
+  //     while (idx >= 0 && (!fields[idx].has_table() || s == fields[idx].table_name())) {
+  //       idx--;
+  //     }
+  //     idx++;
+  //   }
+  // }
+
+}
+
+void Pretable::filter_fields(const std::vector<Field> &fields) {
+  for (auto &tuple : tuples_) {
+      tuple.filter_fields(fields);
+  }
+}
+
+void Pretable::print(std::stringstream &ss)
+{
+  for (const TupleSet &tuple : tuples_) {
+    bool first = true;
+    for (const TupleCell &cell : tuple.cells()) {
+      if (!first) {
+        ss << " | ";
+      } else {
+        first = false;
+      }
+      cell.to_string(ss);
+    }
+    ss << '\n';
+  }
 }
