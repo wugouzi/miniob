@@ -1,3 +1,79 @@
+--update
+
+CREATE TABLE Update_table_1(id int, t_name char, col1 int, col2 int);
+CREATE INDEX index_id on Update_table_1(id);
+INSERT INTO Update_table_1 VALUES (1,'N1',1,1);
+INSERT INTO Update_table_1 VALUES (2,'N2',1,1);
+INSERT INTO Update_table_1 VALUES (3,'N3',2,1);
+UPDATE Update_table_1 SET t_name='N01' WHERE id=1;
+SELECT * FROM Update_table_1;
+UPDATE Update_table_1 SET col2=0 WHERE col1=1;
+SELECT * FROM Update_table_1;
+UPDATE Update_table_1 SET id=4 WHERE t_name='N3';
+SELECT * FROM Update_table_1;
+UPDATE Update_table_1 SET col1=0;
+SELECT * FROM Update_table_1;
+UPDATE Update_table_1 SET t_name='N02' WHERE col1=0 AND col2=0;
+SELECT * FROM Update_table_1;
+UPDATE Update_table_2 SET t_name='N01' WHERE id=1;
+UPDATE Update_table_1 SET t_name_false='N01' WHERE id=1;
+UPDATE Update_table_1 SET t_name='N01' WHERE id_false=1;
+UPDATE Update_table_1 SET t_name='N01' WHERE id=100;
+SELECT * FROM Update_table_1;
+UPDATE Update_table_1 SET col1='N01' WHERE id=1;
+
+/*
+SUCCESS
+SUCCESS
+SUCCESS
+SUCCESS
+SUCCESS
+
+SUCCESS
+1 | N01 | 1 | 1
+2 | N2 | 1 | 1
+3 | N3 | 2 | 1
+ID | T_NAME | COL1 | COL2
+
+SUCCESS
+1 | N01 | 1 | 0
+2 | N2 | 1 | 0
+3 | N3 | 2 | 1
+ID | T_NAME | COL1 | COL2
+
+SUCCESS
+1 | N01 | 1 | 0
+2 | N2 | 1 | 0
+4 | N3 | 2 | 1
+ID | T_NAME | COL1 | COL2
+
+SUCCESS
+1 | N01 | 0 | 0
+2 | N2 | 0 | 0
+4 | N3 | 0 | 1
+ID | T_NAME | COL1 | COL2
+
+SUCCESS
+1 | N02 | 0 | 0
+2 | N02 | 0 | 0
+4 | N3 | 0 | 1
+ID | T_NAME | COL1 | COL2
+
+FAILURE
+FAILURE
+FAILURE
+
+SUCCESS
+SELECT * FROM Update_table_1;
+1 | N02 | 0 | 0
+2 | N02 | 0 | 0
+4 | N3 | 0 | 1
+ID | T_NAME | COL1 | COL2
+
+
+FAILURE
+*/
+
 -- drop table
 -- -- echo 1. Drop empty table
 CREATE TABLE Drop_table_1(id int, t_name char);
@@ -34,4 +110,4 @@ insert into t values(2,2);
 select *, * from t1;
 select *,id from t1;
 select *,age from t1;
-select *,age from t1;
+select *,age,id,age,id,* from t1;

@@ -169,7 +169,9 @@ void ExecuteStage::handle_request(common::StageEvent *event)
     case SCF_DESC_TABLE: {
       do_desc_table(sql_event);
     } break;
-
+    case SCF_UPDATE: {
+      do_update_table(sql_event);
+    } break;
     case SCF_DROP_TABLE: {
       do_drop_table(sql_event);
     } break;
@@ -541,6 +543,89 @@ RC ExecuteStage::do_desc_table(SQLStageEvent *sql_event)
   }
   sql_event->session_event()->set_response(ss.str().c_str());
   return RC::SUCCESS;
+}
+
+bool check_attr_in_table(Table *table, const RelAttr &attr)
+{
+  if (attr.relation_name != nullptr && strcmp(table->name(), attr.relation_name) != 0) {
+    return false;
+  }
+  return table->table_meta().field(attr.attribute_name) != nullptr;
+}
+
+RC check_updates(Db *db, const Updates &updates)
+{
+  const char *table_name = updates.relation_name;
+  int condition_num = updates.condition_num;
+  const Condition *conditions = updates.conditions;
+  const char *attr_name = updates.attribute_name;
+  const Value *value = &updates.value;
+  Table *table = db->find_table(table_name);
+  if (table == nullptr) {
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+  if (value->type == DATES && *(int *)value->data == -1) {
+    return RC::RECORD_INVALID_KEY;
+  }
+
+  const TableMeta &meta = table->table_meta();
+  const FieldMeta *fmeta = meta.field(attr_name);
+  if (fmeta == nullptr) {
+    return RC::SCHEMA_FIELD_MISSING;
+  }
+  if (fmeta->type() != value->type) {
+    return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+  }
+  for (int i = 0; i < condition_num; i++) {
+    const Condition &c = conditions[i];
+    if (!c.left_is_attr && !c.right_is_attr) {
+      return RC::INVALID_ARGUMENT;
+    }
+    if (c.left_is_attr) {
+      if (!check_attr_in_table(table, c.left_attr)) {
+        return RC::SCHEMA_FIELD_NAME_ILLEGAL;
+      }
+      if (c.right_value.type == DATES && *(int*)c.right_value.data == -1) {
+        return RC::INVALID_ARGUMENT;
+      }
+      printf("%d\n", c.right_value.type);
+      if (c.right_value.type != meta.field(c.left_attr.attribute_name)->type()) {
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+    } else {
+      if (!check_attr_in_table(table, c.right_attr)) {
+        return RC::SCHEMA_FIELD_NAME_ILLEGAL;
+      }
+      if (c.left_value.type == DATES && *(int*)c.left_value.data == -1) {
+        return RC::INVALID_ARGUMENT;
+      }
+      if (c.left_value.type != meta.field(c.right_attr.attribute_name)->type()) {
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+    }
+  }
+  return RC::SUCCESS;
+}
+
+RC ExecuteStage::do_update_table(SQLStageEvent *sql_event)
+{
+  const Updates &updates = sql_event->query()->sstr.update;
+  SessionEvent *session_event = sql_event->session_event();
+  Db *db = session_event->session()->get_current_db();
+  RC rc = check_updates(db, updates);
+  if (rc == RC::SUCCESS) {
+    rc = db->update_table(updates.relation_name, updates.attribute_name, &updates.value,
+                           updates.condition_num, updates.conditions);
+  }
+
+  if (rc == RC::SUCCESS) {
+    session_event->set_response("SUCCESS\n");
+  } else {
+    session_event->set_response("FAILURE\n");
+  }
+
+  // TODO: CLOG
+  return rc;
 }
 
 RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
