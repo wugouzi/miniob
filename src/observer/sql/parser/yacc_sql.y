@@ -155,6 +155,7 @@ command:
 	| load_data
 	| help
 	| exit
+    | show_index
     ;
 
 exit:			
@@ -211,9 +212,9 @@ desc_table:
     ;
 
 show_index:
-SHOW INDEX FROM ID {
+SHOW INDEX FROM ID SEMICOLON {
   CONTEXT->ssql->flag = SCF_SHOW_INDEX;
-  show_index_init(&CONTEXT->ssql->sstr.show_index, $2);
+  show_index_init(&CONTEXT->ssql->sstr.show_index, $4);
 }
 ;
 
@@ -221,7 +222,7 @@ create_index:		/*create index 语句的语法解析树*/
     CREATE INDEX ID ON ID LBRACE ID RBRACE SEMICOLON 
 		{
 			CONTEXT->ssql->flag = SCF_CREATE_INDEX;//"create_index";
-			create_index_init(&CONTEXT->ssql->sstr.create_index, $3, $5, $7);
+			create_index_init(&CONTEXT->ssql->sstr.create_index, $3, $5, $7, 0);
 		}
     ;
 

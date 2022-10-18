@@ -41,7 +41,6 @@ RC BplusTreeIndex::create(const char *file_name, const IndexMeta &index_meta, co
         strrc(rc));
     return rc;
   }
-
   inited_ = true;
   LOG_INFO(
       "Successfully create index, file_name:%s, index:%s, field:%s", file_name, index_meta.name(), index_meta.field());

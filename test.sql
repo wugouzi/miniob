@@ -1,4 +1,8 @@
-CREATE TABLE date_table(id int, u_date date);
+--typecast
+create table t(id int, name char, year float);
+insert into t values(1,'a',12);
+select * from where id='1a';
+
 --selects
 CREATE TABLE Select_tables_1(id int, age int, u_name char);
 CREATE TABLE Select_tables_2(id int, age int, u_name char);

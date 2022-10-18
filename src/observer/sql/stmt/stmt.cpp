@@ -12,13 +12,16 @@ See the Mulan PSL v2 for more details. */
 // Created by Wangyunlai on 2022/5/22.
 //
 
+#include <cctype>
+#include <cstdio>
 #include "rc.h"
 #include "common/log/log.h"
+#include "sql/parser/parse_defs.h"
 #include "sql/stmt/insert_stmt.h"
 #include "sql/stmt/delete_stmt.h"
 #include "sql/stmt/select_stmt.h"
 
-RC Stmt::create_stmt(Db *db, const Query &query, Stmt *&stmt)
+RC Stmt::create_stmt(Db *db, Query &query, Stmt *&stmt)
 {
   stmt = nullptr;
 
@@ -41,4 +44,71 @@ RC Stmt::create_stmt(Db *db, const Query &query, Stmt *&stmt)
   return RC::UNIMPLENMENT;
 }
 
-
+bool Stmt::convert_type(AttrType type, Value *value)
+{
+  if (type == AttrType::INTS && value->type == AttrType::FLOATS) {
+    // float -> int
+    float tp = *(float *)value->data;
+    *(int *)value->data = (int)(tp+0.5);
+    value->type = AttrType::INTS;
+    LOG_DEBUG("%f converts to %d", tp, (int)(tp+0.5));
+  } else if (type == AttrType::FLOATS && value->type == AttrType::INTS) {
+    // int -> float
+    float tp = *(int *)value->data;
+    *(float *)value->data = tp;
+    value->type = AttrType::FLOATS;
+    LOG_DEBUG("%d converts to %f", (int)tp, tp);
+  } else if (type == AttrType::INTS && value->type == AttrType::CHARS) {
+    // char -> int
+    char *s = (char *)value->data;
+    int ans = 0;
+    int i = 0;
+    while (isdigit(s[i])) {
+      ans = ans * 10 + s[i] - '0';
+      i++;
+    }
+    LOG_DEBUG("%s converts to %d", (char *)value->data, ans);
+    *(int *)value->data = ans;
+    value->type = AttrType::INTS;
+  } else if (type == AttrType::FLOATS && value->type == AttrType::CHARS) {
+    char *s = (char *)value->data;
+    float ans = 0;
+    int i = 0;
+    if (isdigit(s[i])) {
+      while (isdigit(s[i])) {
+        ans = ans * 10 + s[i] - '0';
+        i++;
+      }
+      if (s[i] == '.') {
+        i++;
+        float tp = 0;
+        int j = 1;
+        while (isdigit(s[i])) {
+          tp = tp * 10 + s[i] - '0';
+          i++;
+          j *= 10;
+        }
+        ans += tp / j;
+      }
+    }
+    LOG_DEBUG("%s converts to %f", (char *)value->data, ans);
+    *(float *)value->data = ans;
+    value->type = AttrType::FLOATS;
+  } else if (type == AttrType::CHARS && value->type == AttrType::INTS) {
+    // int -> chars
+    char *str = new char[20];
+    sprintf(str, "%d", *(int *)value->data);
+    LOG_DEBUG("%d converts to %s", *(int *)value->data, str);
+    value->data = (void *)str;
+    value->type = AttrType::CHARS;
+  } else if (type == AttrType::CHARS && value->type == AttrType::FLOATS) {
+    char *str = new char[30];
+    std::sprintf(str, "%.10f", *(float *)value->data);
+    LOG_DEBUG("%f converts to %s", *(float *)value->data, str);
+    value->data = (void *)str;
+    value->type = AttrType::CHARS;
+  } else {
+    return false;
+  }
+  return value;
+}

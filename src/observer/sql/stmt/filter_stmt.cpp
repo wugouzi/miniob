@@ -29,7 +29,7 @@ FilterStmt::~FilterStmt()
 }
 
 RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-		      const Condition *conditions, int condition_num,
+		      Condition *conditions, int condition_num,
 		      FilterStmt *&stmt)
 {
   RC rc = RC::SUCCESS;
@@ -80,7 +80,7 @@ RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::str
 }
 
 RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-				  const Condition &condition, FilterUnit *&filter_unit)
+                                  Condition &condition, FilterUnit *&filter_unit)
 {
   RC rc = RC::SUCCESS;
   
