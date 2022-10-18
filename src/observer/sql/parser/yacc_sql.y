@@ -102,6 +102,7 @@ ParserContext *get_context(yyscan_t scanner)
         LE
         GE
         NE
+        DATE_T
 
 %union {
   struct _Attr *attr;
@@ -114,6 +115,7 @@ ParserContext *get_context(yyscan_t scanner)
 }
 
 %token <number> NUMBER
+%token <string> DATE_STR;
 %token <floats> FLOAT 
 %token <string> ID
 %token <string> PATH
@@ -268,6 +270,7 @@ type:
 	INT_T { $$=INTS; }
        | STRING_T { $$=CHARS; }
        | FLOAT_T { $$=FLOATS; }
+       | DATE_T { $$=DATES; }
        ;
 ID_get:
 	ID 
@@ -312,6 +315,9 @@ value:
 			$1 = substr($1,1,strlen($1)-2);
   		value_init_string(&CONTEXT->values[CONTEXT->value_length++], $1);
 		}
+    |DATE_STR {
+        value_init_date(&CONTEXT->values[CONTEXT->value_length++], $1);
+    }
     ;
     
 delete:		/*  delete 语句的语法解析树*/

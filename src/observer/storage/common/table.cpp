@@ -122,9 +122,6 @@ RC Table::create(
 
 RC Table::drop()
 {
-  data_buffer_pool_->close_file();
-  data_buffer_pool_ = nullptr;
-
   RC rc = RC::SUCCESS;
   std::string path = base_dir_ + "/" + table_meta_.name();
   std::string file1 = path + TABLE_META_SUFFIX;
@@ -150,6 +147,7 @@ RC Table::drop()
     }
   }
   data_buffer_pool_->close_file();
+  data_buffer_pool_ = nullptr;
 
   return rc;
 }

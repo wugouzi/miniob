@@ -1,3 +1,59 @@
+--date
+CREATE TABLE date_table(id int, u_date date);
+CREATE INDEX index_id on date_table(u_date);
+
+INSERT INTO date_table VALUES (1,'2020-01-21');
+INSERT INTO date_table VALUES (2,'2020-10-21');
+INSERT INTO date_table VALUES (3,'2020-1-01');
+INSERT INTO date_table VALUES (4,'2020-01-1');
+INSERT INTO date_table VALUES (5,'2019-12-21');
+INSERT INTO date_table VALUES (6,'2016-2-29');
+INSERT INTO date_table VALUES (7,'1970-1-1');
+INSERT INTO date_table VALUES (8,'2000-01-01');
+INSERT INTO date_table VALUES (9,'2038-1-19');
+
+SELECT * FROM date_table WHERE u_date>'2020-1-20';
+SELECT * FROM date_table WHERE u_date<'2019-12-31';
+SELECT * FROM date_table WHERE u_date='2020-1-1';
+
+DELETE FROM date_table WHERE u_date>'2012-2-29';
+SELECT * FROM date_table;
+
+SELECT * FROM date_table WHERE u_date='2017-2-29';
+SELECT * FROM date_table WHERE u_date='2017-21-29';
+SELECT * FROM date_table WHERE u_date='2017-12-32';
+SELECT * FROM date_table WHERE u_date='2017-11-31';
+
+INSERT INTO date_table VALUES (10,'2017-2-29');
+INSERT INTO date_table VALUES (11,'2017-21-29');
+INSERT INTO date_table VALUES (12,'2017-12-32');
+INSERT INTO date_table VALUES (13,'2017-11-31');
+
+
+/*
+1 | 2020-01-21
+2 | 2020-10-21
+9 | 2038-01-19
+ID | U_DATE
+
+5 | 2019-12-21
+6 | 2016-02-29
+7 | 1970-01-01
+8 | 2000-01-01
+ID | U_DATE
+
+3 | 2020-01-01
+4 | 2020-01-01
+ID | U_DATE
+
+DELETE
+SUCCESS
+
+7 | 1970-01-01
+8 | 2000-01-01
+ID | U_DATE
+*/
+
 --update
 
 CREATE TABLE Update_table_1(id int, t_name char, col1 int, col2 int);
@@ -106,10 +162,9 @@ SELECT * FROM Drop_table_6;
 -- meta
 
 create table t(id int, age int);
-drop table t;
 delete from t where id=1;
-
 delete from t where age=3;
+drop table t;
 insert into t values(1,1);
 insert into t values(2,2);
 select *, * from t1;
