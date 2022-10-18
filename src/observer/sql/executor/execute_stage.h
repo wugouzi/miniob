@@ -52,6 +52,7 @@ protected:
   RC do_clog_sync(SQLStageEvent *sql_event);
   RC do_drop_table(SQLStageEvent *sql_event);
   RC do_update_table(SQLStageEvent *sql_event);
+  RC value_check(const int &value_num, const Value *values) const;
 
 protected:
 private:

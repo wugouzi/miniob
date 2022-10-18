@@ -1,3 +1,5 @@
+CREATE TABLE date_table(id int, u_date date);
+SELECT * FROM date_table WHERE u_date='2017-2-29';
 --date
 CREATE TABLE date_table(id int, u_date date);
 CREATE INDEX index_id on date_table(u_date);
@@ -28,7 +30,7 @@ INSERT INTO date_table VALUES (10,'2017-2-29');
 INSERT INTO date_table VALUES (11,'2017-21-29');
 INSERT INTO date_table VALUES (12,'2017-12-32');
 INSERT INTO date_table VALUES (13,'2017-11-31');
-
+drop table date_table;
 
 /*
 1 | 2020-01-21

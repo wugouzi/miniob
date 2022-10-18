@@ -32,6 +32,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/predicate_operator.h"
 #include "sql/operator/delete_operator.h"
 #include "sql/operator/project_operator.h"
+#include "sql/parser/parse_defs.h"
 #include "sql/stmt/stmt.h"
 #include "sql/stmt/select_stmt.h"
 #include "sql/stmt/update_stmt.h"
@@ -628,6 +629,15 @@ RC ExecuteStage::do_update_table(SQLStageEvent *sql_event)
   return rc;
 }
 
+RC ExecuteStage::value_check(const int &value_num, const Value *values) const
+{
+  for (int i = 0; i < value_num; i++) {
+    if (values[i].type == DATES && *(const int*)values[i].data == -1) {
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
+  }
+  return RC::SUCCESS;
+}
 RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
 {
   Stmt *stmt = sql_event->stmt();
@@ -645,7 +655,12 @@ RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
   InsertStmt *insert_stmt = (InsertStmt *)stmt;
   Table *table = insert_stmt->table();
 
-  RC rc = table->insert_record(trx, insert_stmt->value_amount(), insert_stmt->values());
+  RC rc = value_check(insert_stmt->value_amount(), insert_stmt->values());
+  if (rc != RC::SUCCESS) {
+    session_event->set_response("FAILURE\n");
+    return rc;
+  }
+  rc = table->insert_record(trx, insert_stmt->value_amount(), insert_stmt->values());
   if (rc == RC::SUCCESS) {
     if (!session->is_trx_multi_operation_mode()) {
       CLogRecord *clog_record = nullptr;
