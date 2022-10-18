@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include <stddef.h>
 #include <math.h>
 #include "condition_filter.h"
+#include "sql/parser/parse_defs.h"
 #include "storage/record/record_manager.h"
 #include "common/log/log.h"
 #include "storage/common/table.h"
@@ -97,6 +98,10 @@ RC DefaultConditionFilter::init(Table &table, const Condition &condition)
     left.value = condition.left_value.data;  // 校验type 或者转换类型
     type_left = condition.left_value.type;
 
+    if (type_left == DATES && *(int*)left.value == -1) {
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
+
     left.attr_length = 0;
     left.attr_offset = 0;
   }
@@ -117,6 +122,10 @@ RC DefaultConditionFilter::init(Table &table, const Condition &condition)
     right.is_attr = false;
     right.value = condition.right_value.data;
     type_right = condition.right_value.type;
+
+    if (type_right == DATES && *(int*)right.value == -1) {
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
 
     right.attr_length = 0;
     right.attr_offset = 0;
