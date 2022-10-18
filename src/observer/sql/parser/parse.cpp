@@ -92,7 +92,7 @@ void value_init_date(Value *value, const char* v)
   if (!b) {
     dv = -1;
   }
-  std::memcpy(value->data, &dv, sizeof(int));
+  memcpy(value->data, &dv, sizeof(int));
 }
 void value_init_float(Value *value, float v)
 {

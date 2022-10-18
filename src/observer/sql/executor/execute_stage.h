@@ -29,6 +29,7 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 #include <utility>
 #include <vector>
+#include <algorithm>
 #include "rc.h"
 
 class SQLStageEvent;
@@ -92,7 +93,6 @@ class TupleSet {
   const TupleCell &get_cell(int idx);
   const std::pair<Table *, FieldMeta> &get_meta(int idx);
   int index(const Field &field) const;
-  void reverse();
 
  private:
   int table_num_ = 0;

@@ -902,12 +902,6 @@ const std::vector<TupleCell> &TupleSet::cells() const {
   return cells_;
 }
 
-void TupleSet::reverse()
-{
-  std::reverse(metas_.begin(), metas_.end());
-  std::reverse(cells_.begin(), cells_.end());
-}
-
 // filter table with table-specific conditions
 FilterStmt *get_sub_filter(Table *table, FilterStmt *old_filter)
 {
@@ -982,7 +976,7 @@ RC Pretable::init(Table *table, FilterStmt *old_filter)
 
 const FieldMeta *Pretable::field(const Field &field) const {
   for (auto table : tables_) {
-    if (std::strcmp(table->name(), field.table_name()) == 0) {
+    if (strcmp(table->name(), field.table_name()) == 0) {
       const FieldMeta *tp = table->table_meta().field(field.field_name());
       if (tp != nullptr) {
         return tp;
