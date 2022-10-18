@@ -18,4 +18,5 @@ GPATH
 GTAGS
 cmake-build-debug-clang/
 cmake-build-debug-clang/
+.cache/
 #*#
