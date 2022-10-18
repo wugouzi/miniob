@@ -162,6 +162,9 @@ void ExecuteStage::handle_request(common::StageEvent *event)
     case SCF_CREATE_INDEX: {
       do_create_index(sql_event);
     } break;
+    case SCF_SHOW_INDEX: {
+      do_show_index(sql_event);
+    } break;
     case SCF_SHOW_TABLES: {
       do_show_tables(sql_event);
     } break;
@@ -582,9 +585,25 @@ RC ExecuteStage::do_create_index(SQLStageEvent *sql_event)
     return RC::SCHEMA_TABLE_NOT_EXIST;
   }
 
-  RC rc = table->create_index(nullptr, create_index.index_name, create_index.attribute_name);
+  RC rc = table->create_index(nullptr, create_index.index_name, create_index.attribute_name, create_index.unique);
   sql_event->session_event()->set_response(rc == RC::SUCCESS ? "SUCCESS\n" : "FAILURE\n");
   return rc;
+}
+
+RC ExecuteStage::do_show_index(SQLStageEvent *sql_event)
+{
+  SessionEvent *session_event = sql_event->session_event();
+  Db *db = session_event->session()->get_current_db();
+  const ShowIndex &show_index = sql_event->query()->sstr.show_index;
+  Table *table = db->find_table(show_index.relation_name);
+  if (nullptr == table) {
+    session_event->set_response("FAILURE\n");
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+
+  std::stringstream ss;
+  table->show_index(ss);
+
 }
 
 RC ExecuteStage::do_show_tables(SQLStageEvent *sql_event)

@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 #define __OBSERVER_STORAGE_COMMON_TABLE_H__
 
 #include "storage/common/table_meta.h"
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -70,7 +71,8 @@ public:
   RC scan_record(Trx *trx, ConditionFilter *filter, int limit, void *context,
       void (*record_reader)(const char *data, void *context));
 
-  RC create_index(Trx *trx, const char *index_name, const char *attribute_name);
+  RC create_index(Trx *trx, const char *index_name, const char *attribute_name, bool unique);
+  void show_index(std::stringstream &ss);
 
   RC get_record_scanner(RecordFileScanner &scanner);
 

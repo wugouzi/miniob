@@ -103,6 +103,7 @@ ParserContext *get_context(yyscan_t scanner)
         GE
         NE
         DATE_T
+        UNIQUE
 
 %union {
   struct _Attr *attr;
@@ -208,6 +209,13 @@ desc_table:
       desc_table_init(&CONTEXT->ssql->sstr.desc_table, $2);
     }
     ;
+
+show_index:
+SHOW INDEX FROM ID {
+  CONTEXT->ssql->flag = SCF_SHOW_INDEX;
+  show_index_init(&CONTEXT->ssql->sstr.show_index, $2);
+}
+;
 
 create_index:		/*create index 语句的语法解析树*/
     CREATE INDEX ID ON ID LBRACE ID RBRACE SEMICOLON 

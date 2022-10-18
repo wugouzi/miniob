@@ -51,6 +51,10 @@ public:
 
   virtual RC sync() = 0;
 
+  bool is_unique() {
+    return index_meta_.is_unique();
+  }
+
 protected:
   RC init(const IndexMeta &index_meta, const FieldMeta &field_meta);
 
