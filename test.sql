@@ -104,7 +104,12 @@ SELECT * FROM Drop_table_6;
 
 
 -- meta
+
 create table t(id int, age int);
+drop table t;
+delete from t where id=1;
+
+delete from t where age=3;
 insert into t values(1,1);
 insert into t values(2,2);
 select *, * from t1;

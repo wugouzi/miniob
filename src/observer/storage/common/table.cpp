@@ -123,6 +123,7 @@ RC Table::create(
 RC Table::drop()
 {
   data_buffer_pool_->close_file();
+  data_buffer_pool_ = nullptr;
 
   RC rc = RC::SUCCESS;
   std::string path = base_dir_ + "/" + table_meta_.name();
@@ -148,6 +149,7 @@ RC Table::drop()
       return RC::GENERIC_ERROR;
     }
   }
+  data_buffer_pool_->close_file();
 
   return rc;
 }
