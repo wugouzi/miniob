@@ -1,5 +1,3 @@
-# -*- coding: UTF-8 -*-
-
 from genericpath import exists
 import os
 import json
@@ -52,8 +50,8 @@ python3 miniob_test.py \
         --test-result-dir=result \
         --test-result-tmp-dir=./result_tmp \
         --use-unix-socket \
-        --git-repo=https://github.com/oceanbase/miniob.git \
-        --git-branch=main \
+        --git-repo=https://github.com/wugouzi/miniob \
+        --git-branch=main2 \
         --code-type=git \
         --target-dir=./miniob \
         --log=stdout \
