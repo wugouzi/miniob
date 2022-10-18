@@ -290,7 +290,7 @@ class MiniObClient:
   测试客户端。使用TCP连接，向服务器发送命令并反馈结果
   '''
 
-  def __init__(self, server_port: int, server_socket: str, time_limit:int = 10):
+  def __init__(self, server_port: int, server_socket: str, time_limit:int = 100):
     if (server_port < 0 or server_port > 65535) and server_socket is None:
       raise(Exception("Invalid server port: " + str(server_port)))
 
@@ -1322,7 +1322,8 @@ def compile(work_dir: str, build_dir: str, cmake_args: str, make_args: str, rebu
         eval_result.append_message(output)
       return False
 
-  make_command = ["make", "--silent", "-C", build_path]
+  # make_command = ["make", "--silent", "-C", build_path]
+  make_command = ["make", "-C", build_path]
   if isinstance(make_args, str):
     args = make_args.split(';')
     for arg in args:

@@ -26,6 +26,9 @@ See the Mulan PSL v2 for more details. */
 #include "sql/expr/tuple.h"
 #include "storage/common/table.h"
 #include "storage/common/field.h"
+#include <string>
+#include <utility>
+#include <vector>
 #include "rc.h"
 
 class SQLStageEvent;

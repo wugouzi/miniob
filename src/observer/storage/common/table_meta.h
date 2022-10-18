@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 
 #include <string>
 #include <vector>
+#include <utility>
 
 #include "rc.h"
 #include "storage/common/field_meta.h"

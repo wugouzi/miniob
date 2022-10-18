@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 
 #include <vector>
 #include <unordered_map>
+#include <string>
 #include "rc.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/stmt.h"

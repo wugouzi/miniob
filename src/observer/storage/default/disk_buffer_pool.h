@@ -22,6 +22,8 @@ See the Mulan PSL v2 for more details. */
 #include <time.h>
 #include <string>
 #include <mutex>
+#include <list>
+#include <set>
 #include <unordered_map>
 
 #include "rc.h"

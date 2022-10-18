@@ -16,6 +16,8 @@ See the Mulan PSL v2 for more details. */
 #define __OBSERVER_STORAGE_COMMON_TABLE_H__
 
 #include "storage/common/table_meta.h"
+#include <string>
+#include <vector>
 
 struct RID;
 class Record;
