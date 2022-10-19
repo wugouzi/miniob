@@ -1,3 +1,20 @@
+create table t(addr char(10));
+insert into t values ('wefw');
+insert into t values ('1');
+insert into t values ('2');
+insert into t values ('3');
+
+INSERT INTO Typecast_table_4 VALUES(1,1,1);
+SUCCESS
+SELECT * FROM Typecast_table_4 WHERE 'a'<1;
+-1 | 1 | 1
+-ID | NAME | AGE
+-SELECT * FROM Typecast_table_4 WHERE '1a'>0;
+-1 | 1 | 1
+-ID | NAME | AGE
+-SELECT * FROM Typecast_table_4 WHERE '1a'>0.5;
+-1 | 1 | 1
+
 3 | 15 | ABC | 3
 11. SELECT SINGLE AND AGGREGATION
 SELECT id,avg(num),addr FROM aggregation_func;
@@ -36,6 +53,23 @@ select avg(id),max(age),min(name),count(score) from t_basic_3;
 select sum(id), sum(1.2), sum(t_basic_2.score) from t_basic_2;
 drop table t_basic_2;
 drop table t_basic_3;
+
+INSERT INTO aggregation_func VALUES (5, 18, 10.0, '1abc', '2022-01-01');
+SUCCESS
+SELECT avg(addr) from aggregation_func;
+-AVG(ADDR)
+-0.2
+\ No newline at end of file
++FAILURE
+create table t(i1 int, i2 int, i3 int, i4 int, i5 date);
+insert into t values(5,18,10.0, '1', '2022-01-01');
+insert into t values(1,3,2,5, '1993-12-04');
+select avg(i1) from t;
+select avg(i2) from t;
+select avg(i3) from t;
+select avg(i4) from t;
+select avg(i5) from t;
+drop table t;
 
 /*
 SUCCESS

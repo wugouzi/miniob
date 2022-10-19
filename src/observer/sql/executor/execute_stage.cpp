@@ -1270,7 +1270,10 @@ RC Pretable::aggregate_avg(int idx, TupleCell *res)
       case FLOATS: {
         *ans += *(float *)cell.data();
       } break;
-      case DATES: case CHARS:
+      case CHARS: {
+        *ans += Stmt::char_to_float(cell.data());
+      } break;
+      case DATES:
       default: {
         return RC::INTERNAL;
       }
@@ -1347,7 +1350,6 @@ RC Pretable::aggregate(const std::vector<Field> fields)
           break;
         case A_MIN:
           rc = aggregate_min(idx, &cell);
-
           break;
         case A_AVG:
           rc = aggregate_avg(idx, &cell);
