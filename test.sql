@@ -1,3 +1,14 @@
+INSERT INTO Typecast_table_2 VALUES(1.9,'3.5',11.5);
+SUCCESS
+SELECT * FROM Typecast_table_2;
+-0 | 1.5 | 9.5
+-1 | 2.5 | 10.5
++0 | 1.50 | 9.5
++1 | 2.50 | 10.5
+2 | 3.5 | 11.5
+ID | NAME | AGE
+SELECT * FROM Typecast_table_2 WHERE age<=10;
+
 
 -- inserts
 CREATE TABLE insert_table(id int, t_name char(4), col1 int, col2 int);

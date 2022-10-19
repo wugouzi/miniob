@@ -14,6 +14,9 @@ See the Mulan PSL v2 for more details. */
 
 #include <cctype>
 #include <cstdio>
+#include <cstring>
+#include <string>
+#include <vector>
 #include "rc.h"
 #include "sql/stmt/stmt.h"
 #include "common/log/log.h"
@@ -125,14 +128,20 @@ bool Stmt::convert_type(AttrType type, Value *value)
     value->type = AttrType::FLOATS;
   } else if (type == AttrType::CHARS && value->type == AttrType::INTS) {
     // int -> chars
-    char *str = new char[20];
+    char *str = strdup(std::to_string(*(int*)value->data).c_str());
     sprintf(str, "%d", *(int *)value->data);
     LOG_DEBUG("%d converts to %s", *(int *)value->data, str);
     value->data = (void *)str;
     value->type = AttrType::CHARS;
   } else if (type == AttrType::CHARS && value->type == AttrType::FLOATS) {
-    char *str = new char[30];
-    std::sprintf(str, "%.10f", *(float *)value->data);
+    char *str = strdup(std::to_string(*(float*)value->data).c_str());
+    for (int i = strlen(str) - 1; i > 0; i--) {
+      if (str[i] == '0') {
+        str[i] = '\0';
+      } else {
+        break;
+      }
+    }
     LOG_DEBUG("%f converts to %s", *(float *)value->data, str);
     value->data = (void *)str;
     value->type = AttrType::CHARS;
