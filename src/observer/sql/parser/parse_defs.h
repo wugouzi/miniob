@@ -39,6 +39,7 @@ typedef struct {
   char *relation_name;   // relation name (may be NULL) 表名
   char *attribute_name;  // attribute name              属性名
   AggreType type;
+  int print_attr;
 } RelAttr;
 
 typedef enum {
@@ -213,7 +214,7 @@ extern "C" {
 void relation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name);
 void relation_attr_destroy(RelAttr *relation_attr);
 
-void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type);
+void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type, int is_digit);
 
 void value_init_integer(Value *value, int v);
 void value_init_float(Value *value, float v);

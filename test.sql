@@ -1,3 +1,167 @@
+select avg(t_basic_2.score) from t_basic_2;
+
+create table t_basic_2(id int, age int, name char, score float);
+insert into t_basic_2 values(1,1, 'a', 1.0);
+insert into t_basic_2 values(2,2, 'b', 2.0);
+insert into t_basic_2 values(4,4, 'c', 3.0);
+insert into t_basic_2 values(3,3, 'd', 4.0);
+insert into t_basic_2 values(5,5, 'e', 5.5);
+insert into t_basic_2 values(6,6, 'f', 6.6);
+insert into t_basic_2 values(7,7, 'g', 7.7);
+select * from t_basic_2;
+select avg(id),count(*),max(id),min(id) from t_basic_2;
+select avg(t_basic_2.score),count(*),max(age),min(score) from t_basic_2;
+select avg(3),count(1) from t_basic_2;
+select avg(3.4),max(1.1),min(-1.1) from t_basic_2;
+select max(3.456),min(age),avg(t_basic_2.age) from t_basic_2;
+select count(4),max(name) from t_basic_2;
+select count(*,id) from t_basic_2;
+select count() from t_basic_2;
+select count(b) from t_basic_2;
+create table t_basic_3(id int, age int, name char, score float);
+select avg(id),max(age),min(name),count(score) from t_basic_3;
+drop table t_basic_2;
+drop table t_basic_3;
+
+/*
+SUCCESS
+SUCCESS
+SUCCESS
+SUCCESS
+SUCCESS
+SUCCESS
+SUCCESS
+SUCCESS
+id | age | name | score
+1 | 1 | a | 1
+2 | 2 | b | 2
+4 | 4 | c | 3
+3 | 3 | d | 4
+5 | 5 | e | 5.5
+6 | 6 | f | 6.6
+7 | 7 | g | 7.7
+avg(id) | count(*) | max(id) | min(id)
+4 | 7 | 7 | 1
+avg(t_basic_2.score) | count(*) | max(age) | min(score)
+4.26 | 7 | 7 | 1
+avg(3) | count(1)
+3 | 7
+avg(3.4) | max(1.1) | min(-1.1)
+3.4 | 1.1 | -1.1
+max(3.456) | min(age) | avg(t_basic_2.age)
+3.46 | 1 | 4
+count(4) | max(name)
+7 | g
+FAILURE
+FAILURE
+FAILURE
+SUCCESS
+avg(id) | max(age) | min(name) | count(score)
+SUCCESS
+SUCCESS
+
+*/
+drop table t;
+create table t(id int);
+insert into t values (1),(2),(3);
+select avg(id) from t;
+drop table t;
+
+CREATE TABLE aggregation_func(id int, num int, price float, addr char, birthday date);
+INSERT INTO aggregation_func VALUES (1, 18, 10.0, 'abc', '2020-01-01');
+INSERT INTO aggregation_func VALUES (2, 15, 20.0, 'abc', '2010-01-11');
+INSERT INTO aggregation_func VALUES (3, 12, 30.0, 'def', '2021-01-21');
+INSERT INTO aggregation_func VALUES (4, 15, 30.0, 'dei', '2021-01-31');
+SELECT count(*) FROM aggregation_func;
+SELECT count(num) FROM aggregation_func;
+SELECT min(num) FROM aggregation_func;
+SELECT min(price) FROM aggregation_func;
+SELECT min(addr) FROM aggregation_func;
+SELECT max(num) FROM aggregation_func;
+SELECT max(price) FROM aggregation_func;
+SELECT max(addr) FROM aggregation_func;
+SELECT avg(num) FROM aggregation_func;
+SELECT avg(price) FROM aggregation_func;
+
+SELECT min(*) FROM aggregation_func;
+SELECT max(*) FROM aggregation_func;
+SELECT avg(*) FROM aggregation_func;
+SELECT count(*,num) FROM aggregation_func;
+SELECT min(num,price) FROM aggregation_func;
+SELECT max(num,price) FROM aggregation_func;
+SELECT avg(num,price) FROM aggregation_func;
+SELECT count() FROM aggregation_func;
+SELECT min() FROM aggregation_func;
+SELECT max() FROM aggregation_func;
+SELECT avg() FROM aggregation_func;
+SELECT count(id2) FROM aggregation_func;
+SELECT min(id2) FROM aggregation_func;
+SELECT max(id2) FROM aggregation_func;
+SELECT avg(id2) FROM aggregation_func;
+
+SELECT min(num),max(num),avg(num) FROM aggregation_func;
+drop table aggregation_func;
+
+/*
+
+COUNT(*)
+4
+
+COUNT(NUM)
+4
+
+MIN(NUM)
+12
+
+MIN(PRICE)
+10
+
+MIN(ADDR)
+ABC
+
+MAX(NUM)
+18
+
+MAX(PRICE)
+30
+
+MAX(ADDR)
+DEI
+
+AVG(NUM)
+15
+
+AVG(PRICE)
+22.5
+
+FAILURE
+FAILURE
+FAILURE
+FAILURE
+FAILURE
+FAILURE
+FAILURE
+FAILURE
+FAILURE
+FAILURE
+FAILURE
+FAILURE
+FAILURE
+FAILURE
+FAILURE
+
+MIN(NUM) | MAX(NUM) | AVG(NUM)
+12 | 18 | 15
+
+
+
+
+
+*/
+
+
+
+
 -- aggregation
 select count(*,id) from t;
 select count() from t;

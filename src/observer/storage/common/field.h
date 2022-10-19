@@ -50,12 +50,17 @@ public:
   void set_aggr(AggreType type) {
     aggr_type_ = type;
   }
-  const std::string &count_str() const { return count_str_; }
-  void set_count(std::string cnt) { count_str_ = cnt; }
+  const std::string &aggr_str() const { return aggr_str_; }
+  void set_aggr_str(std::string cnt) { aggr_str_ = cnt; }
   AggreType aggr_type() const { return aggr_type_; }
+  void set_table(Table *table) { table_ = table; }
+  bool has_field() const { return field_ != nullptr; }
+  void set_print_table() { print_table_ = true; }
+  bool should_print_table() const { return print_table_; }
 private:
   const Table *table_ = nullptr;
   const FieldMeta *field_ = nullptr;
   AggreType aggr_type_ = A_NO;
-  std::string count_str_;
+  std::string aggr_str_;
+  bool print_table_ = false;
 };

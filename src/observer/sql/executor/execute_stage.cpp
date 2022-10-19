@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi & Longda on 2021/4/13.
 //
 
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -467,6 +468,7 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
   }
   if (rc != RC::SUCCESS) {
     LOG_ERROR("aggregate error");
+    session_event->set_response("FAILURE\n");
     return rc;
   }
   res->print(ss);
@@ -1062,12 +1064,12 @@ void TupleSet::push(const std::pair<Table*, FieldMeta> &p, const TupleCell &cell
   metas_.push_back(p);
   metas_.back().second.set_offset(4 + metas_.back().second.offset());
   cells_.push_back(cell);
-  data_ += cell.data();
+  data_ += std::string(cell.data(), cell.length());
 }
 
 int TupleSet::index(const Field &field) const
 {
-  if (!field.has_table()) {
+  if (!field.has_table() || !field.has_field()) {
     return -1;
   }
   for (int i = 0; i < metas_.size(); i++) {
@@ -1085,6 +1087,9 @@ const TupleCell &TupleSet::get_cell(int idx)
 }
 const std::pair<Table *, FieldMeta> &TupleSet::get_meta(int idx)
 {
+  if (idx == -1) {
+    return metas_[0];
+  }
   return metas_[idx];
 }
 
@@ -1219,7 +1224,7 @@ RC Pretable::aggregate_min(int idx, TupleCell *res)
 
 RC Pretable::aggregate_avg(int idx, TupleCell *res)
 {
-  float *ans = new float();
+  float *ans = (float *)malloc(sizeof(float));
   *ans = 0;
   for (TupleSet &tuple : tuples_) {
     const TupleCell &cell = tuple.get_cell(idx);
@@ -1242,6 +1247,29 @@ RC Pretable::aggregate_avg(int idx, TupleCell *res)
   // TODO: dangerous
   res->set_data((char *)ans);
   return RC::SUCCESS;
+  // float *ans = new float();
+  // *ans = 0;
+  // for (TupleSet &tuple : tuples_) {
+  //   const TupleCell &cell = tuple.get_cell(idx);
+  //   switch (cell.attr_type()) {
+  //     case INTS: {
+  //       *ans += *(int *)cell.data();
+  //     } break;
+  //     case FLOATS: {
+  //       *ans += *(float *)cell.data();
+  //     } break;
+  //     case DATES: case CHARS:
+  //     default: {
+  //       return RC::INTERNAL;
+  //     }
+  //   }
+  // }
+  // res->set_type(FLOATS);
+  // res->set_length(sizeof(float));
+  // *ans = *ans / tuples_.size();
+  // // TODO: dangerous
+  // res->set_data((char *)ans);
+  // return RC::SUCCESS;
 }
 
 // TODO: invisible
@@ -1268,26 +1296,40 @@ RC Pretable::aggregate(const std::vector<Field> fields)
   for (const auto &field : fields) {
     int idx = tuples_[0].index(field);
     TupleCell cell;
-    switch (field.aggr_type()) {
-      case A_NO:
-        res.push(tuples_[0].get_meta(idx), tuples_[0].get_cell(idx));
-        continue;
-        break;
-      case A_MAX:
-        rc = aggregate_max(idx, &cell);break;
-      case A_MIN:
-        rc = aggregate_min(idx, &cell);break;
-      case A_AVG:
-        rc = aggregate_avg(idx, &cell);break;
-      case A_COUNT:
-        rc = aggregate_count(idx, &cell);break;
-      case A_FAILURE:
-        return RC::SCHEMA_FIELD_REDUNDAN;
+    if (idx == -1 && field.aggr_type() != AggreType::A_COUNT) {
+      cell.set_type(AttrType::CHARS);
+      const std::string &s = field.aggr_str();
+      cell.set_length(s.size());
+      cell.set_data(strdup(s.c_str()));
+    } else {
+      switch (field.aggr_type()) {
+        case A_NO:
+          res.push(tuples_[0].get_meta(idx), tuples_[0].get_cell(idx));
+          continue;
+          break;
+        case A_MAX:
+          rc = aggregate_max(idx, &cell);
+          break;
+        case A_MIN:
+          rc = aggregate_min(idx, &cell);
+
+          break;
+        case A_AVG:
+
+          rc = aggregate_avg(idx, &cell);
+
+          break;
+        case A_COUNT:
+          rc = aggregate_count(idx, &cell);break;
+        case A_FAILURE:
+          return RC::SCHEMA_FIELD_REDUNDAN;
+      }
+      if (rc != SUCCESS) {
+        LOG_ERROR("wrong wrong wrong");
+        return rc;
+      }
     }
-    if (rc != SUCCESS) {
-      LOG_ERROR("wrong wrong wrong");
-      return rc;
-    }
+
     res.push(tuples_[0].get_meta(idx), cell);
   }
   tuples_.clear();
@@ -1441,8 +1483,9 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
   for (auto &field : fields) {
     ss << (first ? "" : " | ");
     first = false;
-    std::string tp = field.has_table() ? field.field_name() : field.count_str();
-    if (multi && field.has_table()) {
+    std::string tp = field.has_field() ? field.field_name() : field.aggr_str();
+    if (field.should_print_table() ||
+        (multi && field.has_table())) {
       tp = field.table_name() + ("." + tp);
     }
     if (field.aggr_type() != A_NO) {

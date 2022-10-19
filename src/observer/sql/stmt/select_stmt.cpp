@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/stmt/select_stmt.h"
+#include "sql/parser/parse_defs.h"
 #include "sql/stmt/filter_stmt.h"
 #include "common/log/log.h"
 #include "common/lang/string.h"
@@ -68,6 +69,10 @@ RC SelectStmt::create(Db *db, Selects &select_sql, Stmt *&stmt)
   for (int i = select_sql.attr_num - 1; i >= 0; i--) {
     const RelAttr &relation_attr = select_sql.attributes[i];
 
+    if (relation_attr.type == AggreType::A_FAILURE) {
+      return RC::SCHEMA_FIELD_NAME_ILLEGAL;
+    }
+
     if (common::is_blank(relation_attr.relation_name) && 0 == strcmp(relation_attr.attribute_name, "*")) {
       if (relation_attr.type == AggreType::A_NO) {
         for (Table *table : tables) {
@@ -76,13 +81,16 @@ RC SelectStmt::create(Db *db, Selects &select_sql, Stmt *&stmt)
       }
       else {
         Field field;
-        field.set_count(relation_attr.attribute_name);
+        field.set_aggr_str(relation_attr.attribute_name);
         field.set_aggr(relation_attr.type);
         query_fields.push_back(field);
       }
     } else if (!common::is_blank(relation_attr.relation_name)) { // TODO
       const char *table_name = relation_attr.relation_name;
       const char *field_name = relation_attr.attribute_name;
+      if (0 == strcmp(field_name, "*") && relation_attr.type != AggreType::A_NO) {
+        return RC::SCHEMA_FIELD_NAME_ILLEGAL;
+      }
 
       if (0 == strcmp(table_name, "*")) {
         if (0 != strcmp(field_name, "*")) {
@@ -104,12 +112,26 @@ RC SelectStmt::create(Db *db, Selects &select_sql, Stmt *&stmt)
           wildcard_fields(table, query_fields);
         } else {
           const FieldMeta *field_meta = table->table_meta().field(field_name);
-          if (nullptr == field_meta) {
-            LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), field_name);
+          if (nullptr == field_meta && !relation_attr.print_attr) {
+            LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), relation_attr.attribute_name);
             return RC::SCHEMA_FIELD_MISSING;
           }
 
-        query_fields.push_back(Field(table, field_meta));
+          if (relation_attr.print_attr) {
+            Field field;
+            field.set_print_table();
+            field.set_table(table);
+            field.set_aggr(relation_attr.type);
+            field.set_aggr_str(relation_attr.attribute_name);
+            query_fields.push_back(field);
+          } else {
+            Field field(table, field_meta);
+            if (relation_attr.type != A_NO) {
+              field.set_aggr(relation_attr.type);
+              field.set_print_table();
+            }
+            query_fields.push_back(field);
+          }
         }
       }
     } else {
@@ -120,15 +142,16 @@ RC SelectStmt::create(Db *db, Selects &select_sql, Stmt *&stmt)
 
       Table *table = tables[0];
       const FieldMeta *field_meta = table->table_meta().field(relation_attr.attribute_name);
-      if (nullptr == field_meta && !isdigit(relation_attr.attribute_name[0])) {
+      if (nullptr == field_meta && !relation_attr.print_attr) {
         LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), relation_attr.attribute_name);
         return RC::SCHEMA_FIELD_MISSING;
       }
 
-      if (relation_attr.type == AggreType::A_COUNT && std::isdigit(relation_attr.attribute_name[0])) {
+      if (relation_attr.print_attr) {
         Field field;
+        field.set_table(tables[0]);
         field.set_aggr(relation_attr.type);
-        field.set_count(relation_attr.attribute_name);
+        field.set_aggr_str(relation_attr.attribute_name);
         query_fields.push_back(field);
       } else {
         Field field(table, field_meta);

@@ -33,9 +33,10 @@ void relation_attr_init(RelAttr *relation_attr, const char *relation_name, const
   }
   relation_attr->attribute_name = strdup(attribute_name);
   relation_attr->type = A_NO;
+  relation_attr->print_attr = false;
 }
 
-void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type)
+void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type, int is_digit)
 {
   if (relation_name != nullptr) {
     relation_attr->relation_name = strdup(relation_name);
@@ -44,6 +45,7 @@ void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, co
   }
   relation_attr->attribute_name = strdup(attribute_name);
   relation_attr->type = type;
+  relation_attr->print_attr = is_digit;
 }
 
 void relation_attr_destroy(RelAttr *relation_attr)
@@ -179,6 +181,9 @@ void selects_reverse_relations(Selects *selects)
 void selects_append_attribute(Selects *selects, RelAttr *rel_attr)
 {
   selects->attributes[selects->attr_num++] = *rel_attr;
+  if (rel_attr->type != AggreType::A_NO) {
+    selects->aggregate_num++;
+  }
 }
 void selects_append_relation(Selects *selects, const char *relation_name)
 {
@@ -459,6 +464,7 @@ void query_reset(Query *query)
     case SCF_HELP:
     case SCF_EXIT:
     case SCF_ERROR:
+    case SCF_SHOW_INDEX:
       break;
   }
 }

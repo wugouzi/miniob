@@ -4,6 +4,7 @@
 #include "sql/parser/parse_defs.h"
 #include "sql/parser/yacc_sql.tab.h"
 #include "sql/parser/lex.yy.h"
+
 // #include "common/log/log.h" // 包含C++中的头文件
 
 #include<stdio.h>
@@ -418,25 +419,25 @@ STAR attr_list {
 aggregation_attr:
 aggregation_func LBRACE ID aggregation_extra_id RBRACE {
   RelAttr attr;
-  aggregation_attr_init(&attr, NULL, $3, CONTEXT->a_type);
+  aggregation_attr_init(&attr, NULL, $3, CONTEXT->a_type, 0);
   selects_append_attribute(&CONTEXT->ssql->sstr.selection, &attr);
   CONTEXT->a_type = A_NO;
 }
 | aggregation_func LBRACE ID DOT ID aggregation_extra_id RBRACE {
   RelAttr attr;
-  aggregation_attr_init(&attr, $3, $5, CONTEXT->a_type);
+  aggregation_attr_init(&attr, $3, $5, CONTEXT->a_type, 0);
   selects_append_attribute(&CONTEXT->ssql->sstr.selection, &attr);
   CONTEXT->a_type = A_NO;
 }
 | aggregation_func LBRACE RBRACE {
   RelAttr attr;
-  aggregation_attr_init(&attr, NULL, NULL, A_FAILURE);
+  aggregation_attr_init(&attr, NULL, "fail", A_FAILURE, 0);
   selects_append_attribute(&CONTEXT->ssql->sstr.selection, &attr);
   CONTEXT->a_type = A_NO;
 }
 | aggregation_func LBRACE STAR aggregation_extra_id RBRACE {
   RelAttr attr;
-  aggregation_attr_init(&attr, NULL, "*", CONTEXT->a_type);
+  aggregation_attr_init(&attr, NULL, "*", CONTEXT->a_type != A_COUNT ? A_FAILURE : CONTEXT->a_type, 0);
   selects_append_attribute(&CONTEXT->ssql->sstr.selection, &attr);
   CONTEXT->a_type = A_NO;
 }
@@ -444,7 +445,23 @@ aggregation_func LBRACE ID aggregation_extra_id RBRACE {
   RelAttr attr;
   char *str = malloc(10 * sizeof(char));
   snprintf(str, 10, "%d", $3);
-  aggregation_attr_init(&attr, NULL, str, CONTEXT->a_type);
+  aggregation_attr_init(&attr, NULL, str, CONTEXT->a_type, 1);
+  selects_append_attribute(&CONTEXT->ssql->sstr.selection, &attr);
+  CONTEXT->a_type = A_NO;
+}
+| aggregation_func LBRACE FLOAT aggregation_extra_id RBRACE {
+  RelAttr attr;
+  char *buf = malloc(20 * sizeof(char));
+  snprintf(buf, sizeof(buf), "%.10f", $3);
+  size_t len = strlen(buf);
+  while (buf[len - 1] == '0') {
+    len--;
+  }
+  if (buf[len - 1] == '.') {
+    len--;
+  }
+  buf[len] = '\0';
+  aggregation_attr_init(&attr, NULL, buf, CONTEXT->a_type, 1);
   selects_append_attribute(&CONTEXT->ssql->sstr.selection, &attr);
   CONTEXT->a_type = A_NO;
 }
@@ -501,7 +518,10 @@ attr_list:
 			relation_attr_init(&attr, NULL, "*");
 			selects_append_attribute(&CONTEXT->ssql->sstr.selection, &attr);
     }
-  	;
+| COMMA aggregation_attr attr_list {
+
+}
+;
 
 rel_list:
     /* empty */
