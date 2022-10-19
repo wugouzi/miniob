@@ -292,7 +292,7 @@ ID_get:
 
 	
 insert:				/*insert   语句的语法解析树*/
-    INSERT INTO ID VALUES insert_brace LBRACE value value_list RBRACE insert_brace SEMICOLON
+    INSERT INTO ID VALUES insert_brace insert_element insert_brace SEMICOLON
 		{
 			// CONTEXT->values[CONTEXT->value_length++] = *$6;
 
@@ -302,8 +302,8 @@ insert:				/*insert   语句的语法解析树*/
 			// for(i = 0; i < CONTEXT->value_length; i++){
 			// 	CONTEXT->ssql->sstr.insertion.values[i] = CONTEXT->values[i];
       // }
-          inserts_append_values(&CONTEXT->ssql->sstr.insertion, CONTEXT->values, CONTEXT->value_length);
-          CONTEXT->value_length = 0;
+          //inserts_append_values(&CONTEXT->ssql->sstr.insertion, CONTEXT->values, CONTEXT->value_length);
+          //CONTEXT->value_length = 0;
             inserts_init(&CONTEXT->ssql->sstr.insertion, $3);
     //inserts_init(&CONTEXT->ssql->sstr.insertion, $3, CONTEXT->values, CONTEXT->value_length);
 
@@ -313,12 +313,17 @@ insert:				/*insert   语句的语法解析树*/
 
 insert_brace:
 
-| COMMA LBRACE value value_list RBRACE insert_brace {
+| COMMA insert_element insert_brace {
+
+}
+;
+
+insert_element:
+LBRACE value value_list RBRACE {
 inserts_append_values(&CONTEXT->ssql->sstr.insertion, CONTEXT->values, CONTEXT->value_length);
 CONTEXT->value_length = 0;
 }
 ;
-
 value_list:
     /* empty */
     | COMMA value value_list  { 

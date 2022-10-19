@@ -1,6 +1,27 @@
-create table t(id int);
-insert into t values(1);
-drop table t;
+
+-- inserts
+CREATE TABLE insert_table(id int, t_name char(4), col1 int, col2 int);
+INSERT INTO insert_table VALUES (1,'N1',1,1);
+INSERT INTO insert_table VALUES (2,'N2',1,1),(3,'N3',2,1);
+INSERT INTO insert_table VALUES (4,'N4',1,1),(1,1,1);
+INSERT INTO insert_table VALUES (4,'N4',1,1),(1,1,1,1);
+select * from insert_table;
+drop table insert_table;
+/*
+SUCCESS
+SUCCESS
+SUCCESS
+FAILURE
+FAILURE
+SELECT * FROM insert_table;
+1 | N1 | 1 | 1
+2 | N2 | 1 | 1
+3 | N3 | 2 | 1
+ID | T_NAME | COL1 | COL2
+
+*/
+
+
 
 --typecast
 create table t(id int);
