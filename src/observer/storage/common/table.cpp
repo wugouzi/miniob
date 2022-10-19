@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include <algorithm>
 
 #include "common/defs.h"
+#include "sql/parser/parse_defs.h"
 #include "storage/common/table.h"
 #include "storage/common/table_meta.h"
 #include "common/log/log.h"
@@ -999,8 +1000,10 @@ IndexScanner *Table::find_index_for_scan(const DefaultConditionFilter &filter)
   }
   }
 
-  if (filter.attr_type() == CHARS) {
+  if (filter.left_type() == CHARS) {
     left_len = left_key != nullptr ? strlen(left_key) : 0;
+  }
+  if (filter.right_type() == CHARS) {
     right_len = right_key != nullptr ? strlen(right_key) : 0;
   }
   return index->create_scanner(left_key, left_len, left_inclusive, right_key, right_len, right_inclusive);

@@ -605,7 +605,7 @@ RC ExecuteStage::do_show_index(SQLStageEvent *sql_event)
 
   std::stringstream ss;
   table->show_index(ss);
-
+  return RC::SUCCESS;
 }
 
 RC ExecuteStage::do_show_tables(SQLStageEvent *sql_event)
@@ -1333,18 +1333,21 @@ CompositeConditionFilter *Pretable::make_cond_filter(std::vector<FilterUnit*> &u
   for (int i = 0; i < n; i++) {
     ConDesc left = make_cond_desc(units[i]->left(), t2);
     ConDesc right = make_cond_desc(units[i]->right(), t2);
-    AttrType type;
+    AttrType left_type, right_type;
     if (units[i]->left()->type() == ExprType::FIELD) {
-      type = dynamic_cast<FieldExpr*>(units[i]->left())->field().attr_type();
-    } else if (units[i]->right()->type() == ExprType::FIELD) {
-      type = dynamic_cast<FieldExpr*>(units[i]->right())->field().attr_type();
+      left_type = dynamic_cast<FieldExpr*>(units[i]->left())->field().attr_type();
     } else {
-      return nullptr;
+      left_type = dynamic_cast<ValueExpr*>(units[i]->left())->get_type();
+    }
+    if (units[i]->right()->type() == ExprType::FIELD) {
+      right_type = dynamic_cast<FieldExpr*>(units[i]->right())->field().attr_type();
+    } else {
+      right_type = dynamic_cast<ValueExpr*>(units[i]->right())->get_type();
     }
 
     // incomparable type is checked in filter stmt
     filters[i] = new DefaultConditionFilter();
-    dynamic_cast<DefaultConditionFilter*>(filters[i])->init(left, right, type, units[i]->comp());
+    dynamic_cast<DefaultConditionFilter*>(filters[i])->init(left, right, left_type, right_type, units[i]->comp());
   }
   CompositeConditionFilter *ans = new CompositeConditionFilter();
 
