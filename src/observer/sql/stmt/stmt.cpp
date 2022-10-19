@@ -104,34 +104,42 @@ bool Stmt::convert_type(AttrType type, Value *value)
 {
   if (type == AttrType::INTS && value->type == AttrType::FLOATS) {
     // float -> int
-    float tp = *(float *)value->data;
-    *(int *)value->data = (int)(tp+0.5);
+    int *tp = new int();
+    *tp = *(float *)value->data + 0.5;
+    free(value->data);
+    value->data = tp;
     value->type = AttrType::INTS;
-    LOG_DEBUG("%f converts to %d", tp, (int)(tp+0.5));
+    // LOG_DEBUG("%f converts to %d", tp, );
   } else if (type == AttrType::FLOATS && value->type == AttrType::INTS) {
     // int -> float
-    float tp = *(int *)value->data;
-    *(float *)value->data = tp;
+    float *tp = new float();
+    *tp = *(int *)value->data;
+    free(value->data);
+    value->data = tp;
     value->type = AttrType::FLOATS;
-    LOG_DEBUG("%d converts to %f", (int)tp, tp);
+    // LOG_DEBUG("%d converts to %f", (int)tp, tp);
   } else if (type == AttrType::INTS && value->type == AttrType::CHARS) {
     // char -> int
     char *s = (char *)value->data;
-    int ans = char_to_int(s);
-    LOG_DEBUG("%s converts to %d", (char *)value->data, ans);
-    *(int *)value->data = ans;
+    int *tp = new int();
+    *tp = char_to_int(s);
+    free(value->data);
+    value->data = tp;
     value->type = AttrType::INTS;
+    // LOG_DEBUG("%s converts to %d", (char *)value->data, ans);
   } else if (type == AttrType::FLOATS && value->type == AttrType::CHARS) {
     char *s = (char *)value->data;
-    float ans = char_to_float(s);
-    LOG_DEBUG("%s converts to %f", (char *)value->data, ans);
-    *(float *)value->data = ans;
+    float *tp = new float();
+    *tp = char_to_float(s);
+    value->data = tp;
     value->type = AttrType::FLOATS;
+    // LOG_DEBUG("%s converts to %f", (char *)value->data, ans);
   } else if (type == AttrType::CHARS && value->type == AttrType::INTS) {
     // int -> chars
     char *str = strdup(std::to_string(*(int*)value->data).c_str());
     sprintf(str, "%d", *(int *)value->data);
     LOG_DEBUG("%d converts to %s", *(int *)value->data, str);
+    free(value->data);
     value->data = (void *)str;
     value->type = AttrType::CHARS;
   } else if (type == AttrType::CHARS && value->type == AttrType::FLOATS) {
@@ -145,6 +153,7 @@ bool Stmt::convert_type(AttrType type, Value *value)
     // }
     char *str = strdup(double2string(*(float*)value->data).c_str());
     LOG_DEBUG("%f converts to %s", *(float *)value->data, str);
+    free(value->data);
     value->data = (void *)str;
     value->type = AttrType::CHARS;
   } else {

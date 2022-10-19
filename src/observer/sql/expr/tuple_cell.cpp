@@ -67,11 +67,13 @@ int TupleCell::compare(const TupleCell &other) const
     float other_data = *(int *)other.data_;
     return compare_float(data_, &other_data);
   } else if (this->attr_type_ == CHARS && other.attr_type_ == INTS) {
-    int ans = Stmt::char_to_int(data_);
-    return compare_int(&ans, other.data_);
+    float left = Stmt::char_to_float(data_);
+    float right = *(int *)other.data_;
+    return compare_int(&left, &right);
   } else if (this->attr_type_ == INTS && other.attr_type_ == CHARS) {
-    int ans = Stmt::char_to_int(other.data_);
-    return compare_int(data_, &ans);
+    float left = *(int *)data_;
+    float right = Stmt::char_to_float(other.data_);
+    return compare_float(&left, &right);
   } else if (this->attr_type_ == FLOATS && other.attr_type_ == CHARS) {
     float ans = Stmt::char_to_float(other.data_);
     return compare_float(data_, &ans);

@@ -44,6 +44,10 @@ RC SelectStmt::create(Db *db, Selects &select_sql, Stmt *&stmt)
     return RC::INVALID_ARGUMENT;
   }
 
+  if (select_sql.aggregate_num > 0 && select_sql.attr_num != select_sql.aggregate_num) {
+    return RC::INVALID_ARGUMENT;
+  }
+
   // collect tables in `from` statement
   std::vector<Table *> tables;
   std::unordered_map<std::string, Table *> table_map;
