@@ -1024,18 +1024,6 @@ TupleSet *TupleSet::generate_combine(const TupleSet *t2) {
   res->table_num_ += t2->table_num_;
   res->data_ += t2->data();
   int off = 0;
-  for (int i = 0; i < data_.size(); i++) {
-    std::cout << (int)(data_[i]) << ' ';
-  }
-  std::cout << '#';
-  for (int i = 0; i < t2->data_.size(); i++) {
-    std::cout << (int)(t2->data_[i]) << ' ';
-  }
-  std::cout << '#';
-  for (int i = 0; i < res->data_.size(); i++) {
-    std::cout << (int)(res->data_[i]) << ' ';
-  }
-  std::cout << std::endl;
   for (auto &meta : res->metas_) {
     off += meta.second.len();
   }
