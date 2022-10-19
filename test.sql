@@ -1,3 +1,15 @@
+-- aggregation
+select count(*,id) from t;
+select count() from t;
+select count(not_exists_col) from t;
+
+create table t(id int, name char(4), age float);
+insert into t values(1.9,'3.5',11.5);
+insert into t values(0,1.5,11.5);
+insert into t values(0,2.5,9.5);
+select * from t;
+drop table t;
+
 INSERT INTO Typecast_table_2 VALUES(1.9,'3.5',11.5);
 SUCCESS
 SELECT * FROM Typecast_table_2;
@@ -345,7 +357,7 @@ insert into t_basic values(5,5, 'e', 5.5);
 insert into t_basic values(6,6, 'f', 6.6);
 insert into t_basic values(7,7, 'g', 7.7);
 select * from t_basic;
-delete from t_basic where id=3;
+delete from t_basic where id<3;
 select * from t_basic;
 select * from t_basic where id=1;
 select * from t_basic where id>=5;

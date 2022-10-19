@@ -32,8 +32,18 @@ void relation_attr_init(RelAttr *relation_attr, const char *relation_name, const
     relation_attr->relation_name = nullptr;
   }
   relation_attr->attribute_name = strdup(attribute_name);
-  relation_attr->aggregate_func = nullptr;
   relation_attr->type = A_NO;
+}
+
+void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type)
+{
+  if (relation_name != nullptr) {
+    relation_attr->relation_name = strdup(relation_name);
+  } else {
+    relation_attr->relation_name = nullptr;
+  }
+  relation_attr->attribute_name = strdup(attribute_name);
+  relation_attr->type = type;
 }
 
 void relation_attr_destroy(RelAttr *relation_attr)

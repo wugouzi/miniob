@@ -29,7 +29,8 @@ typedef enum
   A_MAX,
   A_MIN,
   A_AVG,
-  A_COUNT
+  A_COUNT,
+  A_FAILURE
 } AggreType;
 
 
@@ -37,7 +38,6 @@ typedef enum
 typedef struct {
   char *relation_name;   // relation name (may be NULL) 表名
   char *attribute_name;  // attribute name              属性名
-  char *aggregate_func;
   AggreType type;
 } RelAttr;
 
@@ -92,7 +92,7 @@ typedef struct {
   char *relations[MAX_NUM];       // relations in From clause
   size_t condition_num;           // Length of conditions in Where clause
   Condition conditions[MAX_NUM];  // conditions in Where clause
-  int aggregate_num;
+  int aggregate_num;              // -1 means error
 } Selects;
 
 // struct of insert
@@ -212,6 +212,8 @@ extern "C" {
 
 void relation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name);
 void relation_attr_destroy(RelAttr *relation_attr);
+
+void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type);
 
 void value_init_integer(Value *value, int v);
 void value_init_float(Value *value, float v);

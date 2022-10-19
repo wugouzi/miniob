@@ -77,7 +77,7 @@ RC SelectStmt::create(Db *db, Selects &select_sql, Stmt *&stmt)
       else {
         Field field;
         field.set_count(relation_attr.attribute_name);
-        field.set_aggr(relation_attr.type, relation_attr.aggregate_func);
+        field.set_aggr(relation_attr.type);
         query_fields.push_back(field);
       }
     } else if (!common::is_blank(relation_attr.relation_name)) { // TODO
@@ -127,13 +127,13 @@ RC SelectStmt::create(Db *db, Selects &select_sql, Stmt *&stmt)
 
       if (relation_attr.type == AggreType::A_COUNT && std::isdigit(relation_attr.attribute_name[0])) {
         Field field;
-        field.set_aggr(relation_attr.type, relation_attr.aggregate_func);
+        field.set_aggr(relation_attr.type);
         field.set_count(relation_attr.attribute_name);
         query_fields.push_back(field);
       } else {
         Field field(table, field_meta);
         if (relation_attr.type != A_NO) {
-          field.set_aggr(relation_attr.type, relation_attr.aggregate_func);
+          field.set_aggr(relation_attr.type);
         }
         query_fields.push_back(field);
       }

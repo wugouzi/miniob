@@ -1281,6 +1281,8 @@ RC Pretable::aggregate(const std::vector<Field> fields)
         rc = aggregate_avg(idx, &cell);break;
       case A_COUNT:
         rc = aggregate_count(idx, &cell);break;
+      case A_FAILURE:
+        return RC::SCHEMA_FIELD_REDUNDAN;
     }
     if (rc != SUCCESS) {
       LOG_ERROR("wrong wrong wrong");
@@ -1417,6 +1419,21 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
   return RC::SUCCESS;
 }
 
+std::string aggr_to_string(AggreType type) {
+  switch (type) {
+    case A_MAX:
+      return "max";
+    case A_MIN:
+      return "min";
+    case A_AVG:
+      return "avg";
+    case A_COUNT:
+      return "count";
+    default:
+      return "";
+  }
+}
+
 
 // TODO: ALIAS
 void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi) {
@@ -1429,7 +1446,7 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
       tp = field.table_name() + ("." + tp);
     }
     if (field.aggr_type() != A_NO) {
-      tp = field.aggr_name() + '(' + tp + ')';
+      tp = aggr_to_string(field.aggr_type()) + '(' + tp + ')';
     }
     ss << tp;
   }
