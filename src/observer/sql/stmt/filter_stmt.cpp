@@ -101,10 +101,13 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       LOG_WARN("cannot find attr");
       return rc;
     }
-    if (condition.right_value.type != field->type() &&
-        !Stmt::convert_type(field->type(), &condition.right_value)) {
+    if (!Stmt::check_type(condition.right_value.type, field->type())) {
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
+    // if (condition.right_value.type != field->type() &&
+    //     !Stmt::convert_type(field->type(), &condition.right_value)) {
+    //   return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    // }
   } else if (!condition.left_is_attr && condition.right_is_attr) {
     Table *table = nullptr;
     const FieldMeta *field = nullptr;
@@ -113,10 +116,13 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       LOG_WARN("cannot find attr");
       return rc;
     }
-    if (condition.left_value.type != field->type() &&
-        !Stmt::convert_type(field->type(), &condition.left_value)) {
+    if (!Stmt::check_type(condition.right_value.type, field->type())) {
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
+    // if (condition.left_value.type != field->type() &&
+    //     !Stmt::convert_type(field->type(), &condition.left_value)) {
+    //   return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    // }
   }
 
   Expression *left = nullptr;

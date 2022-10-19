@@ -13,6 +13,8 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/expr/tuple_cell.h"
+#include "sql/parser/parse_defs.h"
+#include "sql/stmt/stmt.h"
 #include "storage/common/field.h"
 #include "common/log/log.h"
 #include "util/comparator.h"
@@ -64,6 +66,18 @@ int TupleCell::compare(const TupleCell &other) const
   } else if (this->attr_type_ == FLOATS && other.attr_type_ == INTS) {
     float other_data = *(int *)other.data_;
     return compare_float(data_, &other_data);
+  } else if (this->attr_type_ == CHARS && other.attr_type_ == INTS) {
+    int ans = Stmt::char_to_int(data_);
+    return compare_int(&ans, other.data_);
+  } else if (this->attr_type_ == INTS && other.attr_type_ == CHARS) {
+    int ans = Stmt::char_to_int(other.data_);
+    return compare_int(data_, &ans);
+  } else if (this->attr_type_ == FLOATS && other.attr_type_ == CHARS) {
+    float ans = Stmt::char_to_float(other.data_);
+    return compare_float(data_, &ans);
+  } else if (this->attr_type_ == CHARS && other.attr_type_ == FLOATS) {
+    float ans = Stmt::char_to_float(data_);
+    return compare_float(&ans, other.data_);
   }
   LOG_WARN("not supported");
   return -1; // TODO return rc?

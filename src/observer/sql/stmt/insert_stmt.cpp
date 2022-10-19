@@ -58,11 +58,13 @@ RC InsertStmt::create(Db *db, Inserts &inserts, Stmt *&stmt)
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
 
-    if (field_type != value_type && !convert_type(field_type, values+i)) { // TODO try to convert the value type to field type
-      LOG_WARN("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d", 
+    if (!check_type(field_type, value_type)) {
+      LOG_WARN("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d",
                table_name, field_meta->name(), field_type, value_type);
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
+    // if (field_type != value_type && !convert_type(field_type, values+i)) { // TODO try to convert the value type to field type
+    // }
   }
 
   // everything alright

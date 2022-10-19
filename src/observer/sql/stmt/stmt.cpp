@@ -50,6 +50,52 @@ RC Stmt::create_stmt(Db *db, Query &query, Stmt *&stmt)
   return RC::UNIMPLENMENT;
 }
 
+bool Stmt::check_type(AttrType t1, AttrType t2)
+{
+  if (t1 == AttrType::DATES && t2 != AttrType::DATES) {
+    return false;
+  }
+  if (t1 != AttrType::DATES && t2 == AttrType::DATES) {
+    return false;
+  }
+  return true;
+}
+
+int Stmt::char_to_int(const char *s)
+{
+  int ans = 0;
+  int i = 0;
+  while (isdigit(s[i])) {
+    ans = ans * 10 + s[i] - '0';
+    i++;
+  }
+  return ans;
+}
+
+float Stmt::char_to_float(const char *s)
+{
+  float ans = 0;
+  int i = 0;
+  if (isdigit(s[i])) {
+    while (isdigit(s[i])) {
+      ans = ans * 10 + s[i] - '0';
+      i++;
+    }
+    if (s[i] == '.') {
+      i++;
+      float tp = 0;
+      int j = 1;
+      while (isdigit(s[i])) {
+        tp = tp * 10 + s[i] - '0';
+        i++;
+        j *= 10;
+      }
+      ans += tp / j;
+    }
+  }
+  return ans;
+}
+
 bool Stmt::convert_type(AttrType type, Value *value)
 {
   if (type == AttrType::INTS && value->type == AttrType::FLOATS) {
@@ -67,36 +113,13 @@ bool Stmt::convert_type(AttrType type, Value *value)
   } else if (type == AttrType::INTS && value->type == AttrType::CHARS) {
     // char -> int
     char *s = (char *)value->data;
-    int ans = 0;
-    int i = 0;
-    while (isdigit(s[i])) {
-      ans = ans * 10 + s[i] - '0';
-      i++;
-    }
+    int ans = char_to_int(s);
     LOG_DEBUG("%s converts to %d", (char *)value->data, ans);
     *(int *)value->data = ans;
     value->type = AttrType::INTS;
   } else if (type == AttrType::FLOATS && value->type == AttrType::CHARS) {
     char *s = (char *)value->data;
-    float ans = 0;
-    int i = 0;
-    if (isdigit(s[i])) {
-      while (isdigit(s[i])) {
-        ans = ans * 10 + s[i] - '0';
-        i++;
-      }
-      if (s[i] == '.') {
-        i++;
-        float tp = 0;
-        int j = 1;
-        while (isdigit(s[i])) {
-          tp = tp * 10 + s[i] - '0';
-          i++;
-          j *= 10;
-        }
-        ans += tp / j;
-      }
-    }
+    float ans = char_to_float(s);
     LOG_DEBUG("%s converts to %f", (char *)value->data, ans);
     *(float *)value->data = ans;
     value->type = AttrType::FLOATS;

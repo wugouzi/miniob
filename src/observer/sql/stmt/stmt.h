@@ -61,6 +61,9 @@ public:
   static bool convert_type(AttrType type, Value *value);
   static RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
                                 const RelAttr &attr, Table *&table, const FieldMeta *&field);
+  static bool check_type(AttrType t1, AttrType t2);
+  static int char_to_int(const char *s);
+  static float char_to_float(const char *s);
 
 private:
 };
