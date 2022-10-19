@@ -1,3 +1,15 @@
+3 | 15 | ABC | 3
+11. SELECT SINGLE AND AGGREGATION
+SELECT id,avg(num),addr FROM aggregation_func;
+-FAILURE
++ID | ADDR | AVG(NUM)
++1 | ABC | 15
+SELECT max(id),min(num),birthday FROM aggregation_func;
+-FAILURE
++BIRTHDAY | MIN(NUM) | MAX(ID)
++2020-01-01 | 12 | 4
+
+
 select avg(t_basic_2.score) from t_basic_2;
 
 create table t_basic_2(id int, age int, name char, score float);
@@ -20,6 +32,7 @@ select count() from t_basic_2;
 select count(b) from t_basic_2;
 create table t_basic_3(id int, age int, name char, score float);
 select avg(id),max(age),min(name),count(score) from t_basic_3;
+select sum(id), sum(1.2), sum(t_basic_2.score) from t_basic_2;
 drop table t_basic_2;
 drop table t_basic_3;
 
@@ -208,6 +221,13 @@ ID | T_NAME | COL1 | COL2
 
 */
 
+3 | 3 | 3
+ID | NAME | AGE
+SELECT * FROM Typecast_table_3 WHERE id<'1.5a';
+-1 | 1 | 1
+ID | NAME | AGE
+SELECT * FROM Typecast_table_3 WHERE id>='3a';
+3 | 3 | 3
 
 
 --typecast
@@ -223,6 +243,7 @@ insert into t values('2', 3, 1);
 select * from t where id='1a';
 select * from t where id='a';
 select * from t where id>='1a';
+select * from t where id<'1.5a';
 drop table t;
 
 create table t1(id int, name char(4), age float);
