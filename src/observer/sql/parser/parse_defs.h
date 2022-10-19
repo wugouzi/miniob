@@ -67,6 +67,11 @@ typedef struct _Value {
   void *data;     // value
 } Value;
 
+typedef struct {
+  int value_num;
+  Value values[MAX_NUM];
+} ValueList;
+
 typedef struct _Condition {
   int left_is_attr;    // TRUE if left-hand side is an attribute
                        // 1时，操作符左边是属性名，0时，是属性值
@@ -93,8 +98,8 @@ typedef struct {
 // struct of insert
 typedef struct {
   char *relation_name;    // Relation to insert into
-  size_t value_num;       // Length of values
-  Value values[MAX_NUM];  // values to insert
+  size_t valuelist_num;
+  ValueList valuelist[MAX_NUM];
 } Inserts;
 
 // struct of delete
@@ -228,7 +233,9 @@ void selects_append_relation(Selects *selects, const char *relation_name);
 void selects_append_conditions(Selects *selects, Condition conditions[], size_t condition_num);
 void selects_destroy(Selects *selects);
 
-void inserts_init(Inserts *inserts, const char *relation_name, Value values[], size_t value_num);
+//void inserts_init(Inserts *inserts, const char *relation_name, Value values[], size_t value_num);
+void inserts_init(Inserts *inserts, const char *relation_name);
+void inserts_append_values(Inserts *inserts, Value values[], size_t value_num);
 void inserts_destroy(Inserts *inserts);
 
 void deletes_init_relation(Deletes *deletes, const char *relation_name);

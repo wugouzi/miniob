@@ -833,12 +833,8 @@ RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
   InsertStmt *insert_stmt = (InsertStmt *)stmt;
   Table *table = insert_stmt->table();
 
-  // RC rc = value_check(insert_stmt->value_amount(), insert_stmt->values());
-  // if (rc != RC::SUCCESS) {
-  //   session_event->set_response("FAILURE\n");
-  //   return rc;
-  // }
-  RC rc = table->insert_record(trx, insert_stmt->value_amount(), insert_stmt->values());
+  // RC rc = table->insert_record(trx, insert_stmt->value_amount(), insert_stmt->values());
+  RC rc = table->insert_records(trx, insert_stmt->valuelist_amount(), insert_stmt->valuelists());
   if (rc == RC::SUCCESS) {
     if (!session->is_trx_multi_operation_mode()) {
       CLogRecord *clog_record = nullptr;

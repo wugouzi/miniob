@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include <limits.h>
 #include <string.h>
 #include <algorithm>
+#include <vector>
 
 #include "common/defs.h"
 #include "sql/parser/parse_defs.h"
@@ -23,6 +24,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include "common/lang/string.h"
 #include "storage/default/disk_buffer_pool.h"
+#include "storage/record/record.h"
 #include "storage/record/record_manager.h"
 #include "storage/common/condition_filter.h"
 #include "storage/common/meta_util.h"
@@ -278,21 +280,21 @@ RC Table::insert_record(Trx *trx, Record *record)
     return rc;
   }
 
-  // if (trx != nullptr) {
-  //   rc = trx->insert_record(this, record);
-  //   if (rc != RC::SUCCESS) {
-  //     LOG_ERROR("Failed to log operation(insertion) to trx");
+  if (trx != nullptr) {
+    rc = trx->insert_record(this, record);
+    if (rc != RC::SUCCESS) {
+      LOG_ERROR("Failed to log operation(insertion) to trx");
 
-  //     RC rc2 = record_handler_->delete_record(&record->rid());
-  //     if (rc2 != RC::SUCCESS) {
-  //       LOG_ERROR("Failed to rollback record data when insert index entries failed. table name=%s, rc=%d:%s",
-  //           name(),
-  //           rc2,
-  //           strrc(rc2));
-  //     }
-  //     return rc;
-  //   }
-  // }
+      RC rc2 = record_handler_->delete_record(&record->rid());
+      if (rc2 != RC::SUCCESS) {
+        LOG_ERROR("Failed to rollback record data when insert index entries failed. table name=%s, rc=%d:%s",
+            name(),
+            rc2,
+            strrc(rc2));
+      }
+      return rc;
+    }
+  }
 
   rc = insert_entry_of_indexes(record->data(), record->rid());
   if (rc != RC::SUCCESS) {
@@ -339,6 +341,42 @@ RC Table::recover_insert_record(Record *record)
     return rc;
   }
 
+  return rc;
+}
+
+RC Table::insert_records(Trx *trx, int valuelist_num, const ValueList *valuelists)
+{
+  std::vector<Record> records;
+  RC rc = RC::SUCCESS;
+  for (int i = 0; i < valuelist_num; i++) {
+    int value_num = valuelists[i].value_num;
+    const Value *values = valuelists[i].values;
+    if (value_num <= 0 || nullptr == values) {
+      LOG_ERROR("Invalid argument. table name: %s, value num=%d, values=%p", name(), value_num, values);
+      return RC::INVALID_ARGUMENT;
+    }
+
+    char *record_data;
+    rc = make_record(value_num, values, record_data);
+    if (rc != RC::SUCCESS) {
+      LOG_ERROR("Failed to create a record. rc=%d:%s", rc, strrc(rc));
+      return rc;
+    }
+
+    Record record;
+    record.set_data(record_data);
+    rc = insert_record(trx, &record);
+    if (rc != RC::SUCCESS) {
+      for (Record &r : records) {
+        recover_insert_record(&r);
+      }
+      return rc;
+    }
+    records.push_back(record);
+  }
+  for (auto &r : records) {
+    delete[] r.data();
+  }
   return rc;
 }
 

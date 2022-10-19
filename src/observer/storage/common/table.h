@@ -61,6 +61,7 @@ public:
   RC open(const char *meta_file, const char *base_dir, CLogManager *clog_manager);
 
   RC insert_record(Trx *trx, int value_num, const Value *values);
+  RC insert_records(Trx *trx, int valuelist_num, const ValueList *valuelists);
   RC update_record(Trx *trx, const char *attribute_name, const Value *value, int condition_num,
       const Condition conditions[], int *updated_count);
   RC update_record(Trx *trx, Record *record);
@@ -102,6 +103,7 @@ private:
   IndexScanner *find_index_for_scan(const ConditionFilter *filter);
   IndexScanner *find_index_for_scan(const DefaultConditionFilter &filter);
   RC insert_record(Trx *trx, Record *record);
+
 
 public:
   RC recover_insert_record(Record *record);

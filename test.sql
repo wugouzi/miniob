@@ -301,3 +301,99 @@ select *, * from t1;
 select *,id from t1;
 select *,age from t1;
 select *,age,id,age,id,* from t1;
+
+-- basic
+
+create table t_basic(id int, age int, name char, score float);
+insert into t_basic values(1,1, 'a', 1.0);
+insert into t_basic values(2,2, 'b', 2.0);
+insert into t_basic values(4,4, 'c', 3.0);
+insert into t_basic values(3,3, 'd', 4.0);
+insert into t_basic values(5,5, 'e', 5.5);
+insert into t_basic values(6,6, 'f', 6.6);
+insert into t_basic values(7,7, 'g', 7.7);
+select * from t_basic;
+delete from t_basic where id=3;
+select * from t_basic;
+select * from t_basic where id=1;
+select * from t_basic where id>=5;
+select * from t_basic where age>1 and age<3;
+select * from t_basic where t_basic.id=1 and t_basic.age=1;
+select * from t_basic where id=1 and age=1;
+select id, age, name, score from t_basic;
+select t_basic.id, t_basic.age, t_basic.name, t_basic.score from t_basic;
+select t_basic.id, t_basic.age, name from t_basic;
+create index i_id on t_basic (id);
+select * from t_basic;
+drop table t_basic;
+
+/*
+1 | 1 | A | 1
+2 | 2 | B | 2
+3 | 3 | D | 4
+4 | 4 | C | 3
+5 | 5 | E | 5.5
+6 | 6 | F | 6.6
+7 | 7 | G | 7.7
+ID | AGE | NAME | SCORE
+
+1 | 1 | A | 1
+2 | 2 | B | 2
+4 | 4 | C | 3
+5 | 5 | E | 5.5
+6 | 6 | F | 6.6
+7 | 7 | G | 7.7
+ID | AGE | NAME | SCORE
+
+ID | AGE | NAME | SCORE
+1 | 1 | A | 1
+
+5 | 5 | E | 5.5
+6 | 6 | F | 6.6
+7 | 7 | G | 7.7
+ID | AGE | NAME | SCORE
+
+ID | AGE | NAME | SCORE
+2 | 2 | B | 2
+
+ID | AGE | NAME | SCORE
+1 | 1 | A | 1
+
+ID | AGE | NAME | SCORE
+1 | 1 | A | 1
+
+
+1 | 1 | A | 1
+2 | 2 | B | 2
+4 | 4 | C | 3
+5 | 5 | E | 5.5
+6 | 6 | F | 6.6
+7 | 7 | G | 7.7
+ID | AGE | NAME | SCORE
+
+1 | 1 | A | 1
+2 | 2 | B | 2
+4 | 4 | C | 3
+5 | 5 | E | 5.5
+6 | 6 | F | 6.6
+7 | 7 | G | 7.7
+ID | AGE | NAME | SCORE
+
+1 | 1 | A
+2 | 2 | B
+4 | 4 | C
+5 | 5 | E
+6 | 6 | F
+7 | 7 | G
+ID | AGE | NAME
+
+1 | 1 | A | 1
+2 | 2 | B | 2
+4 | 4 | C | 3
+5 | 5 | E | 5.5
+6 | 6 | F | 6.6
+7 | 7 | G | 7.7
+ID | AGE | NAME | SCORE
+
+
+*/
