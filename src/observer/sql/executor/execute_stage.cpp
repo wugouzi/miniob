@@ -30,6 +30,7 @@ See the Mulan PSL v2 for more details. */
 #include "event/sql_event.h"
 #include "event/session_event.h"
 #include "sql/expr/expression.h"
+#include "sql/expr/tuple.h"
 #include "sql/expr/tuple_cell.h"
 #include "sql/operator/table_scan_operator.h"
 #include "sql/operator/index_scan_operator.h"
@@ -38,6 +39,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/project_operator.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/filter_stmt.h"
+#include "sql/stmt/update_stmt.h"
 #include "storage/index/index.h"
 #include "storage/default/default_handler.h"
 #include "storage/common/condition_filter.h"
@@ -142,7 +144,7 @@ void ExecuteStage::handle_request(common::StageEvent *event)
       do_insert(sql_event);
     } break;
     case StmtType::UPDATE: {
-      //do_update((UpdateStmt *)stmt, session_event);
+      do_update(sql_event);
     } break;
     case StmtType::DELETE: {
       do_delete(sql_event);
@@ -732,6 +734,88 @@ RC ExecuteStage::value_check(const int &value_num, const Value *values) const
   }
   return RC::SUCCESS;
 }
+
+RC ExecuteStage::do_update(SQLStageEvent *sql_event)
+{
+  Stmt *stmt = sql_event->stmt();
+  SessionEvent *session_event = sql_event->session_event();
+  Session *session = session_event->session();
+  // Db *db = session->get_current_db();
+  Trx *trx = session->current_trx();
+  // CLogManager *clog_manager = db->get_clog_manager();
+
+  if (stmt == nullptr) {
+    LOG_WARN("cannot find statement");
+    return RC::GENERIC_ERROR;
+  }
+
+  UpdateStmt *update_stmt = (UpdateStmt *)stmt;
+  Table *table = update_stmt->table();
+
+  Operator *scan_oper = try_to_create_index_scan_operator(update_stmt->filter_stmt());
+  if (nullptr == scan_oper) {
+    scan_oper = new TableScanOperator(update_stmt->table());
+  }
+
+  DEFER([&] () {delete scan_oper;});
+
+  PredicateOperator pred_oper(update_stmt->filter_stmt());
+  pred_oper.add_child(scan_oper);
+
+  RC rc = pred_oper.open();
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to open operator");
+    return rc;
+  }
+
+  const FieldMeta *field = update_stmt->attr_meta();
+  Value *value = update_stmt->value();
+  while ((rc = pred_oper.next()) == RC::SUCCESS) {
+    // get current record
+    // write to response
+    RowTuple *tuple = dynamic_cast<RowTuple*>(pred_oper.current_tuple());
+    if (nullptr == tuple) {
+      rc = RC::INTERNAL;
+      LOG_WARN("failed to get current record. rc=%s", strrc(rc));
+      break;
+    }
+    Record record = tuple->record();
+    if (trx == nullptr || trx->is_visible(table, &record)) {
+      // prepare data
+      size_t copy_len = field->len();
+      if (field->type() == CHARS) {
+        const size_t data_len = strlen((const char *)value->data);
+        if (copy_len > data_len) {
+          copy_len = data_len + 1;
+        }
+      }
+      memcpy(record.data() + field->offset(), value->data, copy_len);
+
+      // update
+      rc = table->update_record(trx, &record);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("failed to update");
+        return rc;
+      }
+    }
+  }
+
+  // TODO: CLOG
+
+  if (rc != RC::RECORD_EOF) {
+    LOG_WARN("something wrong while iterate operator. rc=%s", strrc(rc));
+    pred_oper.close();
+  } else {
+    rc = pred_oper.close();
+  }
+  if (rc == RC::SUCCESS) {
+    session_event->set_response("SUCCESS\n");
+  } else {
+    session_event->set_response("FAILURE\n");
+  }
+  return rc;
+}
+
 RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
 {
   Stmt *stmt = sql_event->stmt();
@@ -749,12 +833,12 @@ RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
   InsertStmt *insert_stmt = (InsertStmt *)stmt;
   Table *table = insert_stmt->table();
 
-  RC rc = value_check(insert_stmt->value_amount(), insert_stmt->values());
-  if (rc != RC::SUCCESS) {
-    session_event->set_response("FAILURE\n");
-    return rc;
-  }
-  rc = table->insert_record(trx, insert_stmt->value_amount(), insert_stmt->values());
+  // RC rc = value_check(insert_stmt->value_amount(), insert_stmt->values());
+  // if (rc != RC::SUCCESS) {
+  //   session_event->set_response("FAILURE\n");
+  //   return rc;
+  // }
+  RC rc = table->insert_record(trx, insert_stmt->value_amount(), insert_stmt->values());
   if (rc == RC::SUCCESS) {
     if (!session->is_trx_multi_operation_mode()) {
       CLogRecord *clog_record = nullptr;

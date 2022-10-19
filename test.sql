@@ -1,6 +1,10 @@
 --typecast
+create table t(id int);
+insert into t values('2');
+select * from t where id='3';
 create table t(id int, name char, year float);
 insert into t values(1,'a',12);
+
 select * from where id='1a';
 
 --selects
@@ -184,7 +188,7 @@ UPDATE Update_table_1 SET t_name='N01' WHERE id_false=1;
 UPDATE Update_table_1 SET t_name='N01' WHERE id=100;
 SELECT * FROM Update_table_1;
 UPDATE Update_table_1 SET col1='N01' WHERE id=1;
-
+drop table Update_table_1;
 /*
 SUCCESS
 SUCCESS

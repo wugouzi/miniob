@@ -15,9 +15,12 @@ See the Mulan PSL v2 for more details. */
 #include "rc.h"
 #include "common/log/log.h"
 #include "common/lang/string.h"
+#include "sql/expr/expression.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/filter_stmt.h"
+#include "sql/stmt/stmt.h"
 #include "storage/common/db.h"
+#include "storage/common/field_meta.h"
 #include "storage/common/table.h"
 
 FilterStmt::~FilterStmt()
@@ -92,16 +95,20 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
 
   Expression *left = nullptr;
   Expression *right = nullptr;
+  Value *value = nullptr;
+  const FieldMeta *field_meta = nullptr;
   if (condition.left_is_attr) {
     Table *table = nullptr;
     const FieldMeta *field = nullptr;
-    rc = get_table_and_field(db, default_table, tables, condition.left_attr, table, field);  
+    rc = get_table_and_field(db, default_table, tables, condition.left_attr, table, field);
+    field_meta = field;
     if (rc != RC::SUCCESS) {
       LOG_WARN("cannot find attr");
       return rc;
     }
     left = new FieldExpr(table, field);
   } else {
+    value = &condition.left_value;
     if (condition.left_value.type == DATES && *(int *)condition.left_value.data == -1) {
       return RC::INVALID_ARGUMENT;
     }
@@ -111,7 +118,8 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   if (condition.right_is_attr) {
     Table *table = nullptr;
     const FieldMeta *field = nullptr;
-    rc = get_table_and_field(db, default_table, tables, condition.right_attr, table, field);  
+    rc = get_table_and_field(db, default_table, tables, condition.right_attr, table, field);
+    field_meta = field;
     if (rc != RC::SUCCESS) {
       LOG_WARN("cannot find attr");
       delete left;
@@ -119,10 +127,17 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     }
     right = new FieldExpr(table, field);
   } else {
+    value = &condition.right_value;
     if (condition.right_value.type == DATES && *(int *)condition.right_value.data == -1) {
       return RC::INVALID_ARGUMENT;
     }
     right = new ValueExpr(condition.right_value);
+  }
+
+  if (value != nullptr && field_meta != nullptr) {
+    if (value->type != field_meta->type() && !Stmt::convert_type(field_meta->type(), value)) {
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
   }
 
   filter_unit = new FilterUnit;

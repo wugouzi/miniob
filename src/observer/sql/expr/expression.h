@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include <string.h>
+#include "sql/parser/parse_defs.h"
 #include "storage/common/field.h"
 #include "sql/expr/tuple_cell.h"
 
@@ -92,6 +93,10 @@ public:
   ExprType type() const override
   {
     return ExprType::VALUE;
+  }
+
+  AttrType get_type() const {
+    return tuple_cell_.attr_type();
   }
 
   void get_tuple_cell(TupleCell &cell) const {
