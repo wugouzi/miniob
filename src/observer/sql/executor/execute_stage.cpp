@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi & Longda on 2021/4/13.
 //
 
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -1222,6 +1223,40 @@ RC Pretable::aggregate_min(int idx, TupleCell *res)
   return RC::SUCCESS;
 }
 
+RC Pretable::aggregate_sum(int idx, TupleCell *res)
+{
+  float ans = 0;
+  AttrType type = UNDEFINED;
+  for (TupleSet &tuple : tuples_) {
+    const TupleCell &cell = tuple.get_cell(idx);
+    type = cell.attr_type();
+    switch (cell.attr_type()) {
+      case INTS: {
+        ans += *(int *)cell.data();
+      } break;
+      case FLOATS: {
+        ans += *(float *)cell.data();
+      } break;
+      case DATES: case CHARS:
+      default: {
+        return RC::INTERNAL;
+      }
+    }
+  }
+  res->set_type(type);
+  res->set_length(sizeof(float));
+  if (type == INTS) {
+    int *a = new int();
+    *a = ans;
+    res->set_data((char *)a);
+  } else if (type == FLOATS) {
+    float *a = new float();
+    *a = ans;
+    res->set_data((char *)a);
+  }
+  return RC::SUCCESS;
+}
+
 RC Pretable::aggregate_avg(int idx, TupleCell *res)
 {
   float *ans = (float *)malloc(sizeof(float));
@@ -1315,12 +1350,12 @@ RC Pretable::aggregate(const std::vector<Field> fields)
 
           break;
         case A_AVG:
-
           rc = aggregate_avg(idx, &cell);
-
           break;
         case A_COUNT:
           rc = aggregate_count(idx, &cell);break;
+        case A_SUM:
+          rc = aggregate_sum(idx, &cell); break;
         case A_FAILURE:
           return RC::SCHEMA_FIELD_REDUNDAN;
       }
@@ -1471,6 +1506,8 @@ std::string aggr_to_string(AggreType type) {
       return "avg";
     case A_COUNT:
       return "count";
+    case A_SUM:
+      return "sum";
     default:
       return "";
   }

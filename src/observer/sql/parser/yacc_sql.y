@@ -115,6 +115,7 @@ ParserContext *get_context(yyscan_t scanner)
         MIN
         COUNT
         AVG
+        SUM
 
 %union {
   struct _Attr *attr;
@@ -479,6 +480,9 @@ MAX {
 }
 | COUNT {
   CONTEXT->a_type = A_COUNT;
+}
+| SUM {
+  CONTEXT->a_type = A_SUM;
 }
 ;
 

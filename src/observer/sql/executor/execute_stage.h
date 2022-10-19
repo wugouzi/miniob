@@ -125,6 +125,7 @@ class Pretable {
   void filter_fields(const std::vector<Field> &fields);
   RC aggregate(const std::vector<Field> fields);
   RC aggregate_max(int idx, TupleCell *res);
+  RC aggregate_sum(int idx, TupleCell *res);
   RC aggregate_min(int idx, TupleCell *res);
   RC aggregate_avg(int idx, TupleCell *res);
   RC aggregate_count(int idx, TupleCell *res);
