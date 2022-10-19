@@ -15,7 +15,12 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include "rc.h"
+#include "common/log/log.h"
+#include "common/lang/string.h"
 #include "sql/parser/parse_defs.h"
+#include "storage/common/db.h"
+#include "storage/common/field_meta.h"
+#include "storage/common/table.h"
 
 class Db;
 
@@ -54,6 +59,8 @@ public:
 public:
   static RC create_stmt(Db *db, Query &query, Stmt *&stmt);
   static bool convert_type(AttrType type, Value *value);
+  static RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
+                                const RelAttr &attr, Table *&table, const FieldMeta *&field);
 
 private:
 };

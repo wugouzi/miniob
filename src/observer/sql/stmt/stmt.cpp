@@ -15,12 +15,14 @@ See the Mulan PSL v2 for more details. */
 #include <cctype>
 #include <cstdio>
 #include "rc.h"
+#include "sql/stmt/stmt.h"
 #include "common/log/log.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/insert_stmt.h"
 #include "sql/stmt/delete_stmt.h"
 #include "sql/stmt/select_stmt.h"
 #include "sql/stmt/update_stmt.h"
+
 
 RC Stmt::create_stmt(Db *db, Query &query, Stmt *&stmt)
 {
@@ -115,4 +117,32 @@ bool Stmt::convert_type(AttrType type, Value *value)
     return false;
   }
   return value;
+}
+
+RC Stmt::get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
+		       const RelAttr &attr, Table *&table, const FieldMeta *&field)
+{
+  if (common::is_blank(attr.relation_name)) {
+    table = default_table;
+  } else if (nullptr != tables) {
+    auto iter = tables->find(std::string(attr.relation_name));
+    if (iter != tables->end()) {
+      table = iter->second;
+    }
+  } else {
+    table = db->find_table(attr.relation_name);
+  }
+  if (nullptr == table) {
+    LOG_WARN("No such table: attr.relation_name: %s", attr.relation_name);
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+
+  field = table->table_meta().field(attr.attribute_name);
+  if (nullptr == field) {
+    LOG_WARN("no such field in table: table %s, field %s", table->name(), attr.attribute_name);
+    table = nullptr;
+    return RC::SCHEMA_FIELD_NOT_EXIST;
+  }
+
+  return RC::SUCCESS;
 }

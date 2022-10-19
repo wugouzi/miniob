@@ -1,11 +1,16 @@
 --typecast
 create table t(id int);
 insert into t values('2');
+select * from t;
+update t set id=1.1;
+update t set id='33';
 select * from t where id='3';
 create table t(id int, name char, year float);
 insert into t values(1,'a',12);
-
-select * from where id='1a';
+select * from t where id='1a';
+select * from t where id='a';
+select * from t where id>='1a';
+drop table t;
 
 --selects
 CREATE TABLE Select_tables_1(id int, age int, u_name char);
@@ -167,7 +172,7 @@ ID | U_DATE
 
 --update
 
-CREATE TABLE Update_table_1(id int, t_name char, col1 int, col2 int);
+CREATE TABLE Update_table_1(id int, t_name char(4), col1 int, col2 int);
 CREATE INDEX index_id on Update_table_1(id);
 INSERT INTO Update_table_1 VALUES (1,'N1',1,1);
 INSERT INTO Update_table_1 VALUES (2,'N2',1,1);
@@ -188,6 +193,7 @@ UPDATE Update_table_1 SET t_name='N01' WHERE id_false=1;
 UPDATE Update_table_1 SET t_name='N01' WHERE id=100;
 SELECT * FROM Update_table_1;
 UPDATE Update_table_1 SET col1='N01' WHERE id=1;
+SELECT * FROM Update_table_1;
 drop table Update_table_1;
 /*
 SUCCESS
