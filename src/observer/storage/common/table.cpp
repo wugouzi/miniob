@@ -277,21 +277,21 @@ RC Table::insert_record(Trx *trx, Record *record)
     return rc;
   }
 
-  if (trx != nullptr) {
-    rc = trx->insert_record(this, record);
-    if (rc != RC::SUCCESS) {
-      LOG_ERROR("Failed to log operation(insertion) to trx");
+  // if (trx != nullptr) {
+  //   rc = trx->insert_record(this, record);
+  //   if (rc != RC::SUCCESS) {
+  //     LOG_ERROR("Failed to log operation(insertion) to trx");
 
-      RC rc2 = record_handler_->delete_record(&record->rid());
-      if (rc2 != RC::SUCCESS) {
-        LOG_ERROR("Failed to rollback record data when insert index entries failed. table name=%s, rc=%d:%s",
-            name(),
-            rc2,
-            strrc(rc2));
-      }
-      return rc;
-    }
-  }
+  //     RC rc2 = record_handler_->delete_record(&record->rid());
+  //     if (rc2 != RC::SUCCESS) {
+  //       LOG_ERROR("Failed to rollback record data when insert index entries failed. table name=%s, rc=%d:%s",
+  //           name(),
+  //           rc2,
+  //           strrc(rc2));
+  //     }
+  //     return rc;
+  //   }
+  // }
 
   rc = insert_entry_of_indexes(record->data(), record->rid());
   if (rc != RC::SUCCESS) {
@@ -824,20 +824,20 @@ RC Table::delete_record(Trx *trx, Record *record)
     return rc;
   }
 
-  if (trx != nullptr) {
-    rc = trx->delete_record(this, record);
-    
-    CLogRecord *clog_record = nullptr;
-    rc = clog_manager_->clog_gen_record(CLogType::REDO_DELETE, trx->get_current_id(), clog_record, name(), 0, record);
-    if (rc != RC::SUCCESS) {
-      LOG_ERROR("Failed to create a clog record. rc=%d:%s", rc, strrc(rc));
-      return rc;
-    }
-    rc = clog_manager_->clog_append_record(clog_record);
-    if (rc != RC::SUCCESS) {
-      return rc;
-    }
-  }
+  // if (trx != nullptr) {
+  //   rc = trx->delete_record(this, record);
+
+  //   CLogRecord *clog_record = nullptr;
+  //   rc = clog_manager_->clog_gen_record(CLogType::REDO_DELETE, trx->get_current_id(), clog_record, name(), 0, record);
+  //   if (rc != RC::SUCCESS) {
+  //     LOG_ERROR("Failed to create a clog record. rc=%d:%s", rc, strrc(rc));
+  //     return rc;
+  //   }
+  //   rc = clog_manager_->clog_append_record(clog_record);
+  //   if (rc != RC::SUCCESS) {
+  //     return rc;
+  //   }
+  // }
 
   return rc;
 }

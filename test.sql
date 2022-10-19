@@ -1,3 +1,7 @@
+create table t(id int);
+insert into t values(1);
+drop table t;
+
 --typecast
 create table t(id int);
 insert into t values('2');
@@ -7,10 +11,19 @@ update t set id='33';
 select * from t where id='3';
 create table t(id int, name char, year float);
 insert into t values(1,'a',12);
+insert into t values('2', 3, 1);
 select * from t where id='1a';
 select * from t where id='a';
 select * from t where id>='1a';
 drop table t;
+
+create table t1(id int, name char(4), age float);
+insert into t1 values(0,'C',0);
+insert into t1 values(1,'A',11.5);
+insert into t1 values(2,'B',11.5);
+insert into t1 values(3,'1C',10.5);
+SELECT * FROM t1 WHERE name>=1;
+drop table t1;
 
 --selects
 CREATE TABLE Select_tables_1(id int, age int, u_name char);
