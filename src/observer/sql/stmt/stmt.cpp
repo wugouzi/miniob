@@ -102,6 +102,9 @@ float Stmt::char_to_float(const char *s)
 
 bool Stmt::convert_type(AttrType type, Value *value)
 {
+  if (value->type == AttrType::NULLS) {
+    return true;
+  }
   if (type == AttrType::INTS && value->type == AttrType::FLOATS) {
     // float -> int
     int *tp = new int();

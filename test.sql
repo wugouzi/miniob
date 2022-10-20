@@ -1,8 +1,29 @@
+-- null
+-- insert null -> nullable
+-- insert null -> non-nullable
+-- update null -> nullable
+-- update null -> non-nullable
+create table t(id int nullable, age int);
+insert into t values (null,2);
+insert into t values (1,4);
+select * from t where id=null;
+
+-- order by, need null
+create table t(id int);
+insert into t values (1);
+insert into t values (2);
+insert into t values (3);
+insert into t values (null);
+select * from t order by id asc;
+drop table t;
+
 create table t(addr char(10));
 insert into t values ('wefw');
 insert into t values ('1');
 insert into t values ('2');
 insert into t values ('3');
+select avg(addr) from t;
+drop table t;
 
 INSERT INTO Typecast_table_4 VALUES(1,1,1);
 SUCCESS
@@ -69,6 +90,14 @@ select avg(i2) from t;
 select avg(i3) from t;
 select avg(i4) from t;
 select avg(i5) from t;
+drop table t;
+
+create table t(a char);
+insert into t values ('ww');
+insert into t values ('1');
+insert into t values ('2.5');
+insert into t values ('ww');
+select avg(a) from t;
 drop table t;
 
 /*
@@ -266,6 +295,17 @@ SELECT * FROM Typecast_table_3 WHERE id>='3a';
 
 
 --typecast
+create table t(id int, name char(4), age float);
+insert into t values(1.9,'3.5',11.5);
+insert into t values(0,1.5,11.5);
+insert into t values(0,2.5,9.5);
+insert into t values(23.3244, '4AA', 'wefwof');
+insert into t values('3ewA', 1.324, 4);
+select * from t;
+select * from t where id < '1';
+select * from t where 'a'<1;
+drop table t;
+
 create table t(id int);
 insert into t values('2');
 select * from t;

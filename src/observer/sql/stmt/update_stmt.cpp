@@ -50,6 +50,9 @@ RC UpdateStmt::create(Db *db, Updates &update, Stmt *&stmt)
   if (fmeta == nullptr) {
     return RC::SCHEMA_FIELD_MISSING;
   }
+  if (!fmeta->nullable() && value.type == AttrType::NULLS) {
+    return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+  }
   if (fmeta->type() != value.type && !convert_type(fmeta->type(), &value)) {
     return RC::SCHEMA_FIELD_TYPE_MISMATCH;
   }

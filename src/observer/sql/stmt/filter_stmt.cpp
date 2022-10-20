@@ -101,6 +101,10 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       LOG_WARN("cannot find attr");
       return rc;
     }
+    // condition being null is ok
+    // if (!field->nullable() && condition.right_value.type == AttrType::NULLS) {
+    //   return RC::SCHEMA_FIELD_TYPE_MISMATCH;;
+    // }
     if (!Stmt::check_type(condition.right_value.type, field->type())) {
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
@@ -115,6 +119,9 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     if (rc != RC::SUCCESS) {
       LOG_WARN("cannot find attr");
       return rc;
+    }
+    if (!field->nullable() && condition.left_value.type == AttrType::NULLS) {
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
     if (!Stmt::check_type(condition.right_value.type, field->type())) {
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;

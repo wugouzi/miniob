@@ -1123,6 +1123,10 @@ FilterStmt *get_sub_filter(Table *table, FilterStmt *old_filter)
     if (left->type() == ExprType::FIELD && right->type() == ExprType::FIELD) {
       continue;
     }
+    if (left->type() == ExprType::VALUE && right->type() == ExprType::VALUE) {
+      filter->push(unit);
+      continue;
+    }
     if (left->type() == ExprType::VALUE && right->type() == ExprType::FIELD) {
       std::swap(left, right);
     }
@@ -1237,7 +1241,10 @@ RC Pretable::aggregate_sum(int idx, TupleCell *res)
       case FLOATS: {
         ans += *(float *)cell.data();
       } break;
-      case DATES: case CHARS:
+      case CHARS: {
+        ans += Stmt::char_to_float(cell.data());
+      }
+      case DATES:
       default: {
         return RC::INTERNAL;
       }
@@ -1249,7 +1256,7 @@ RC Pretable::aggregate_sum(int idx, TupleCell *res)
     int *a = new int();
     *a = ans;
     res->set_data((char *)a);
-  } else if (type == FLOATS) {
+  } else if (type == FLOATS || type == CHARS) {
     float *a = new float();
     *a = ans;
     res->set_data((char *)a);

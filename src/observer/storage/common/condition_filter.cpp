@@ -153,7 +153,9 @@ bool DefaultConditionFilter::filter(const Record &rec) const
   }
 
   int cmp_result = 0;
-  if (left_type_ == right_type_) {
+  if (left_type_ == AttrType::NULLS || right_type_ == AttrType::NULLS) {
+    return false;
+  } else if (left_type_ == right_type_) {
     switch (left_type_) {
       case CHARS: {  // 字符串都是定长的，直接比较
         // 按照C字符串风格来定
