@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include "rc.h"
 #include "common/log/log.h"
 #include "sql/parser/parse_defs.h"
+#include "sql/parser/yacc_sql.tab.h"
 
 RC parse(char *st, Query *sqln);
 
@@ -124,11 +125,18 @@ void value_init_string(Value *value, const char *v)
   value->type = CHARS;
   value->data = strdup(v);
 }
+void value_init_select(Value *value, Selects *selects)
+{
+  value->type = SELECTS;
+  value->select = selects;
+}
+
 void value_destroy(Value *value)
 {
   value->type = UNDEFINED;
   free(value->data);
   value->data = nullptr;
+  value->select = nullptr;
 }
 
 void condition_init(Condition *condition, CompOp comp, int left_is_attr, RelAttr *left_attr, Value *left_value,
@@ -167,7 +175,8 @@ void attr_info_init(AttrInfo *attr_info, const char *name, AttrType type, size_t
 {
   attr_info->name = strdup(name);
   attr_info->type = type;
-  attr_info->length = length;
+  // For NULLS
+  attr_info->length = length + 1;
   attr_info->nullable = nullable;
 }
 void attr_info_destroy(AttrInfo *attr_info)
@@ -176,7 +185,7 @@ void attr_info_destroy(AttrInfo *attr_info)
   attr_info->name = nullptr;
 }
 
-void selects_init(Selects *selects, ...);
+void selects_init(Selects *s1, ...);
 void selects_reverse_relations(Selects *selects)
 {
   for (int i = 0; i < selects->relation_num / 2; i++) {
@@ -245,6 +254,7 @@ void inserts_destroy(Inserts *inserts)
   inserts->valuelist_num = 0;
 }
 
+
 void inserts_append_values(Inserts *inserts, Value values[], size_t value_num)
 {
   for (size_t i = 0; i < value_num; i++) {
@@ -276,12 +286,9 @@ void deletes_destroy(Deletes *deletes)
   deletes->relation_name = nullptr;
 }
 
-void updates_init(Updates *updates, const char *relation_name, const char *attribute_name, Value *value,
-    Condition conditions[], size_t condition_num)
+void updates_init(Updates *updates, const char *relation_name, Condition conditions[], size_t condition_num)
 {
   updates->relation_name = strdup(relation_name);
-  updates->attribute_name = strdup(attribute_name);
-  updates->value = *value;
 
   assert(condition_num <= sizeof(updates->conditions) / sizeof(updates->conditions[0]));
   for (size_t i = 0; i < condition_num; i++) {
@@ -290,14 +297,22 @@ void updates_init(Updates *updates, const char *relation_name, const char *attri
   updates->condition_num = condition_num;
 }
 
+void updates_append(Updates *updates, const char *attribute_name, Value *value)
+{
+  updates->attributes[updates->attribute_num] = strdup(attribute_name);
+  updates->values[updates->attribute_num++] = *value;
+}
+
 void updates_destroy(Updates *updates)
 {
   free(updates->relation_name);
-  free(updates->attribute_name);
-  updates->relation_name = nullptr;
-  updates->attribute_name = nullptr;
+  for (size_t i = 0; i < updates->attribute_num; i++) {
+    free(updates->attributes[i]);
+    updates->attributes[i] = nullptr;
+    value_destroy(&updates->values[i]);
+  }
 
-  value_destroy(&updates->value);
+  updates->relation_name = nullptr;
 
   for (size_t i = 0; i < updates->condition_num; i++) {
     condition_destroy(&updates->conditions[i]);
@@ -426,9 +441,12 @@ Query *query_create()
 
 void query_reset(Query *query)
 {
+  for (int i = 0; i < MAX_NUM; i++) {
+    selects_destroy(&query->sstr.selects[i]);
+  }
   switch (query->flag) {
     case SCF_SELECT: {
-      selects_destroy(&query->sstr.selection);
+      // selects_destroy(query->sstr.selection);
     } break;
     case SCF_INSERT: {
       inserts_destroy(&query->sstr.insertion);

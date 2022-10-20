@@ -14,9 +14,12 @@ See the Mulan PSL v2 for more details. */
 
 #include "common/log/log.h"
 #include "sql/operator/predicate_operator.h"
+#include "sql/parser/parse_defs.h"
 #include "storage/record/record.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/common/field.h"
+#include <cstring>
+#include <vector>
 
 RC PredicateOperator::open()
 {
@@ -48,6 +51,30 @@ RC PredicateOperator::next()
   return rc;
 }
 
+bool PredicateOperator::string_like(const char *s1, const char *s2)
+{
+  int n = strlen(s1), m = strlen(s2);
+  auto match = [&](char a, char b) {
+    return a == b || a == '_' || b == '_';
+  };
+  std::vector<std::vector<bool>> dp(n + 1, std::vector<bool>(m + 1, false));
+  dp[0][0] = true;
+  for (int i = 1; i <= n; i++) {
+    for (int j = 1; j <= m; j++) {
+      if (s2[j-1] == '%') {
+        dp[i][j] = dp[i-1][j] || dp[i][j-1];
+      } else {
+        if (match(s2[j-1], s1[i-1])) {
+          dp[i][j] = dp[i-1][j-1];
+        } else {
+          return false;
+        }
+      }
+    }
+  }
+  return dp[n][m];
+}
+
 RC PredicateOperator::close()
 {
   children_[0]->close();
@@ -73,7 +100,10 @@ bool PredicateOperator::do_predicate(RowTuple &tuple)
     TupleCell right_cell;
     left_expr->get_value(tuple, left_cell);
     right_expr->get_value(tuple, right_cell);
-
+    // NULL COMPARE
+    if (left_cell.attr_type() == AttrType::NULLS || right_cell.attr_type() == AttrType::NULLS) {
+      return false;
+    }
     const int compare = left_cell.compare(right_cell);
     bool filter_result = false;
     switch (comp) {

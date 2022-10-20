@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/filter_stmt.h"
 #include "sql/stmt/stmt.h"
 #include "storage/common/field_meta.h"
+#include <vector>
 
 class FieldMeta;
 class FilterStmt;
@@ -39,14 +40,19 @@ public:
 
 public:
   Table *table() const {return table_;}
-  Value *value() { return value_; }
-  const FieldMeta *attr_meta() const { return attr_meta_; }
+  int attr_num() const { return values_.size(); }
+  Value *value(int i) { return values_[i]; }
+  std::vector<Value *> &values() { return values_; }
+  std::vector<const FieldMeta *> &metas() { return attr_metas_; }
+  const FieldMeta *attr_meta(int i) const { return attr_metas_[i]; }
   FilterStmt *filter_stmt() const { return filter_stmt_; }
 
 private:
   Table *table_ = nullptr;
-  Value *value_ = nullptr;
-  const FieldMeta *attr_meta_ = nullptr;
+  std::vector<Value *> values_;
+  std::vector<const FieldMeta *> attr_metas_;
+  // Value *value_ = nullptr;
+  // const FieldMeta *attr_meta_ = nullptr;
   FilterStmt *filter_stmt_ = nullptr;
 };
 

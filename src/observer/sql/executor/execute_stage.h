@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #ifndef __OBSERVER_SQL_EXECUTE_STAGE_H__
 #define __OBSERVER_SQL_EXECUTE_STAGE_H__
 
+#include "sql/parser/parse_defs.h"
 #include "sql/stmt/stmt.h"
 #include "sql/stmt/select_stmt.h"
 #include "sql/stmt/update_stmt.h"
@@ -36,6 +37,7 @@ See the Mulan PSL v2 for more details. */
 class SQLStageEvent;
 class SessionEvent;
 class SelectStmt;
+class Pretable;
 
 class ExecuteStage : public common::Stage {
 public:
@@ -68,9 +70,11 @@ protected:
   RC do_commit(SQLStageEvent *sql_event);
   RC do_clog_sync(SQLStageEvent *sql_event);
   RC do_drop_table(SQLStageEvent *sql_event);
-  RC do_update_table(SQLStageEvent *sql_event);
+  // RC do_update_table(SQLStageEvent *sql_event);
   RC value_check(const int &value_num, const Value *values) const;
   void print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi);
+  Pretable *select_to_pretable(SelectStmt *select_stmt, RC *rc);
+  RC compute_value_from_select(Db *db, Value *value, AttrType type, Selects *select);
 
 protected:
 private:
@@ -91,11 +95,13 @@ class TupleSet {
   void filter_fields(const std::vector<Field> &fields);
   const std::vector<TupleCell> &cells() const;
   const FieldMeta &meta(int idx) const;
+  const std::vector<std::pair<Table*, FieldMeta>> &metas() const { return metas_; }
 
   void push(const std::pair<Table*, FieldMeta> &p, const TupleCell &cell);
 
   const TupleCell &get_cell(int idx);
   const std::pair<Table *, FieldMeta> &get_meta(int idx);
+
   int index(const Field &field) const;
   const std::string &data() const { return data_; }
   int get_offset(const char *table_name, const char *field_name) const ;
@@ -135,6 +141,8 @@ class Pretable {
 
   std::vector<TupleSet>::iterator begin() { return tuples_.begin(); }
   std::vector<TupleSet>::iterator end() { return tuples_.end(); }
+
+  RC assign_row_to_value(Value *value, AttrType type);
 
   std::vector<TupleSet> tuples_;
   std::vector<Table*> tables_;

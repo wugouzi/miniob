@@ -1,0 +1,13 @@
+#+title: Todo
+
+
+
+* TODO [0/8]
+    * [ ] updates
+    * [ ] join
+    * [ ] order
+    * [ ] many selects
+    * [ ] inserts init takes all values, might not be true in complex queries
+    * [ ] like
+    * [ ] update with very long string
+    * [ ] update with null value

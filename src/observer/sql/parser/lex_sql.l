@@ -48,11 +48,12 @@ QUOTE            [\'\"]
 [Cc][Oo][Uu][Nn][Tt]                                 RETURN_TOKEN(COUNT);
 [Nn][Uu][Ll][Ll][Aa][Bb][Ll][Ee]                         RETURN_TOKEN(NULLABLE);
 [Nn][Uu][Ll][Ll]                                     RETURN_TOKEN(NULL_V);
+[Nn][Oo][Tt]                                         RETURN_TOKEN(NOT);
 [Mm][Ii][Nn]                                         RETURN_TOKEN(MIN);
 [Aa][Vv][Gg]                                         RETURN_TOKEN(AVG);
 [Ss][Uu][Mm]                                         RETURN_TOKEN(SUM);
 [Ee][Xx][Ii][Tt]                                     RETURN_TOKEN(EXIT);
-[Uu][Nn][Ii][Qq][Uu][Ee]                             RETURN_TOKEN(UNIQUE);
+[Uu][Nn][Ii][Qq][Uu][Ee]                             RETURN_TOKEN(UNIQUE_T);
 [Hh][Ee][Ll][Pp]                                     RETURN_TOKEN(HELP);
 [Dd][Ee][Ss][Cc]                                     RETURN_TOKEN(DESC);
 [Cc][Rr][Ee][Aa][Tt][Ee]                             RETURN_TOKEN(CREATE);
@@ -80,7 +81,7 @@ QUOTE            [\'\"]
 [Cc][Hh][Aa][Rr]                                     RETURN_TOKEN(STRING_T);
 [Ff][Ll][Oo][Aa][Tt]                                 RETURN_TOKEN(FLOAT_T);
 [Ll][Oo][Aa][Dd]                                     RETURN_TOKEN(LOAD);
-[Dd][Aa][Tt][Aa]                                     RETURN_TOKEN(DATA);
+[Dd][Aa][Tt][Aa]                                     RETURN_TOKEN(DATA_T);
 [Ii][Nn][Ff][Ii][Ll][Ee]                             RETURN_TOKEN(INFILE);
 {ID}                                                 yylval->string=strdup(yytext); RETURN_TOKEN(ID);
 "("                                                  RETURN_TOKEN(LBRACE);

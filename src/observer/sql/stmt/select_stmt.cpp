@@ -37,22 +37,22 @@ static void wildcard_fields(Table *table, std::vector<Field> &field_metas)
   }
 }
 
-RC SelectStmt::create(Db *db, Selects &select_sql, Stmt *&stmt)
+RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt)
 {
   if (nullptr == db) {
     LOG_WARN("invalid argument. db is null");
     return RC::INVALID_ARGUMENT;
   }
 
-  if (select_sql.aggregate_num > 0 && select_sql.attr_num != select_sql.aggregate_num) {
+  if (select_sql->aggregate_num > 0 && select_sql->attr_num != select_sql->aggregate_num) {
     return RC::INVALID_ARGUMENT;
   }
 
   // collect tables in `from` statement
   std::vector<Table *> tables;
   std::unordered_map<std::string, Table *> table_map;
-  for (size_t i = 0; i < select_sql.relation_num; i++) {
-    const char *table_name = select_sql.relations[i];
+  for (size_t i = 0; i < select_sql->relation_num; i++) {
+    const char *table_name = select_sql->relations[i];
     if (nullptr == table_name) {
       LOG_WARN("invalid argument. relation name is null. index=%d", i);
       return RC::INVALID_ARGUMENT;
@@ -70,8 +70,8 @@ RC SelectStmt::create(Db *db, Selects &select_sql, Stmt *&stmt)
   
   // collect query fields in `select` statement
   std::vector<Field> query_fields;
-  for (int i = select_sql.attr_num - 1; i >= 0; i--) {
-    const RelAttr &relation_attr = select_sql.attributes[i];
+  for (int i = select_sql->attr_num - 1; i >= 0; i--) {
+    const RelAttr &relation_attr = select_sql->attributes[i];
 
     if (relation_attr.type == AggreType::A_FAILURE) {
       return RC::SCHEMA_FIELD_NAME_ILLEGAL;
@@ -177,7 +177,7 @@ RC SelectStmt::create(Db *db, Selects &select_sql, Stmt *&stmt)
   // create filter statement in `where` statement
   FilterStmt *filter_stmt = nullptr;
   RC rc = FilterStmt::create(db, default_table, &table_map,
-           select_sql.conditions, select_sql.condition_num, filter_stmt);
+           select_sql->conditions, select_sql->condition_num, filter_stmt);
   if (rc != RC::SUCCESS) {
     LOG_WARN("cannot construct filter stmt");
     return rc;
@@ -188,7 +188,7 @@ RC SelectStmt::create(Db *db, Selects &select_sql, Stmt *&stmt)
   select_stmt->tables_.swap(tables);
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->filter_stmt_ = filter_stmt;
-  select_stmt->aggregate_num_ = select_sql.aggregate_num;
+  select_stmt->aggregate_num_ = select_sql->aggregate_num;
   stmt = select_stmt;
   return RC::SUCCESS;
 }

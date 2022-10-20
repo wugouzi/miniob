@@ -27,6 +27,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/lang/defer.h"
 #include "common/seda/timer_stage.h"
 #include "common/lang/string.h"
+#include "rc.h"
 #include "session/session.h"
 #include "event/storage_event.h"
 #include "event/sql_event.h"
@@ -41,7 +42,10 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/project_operator.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/filter_stmt.h"
+#include "sql/stmt/select_stmt.h"
 #include "sql/stmt/update_stmt.h"
+#include "storage/common/field_meta.h"
+#include "storage/common/table_meta.h"
 #include "storage/index/index.h"
 #include "storage/default/default_handler.h"
 #include "storage/common/condition_filter.h"
@@ -175,9 +179,9 @@ void ExecuteStage::handle_request(common::StageEvent *event)
     case SCF_DESC_TABLE: {
       do_desc_table(sql_event);
     } break;
-    case SCF_UPDATE: {
-      do_update_table(sql_event);
-    } break;
+    // case SCF_UPDATE: {
+    //   do_update_table(sql_event);
+    // } break;
     case SCF_DROP_TABLE: {
       do_drop_table(sql_event);
     } break;
@@ -413,25 +417,22 @@ void reorder_fields(std::vector<Field> &fields)
   }
 }
 
-
-RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
+Pretable *ExecuteStage::select_to_pretable(SelectStmt *select_stmt, RC *rc)
 {
-  SelectStmt *select_stmt = (SelectStmt *)(sql_event->stmt());
-  SessionEvent *session_event = sql_event->session_event();
   FilterStmt *filter_stmt = select_stmt->filter_stmt();
 
   std::vector<Pretable*> pretables;
 
-  RC rc = RC::SUCCESS;
+  *rc = RC::SUCCESS;
 
   for (int i = 0; i < select_stmt->tables().size(); i++) {
     Pretable *pre = new Pretable;
-    rc = pre->init(select_stmt->tables()[i], filter_stmt);
-    if (rc != RC::RECORD_EOF) {
+    *rc = pre->init(select_stmt->tables()[i], filter_stmt);
+    if (*rc != RC::RECORD_EOF) {
       delete pre;
       for (auto &t : pretables)
         delete t;
-      return rc;
+      return nullptr;
     }
     pretables.push_back(pre);
   }
@@ -439,39 +440,56 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
   // no relevant field or something
   if (pretables.empty()) {
     LOG_ERROR("No table or No relevant condition");
-    return RC::INTERNAL;
+    *rc = RC::INTERNAL;
+    return nullptr;
   }
 
   Pretable *res = pretables[0];
   auto iter = std::next(pretables.begin());
   while (iter != pretables.end()) {
-    rc = res->join(*iter, filter_stmt);
+    *rc = res->join(*iter, filter_stmt);
     delete *iter;
     iter = pretables.erase(iter);
-    if (rc != RC::SUCCESS) {
+    if (*rc != RC::SUCCESS) {
       while (iter != pretables.end()) {
         delete *iter;
         iter = pretables.erase(iter);
       }
       LOG_ERROR("join fails");
-      return rc;
+      return nullptr;
     }
   }
 
-  std::stringstream ss;
-  rc = RC::SUCCESS;
-  reorder_fields(select_stmt->query_fields());
-  print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1);
+  *rc = RC::SUCCESS;
+
   if (select_stmt->aggregate_num() > 0) {
-    rc = res->aggregate(select_stmt->query_fields());
+    *rc = res->aggregate(select_stmt->query_fields());
   } else {
     res->filter_fields(select_stmt->query_fields());
   }
-  if (rc != RC::SUCCESS) {
+  if (*rc != RC::SUCCESS) {
     LOG_ERROR("aggregate error");
+    return nullptr;
+  }
+  return res;
+}
+
+
+RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
+{
+  SelectStmt *select_stmt = (SelectStmt *)(sql_event->stmt());
+  SessionEvent *session_event = sql_event->session_event();
+  // FilterStmt *filter_stmt = select_stmt->filter_stmt();
+
+  RC rc;
+  Pretable *res = select_to_pretable(select_stmt, &rc);
+  if (res == nullptr) {
     session_event->set_response("FAILURE\n");
     return rc;
   }
+  std::stringstream ss;
+  reorder_fields(select_stmt->query_fields());
+  print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1);
   res->print(ss);
 
   session_event->set_response(ss.str());
@@ -653,6 +671,7 @@ bool check_attr_in_table(Table *table, const RelAttr &attr)
   return table->table_meta().field(attr.attribute_name) != nullptr;
 }
 
+/*
 RC check_updates(Db *db, const Updates &updates)
 {
   const char *table_name = updates.relation_name;
@@ -706,36 +725,51 @@ RC check_updates(Db *db, const Updates &updates)
   }
   return RC::SUCCESS;
 }
+*/
+// RC ExecuteStage::do_update_table(SQLStageEvent *sql_event)
+// {
+//   const Updates &updates = sql_event->query()->sstr.update;
+//   SessionEvent *session_event = sql_event->session_event();
+//   Db *db = session_event->session()->get_current_db();
+//   RC rc = check_updates(db, updates);
+//   if (rc == RC::SUCCESS) {
+//     rc = db->update_table(updates.relation_name, updates.attribute_name, &updates.value,
+//                            updates.condition_num, updates.conditions);
+//   }
 
-RC ExecuteStage::do_update_table(SQLStageEvent *sql_event)
-{
-  const Updates &updates = sql_event->query()->sstr.update;
-  SessionEvent *session_event = sql_event->session_event();
-  Db *db = session_event->session()->get_current_db();
-  RC rc = check_updates(db, updates);
-  if (rc == RC::SUCCESS) {
-    rc = db->update_table(updates.relation_name, updates.attribute_name, &updates.value,
-                           updates.condition_num, updates.conditions);
-  }
+//   if (rc == RC::SUCCESS) {
+//     session_event->set_response("SUCCESS\n");
+//   } else {
+//     session_event->set_response("FAILURE\n");
+//   }
 
-  if (rc == RC::SUCCESS) {
-    session_event->set_response("SUCCESS\n");
-  } else {
-    session_event->set_response("FAILURE\n");
-  }
-
-  // TODO: CLOG
-  return rc;
-}
+//   // TODO: CLOG
+//   return rc;
+// }
 
 RC ExecuteStage::value_check(const int &value_num, const Value *values) const
 {
   for (int i = 0; i < value_num; i++) {
     if (values[i].type == DATES && *(const int*)values[i].data == -1) {
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-    }
-  }
+    }  }
   return RC::SUCCESS;
+}
+
+RC ExecuteStage::compute_value_from_select(Db *db, Value *value, AttrType type, Selects *select)
+{
+  Stmt *stmt = nullptr;
+  RC rc = SelectStmt::create(db, select, stmt);
+  if (rc != RC::SUCCESS) {
+    return rc;
+  }
+  SelectStmt *select_stmt = dynamic_cast<SelectStmt*>(stmt);
+  Pretable *res = select_to_pretable(select_stmt, &rc);
+  if (res == nullptr) {
+    return rc;
+  }
+  rc = res->assign_row_to_value(value, type);
+  return rc;
 }
 
 RC ExecuteStage::do_update(SQLStageEvent *sql_event)
@@ -743,12 +777,13 @@ RC ExecuteStage::do_update(SQLStageEvent *sql_event)
   Stmt *stmt = sql_event->stmt();
   SessionEvent *session_event = sql_event->session_event();
   Session *session = session_event->session();
-  // Db *db = session->get_current_db();
+  Db *db = session->get_current_db();
   Trx *trx = session->current_trx();
   // CLogManager *clog_manager = db->get_clog_manager();
 
   if (stmt == nullptr) {
     LOG_WARN("cannot find statement");
+    session_event->set_response("FAILURE\n");
     return RC::GENERIC_ERROR;
   }
 
@@ -767,12 +802,23 @@ RC ExecuteStage::do_update(SQLStageEvent *sql_event)
 
   RC rc = pred_oper.open();
   if (rc != RC::SUCCESS) {
+    session_event->set_response("FAILURE\n");
     LOG_WARN("failed to open operator");
     return rc;
   }
 
-  const FieldMeta *field = update_stmt->attr_meta();
-  Value *value = update_stmt->value();
+  std::vector<Value *> &values = update_stmt->values();
+  std::vector<const FieldMeta *> &metas = update_stmt->metas();
+  for (int i  = 0; i < values.size(); i++) {
+    if (values[i]->type == AttrType::SELECTS) {
+      rc = compute_value_from_select(db, values[i], metas[i]->type(), values[i]->select);
+      if (rc != RC::SUCCESS) {
+        session_event->set_response("FAILURE\n");
+        LOG_DEBUG("selects in update isn't good");
+        return rc;
+      }
+    }
+  }
   while ((rc = pred_oper.next()) == RC::SUCCESS) {
     // get current record
     // write to response
@@ -784,21 +830,25 @@ RC ExecuteStage::do_update(SQLStageEvent *sql_event)
     }
     Record record = tuple->record();
     if (trx == nullptr || trx->is_visible(table, &record)) {
-      // prepare data
-      size_t copy_len = field->len();
-      if (field->type() == CHARS) {
-        const size_t data_len = strlen((const char *)value->data);
-        if (copy_len > data_len) {
-          copy_len = data_len + 1;
+      for (size_t i = 0; i < values.size(); i++) {
+        const FieldMeta *field = metas[i];
+        Value *value = values[i];
+        // prepare data
+        size_t copy_len = field->len();
+        if (field->type() == CHARS) {
+          const size_t data_len = strlen((const char *)value->data);
+          if (copy_len > data_len) {
+            copy_len = data_len + 1;
+          }
         }
-      }
-      memcpy(record.data() + field->offset(), value->data, copy_len);
+        memcpy(record.data() + field->offset(), value->data, copy_len);
 
-      // update
-      rc = table->update_record(trx, &record);
-      if (rc != RC::SUCCESS) {
-        LOG_WARN("failed to update");
-        return rc;
+        // update
+        rc = table->update_record(trx, &record);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("failed to update");
+          return rc;
+        }
       }
     }
   }
@@ -1206,9 +1256,15 @@ RC Pretable::aggregate_max(int idx, TupleCell *res)
   *res = tuples_[0].get_cell(idx);
   for (TupleSet &tuple : tuples_) {
     const TupleCell &cell = tuple.get_cell(idx);
-    int comp = cell.compare(*res);
-    if (comp > 0) {
-      *res = cell;
+    if (cell.attr_type() != NULLS) {
+      if (res->attr_type() == NULLS) {
+        *res = cell;
+      } else {
+        int comp = cell.compare(*res);
+        if (comp > 0) {
+          *res = cell;
+        }
+      }
     }
   }
   return RC::SUCCESS;
@@ -1219,9 +1275,15 @@ RC Pretable::aggregate_min(int idx, TupleCell *res)
   *res = tuples_[0].get_cell(idx);
   for (TupleSet &tuple : tuples_) {
     const TupleCell &cell = tuple.get_cell(idx);
-    int comp = res->compare(cell);
-    if (comp > 0) {
-      *res = cell;
+    if (cell.attr_type() != NULLS) {
+      if (res->attr_type() == NULLS) {
+        *res = cell;
+      } else {
+        int comp = res->compare(cell);
+        if (comp > 0) {
+          *res = cell;
+        }
+      }
     }
   }
   return RC::SUCCESS;
@@ -1231,18 +1293,25 @@ RC Pretable::aggregate_sum(int idx, TupleCell *res)
 {
   float ans = 0;
   AttrType type = UNDEFINED;
+  int cnt = 0;
   for (TupleSet &tuple : tuples_) {
     const TupleCell &cell = tuple.get_cell(idx);
     type = cell.attr_type();
     switch (cell.attr_type()) {
       case INTS: {
         ans += *(int *)cell.data();
+        cnt++;
       } break;
       case FLOATS: {
         ans += *(float *)cell.data();
+        cnt++;
       } break;
       case CHARS: {
         ans += Stmt::char_to_float(cell.data());
+        cnt++;
+      } break;
+      case NULLS: {
+        continue;
       }
       case DATES:
       default: {
@@ -1252,7 +1321,9 @@ RC Pretable::aggregate_sum(int idx, TupleCell *res)
   }
   res->set_type(type);
   res->set_length(sizeof(float));
-  if (type == INTS) {
+  if (cnt == 0) {
+    res->set_type(NULLS);
+  } else if (type == INTS) {
     int *a = new int();
     *a = ans;
     res->set_data((char *)a);
@@ -1268,29 +1339,41 @@ RC Pretable::aggregate_avg(int idx, TupleCell *res)
 {
   float *ans = (float *)malloc(sizeof(float));
   *ans = 0;
+  int cnt = 0;
   for (TupleSet &tuple : tuples_) {
     const TupleCell &cell = tuple.get_cell(idx);
     switch (cell.attr_type()) {
       case INTS: {
         *ans += *(int *)cell.data();
+        cnt++;
       } break;
       case FLOATS: {
         *ans += *(float *)cell.data();
+        cnt++;
       } break;
       case CHARS: {
         *ans += Stmt::char_to_float(cell.data());
+        cnt++;
       } break;
+      case NULLS: {
+        continue;
+      }
       case DATES:
       default: {
         return RC::INTERNAL;
       }
     }
   }
-  res->set_type(FLOATS);
-  res->set_length(sizeof(float));
-  *ans = *ans / tuples_.size();
-  // TODO: dangerous
-  res->set_data((char *)ans);
+  if (cnt == 0) {
+    res->set_type(NULLS);
+  } else {
+    res->set_type(FLOATS);
+    res->set_length(sizeof(float));
+    *ans = *ans / tuples_.size();
+    // TODO: dangerous
+    res->set_data((char *)ans);
+  }
+
   return RC::SUCCESS;
   // float *ans = new float();
   // *ans = 0;
@@ -1543,59 +1626,6 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
   if (!first) {
     ss << '\n';
   }
-  // bool is_aggr = false;
-  // for (const auto &field : fields) {
-  //   if (field.aggr_type() != AggreType::A_NO) {
-  //     is_aggr = true;
-  //     break;
-  //   }
-  // }
-  // bool first = true;
-  // if (is_aggr) {
-  //   for (int i = fields.size() - 1; i >= 0; i--) {
-  //     ss << (first ? "" : " | ");
-  //     first = false;
-  //     std::string tp = fields[i].has_table() ? fields[i].field_name() : fields[i].count_str();
-  //     if (multi && fields[i].has_table()) {
-  //       tp = fields[i].table_name() + ("." + tp);
-  //     }
-  //     tp = fields[i].aggr_name() + '(' + tp + ')';
-  //     ss << tp;
-  //   }
-  // } else {
-  //   int idx = 0;
-  //   std::string s;
-  //   if (multi) {
-  //     idx = fields.size()-1;
-  //     while (idx >= 0 && fields[idx].table_name() != s) {
-  //       idx--;
-  //     }
-  //     idx++;
-  //   }
-  //   int last_idx = fields.size();
-  //   while (1) {
-  //     for (int i = idx; i < last_idx; i++) {
-  //       ss << (first ? "" : " | ");
-  //       first = false;
-  //       std::string tp = fields[i].field_name();
-  //       if (multi && fields[i].has_table()) {
-  //         tp = fields[i].table_name() + ("." + tp);
-  //       }
-  //       ss << tp;
-  //     }
-  //     last_idx = idx;
-  //     idx--;
-  //     if (idx < 0) {
-  //       break;
-  //     }
-  //     s = fields[idx].table_name();
-  //     while (idx >= 0 && (!fields[idx].has_table() || s == fields[idx].table_name())) {
-  //       idx--;
-  //     }
-  //     idx++;
-  //   }
-  // }
-
 }
 
 void Pretable::filter_fields(const std::vector<Field> &fields) {
@@ -1618,4 +1648,21 @@ void Pretable::print(std::stringstream &ss)
     }
     ss << '\n';
   }
+}
+
+
+RC Pretable::assign_row_to_value(Value *value, AttrType type)
+{
+  if (tuples_.size() == 1 && tuples_[0].metas().size() == 0 &&
+      tuples_[0].meta(0).type() == type) {
+    const FieldMeta &meta = tuples_[0].meta(0);
+    value->type = type;
+    value->data = new char(meta.len());
+    memcpy(value->data, tuples_[0].get_cell(0).data(), meta.len());
+    // null case
+    if (((char *)value->data)[meta.len() - 1] == 1) {
+      value->type = NULLS;
+    }
+  }
+  return RC::SCHEMA_FIELD_TYPE_MISMATCH;
 }

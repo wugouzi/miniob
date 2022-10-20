@@ -22,6 +22,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/parser/parse.h"
 #include "sql/expr/tuple_cell.h"
 #include "sql/expr/expression.h"
+#include "sql/parser/parse_defs.h"
 #include "storage/record/record.h"
 
 class Table;
@@ -119,9 +120,15 @@ public:
     const TupleCellSpec *spec = speces_[index];
     FieldExpr *field_expr = (FieldExpr *)spec->expression();
     const FieldMeta *field_meta = field_expr->field().meta();
-    cell.set_type(field_meta->type());
-    cell.set_data(this->record_->data() + field_meta->offset());
-    cell.set_length(field_meta->len());
+    if (this->record_->data()[field_meta->offset()+field_meta->len()-1] == 1) {
+      cell.set_type(NULLS);
+      cell.set_length(0);
+      cell.set_data((char *)nullptr);
+    } else {
+      cell.set_type(field_meta->type());
+      cell.set_data(this->record_->data() + field_meta->offset());
+      cell.set_length(field_meta->len() - 1);
+    }
     return RC::SUCCESS;
   }
 

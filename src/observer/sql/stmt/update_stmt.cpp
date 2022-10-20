@@ -21,6 +21,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/common/table.h"
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 RC UpdateStmt::create(Db *db, Updates &update, Stmt *&stmt)
 {
@@ -36,26 +37,36 @@ RC UpdateStmt::create(Db *db, Updates &update, Stmt *&stmt)
     return RC::SCHEMA_TABLE_NOT_EXIST;
   }
 
-  Value &value = update.value;
-  const char *attr_name = update.attribute_name;
+  std::vector<Value *> values;
+  std::vector<const FieldMeta *> metas;
+  for (size_t i = update.attribute_num - 1; i >= 0; i--) {
+
+    Value &value = update.values[i];
+    const char *attr_name = update.attributes[i];
+
+    if (value.type == DATES && *(int *)value.data == -1) {
+      return RC::RECORD_INVALID_KEY;
+    }
+
+    const TableMeta &meta = table->table_meta();
+    const FieldMeta *fmeta = meta.field(attr_name);
+    if (fmeta == nullptr) {
+      return RC::SCHEMA_FIELD_MISSING;
+    }
+    if (!fmeta->nullable() && value.type == AttrType::NULLS) {
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
+    if (value.type != SELECTS && fmeta->type() != value.type &&
+        !convert_type(fmeta->type(), &value)) {
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
+    values.push_back(&update.values[i]);
+    metas.push_back(fmeta);
+  }
+
   int condition_num = update.condition_num;
   Condition *conditions = update.conditions;
 
-  if (value.type == DATES && *(int *)value.data == -1) {
-    return RC::RECORD_INVALID_KEY;
-  }
-
-  const TableMeta &meta = table->table_meta();
-  const FieldMeta *fmeta = meta.field(attr_name);
-  if (fmeta == nullptr) {
-    return RC::SCHEMA_FIELD_MISSING;
-  }
-  if (!fmeta->nullable() && value.type == AttrType::NULLS) {
-    return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-  }
-  if (fmeta->type() != value.type && !convert_type(fmeta->type(), &value)) {
-    return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-  }
   FilterStmt *filter_stmt = nullptr;
   std::unordered_map<std::string, Table *> table_map;
   table_map[table->name()] = table;
@@ -69,8 +80,8 @@ RC UpdateStmt::create(Db *db, Updates &update, Stmt *&stmt)
   UpdateStmt *update_stmt = new UpdateStmt();
   update_stmt->table_ = table;
   update_stmt->filter_stmt_ = filter_stmt;
-  update_stmt->attr_meta_ = fmeta;
-  update_stmt->value_ = &value;
+  update_stmt->attr_metas_.swap(metas);
+  update_stmt->values_.swap(values);
   return RC::SUCCESS;
 }
 

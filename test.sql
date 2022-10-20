@@ -6,8 +6,41 @@
 create table t(id int nullable, age int);
 insert into t values (null,2);
 insert into t values (1,4);
+select avg(id) from t;
+select * from t;
 select * from t where id=null;
+drop table t;
 
+create table t(id int, num int nullable, birthday date nullable);
+create index i_num on t(num);
+insert into t values(1, 2, '2020-01-01');
+insert into t values(1, null, null);
+insert into t values(1, null, '2020-02-02');
+insert into t values(null, 1, '2020-01-02'),(2,null,null);
+update t set id=null where id = 1;
+select * from t;
+select * from t where id is null;
+select * from t where id is not null;
+select * from t where num is null;
+select * from t where num > null;
+select * from t where num <> null;
+select * from t where 1=null;
+select * from t where 'a'=null;
+select * from t where null = null;
+select count(*) from t;
+select count(num) from t;
+select avg(num) from t;
+
+
+create table t(id1 nullable, id2 nullable);
+create unique index id1_id2 on t(id1,id2); insert into t values(1,null);
+insert into t values(1,null);-- 允许 insert into t values(2,2);
+insert into t values(2,2);-- 不允许
+
+
+-- update t set id=null, num=null where id =1;
+-- select * from t where null is null;
+-- select * from t where '2020-01-31' is null;
 -- order by, need null
 create table t(id int);
 insert into t values (1);

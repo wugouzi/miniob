@@ -35,6 +35,8 @@ public:
   RC next() override;
   RC close() override;
 
+  static bool string_like(const char *s1, const char *s2);
+
   Tuple * current_tuple() override;
   //int tuple_cell_num() const override;
   //RC tuple_cell_spec_at(int index, TupleCellSpec &spec) const override;

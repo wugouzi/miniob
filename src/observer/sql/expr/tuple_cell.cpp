@@ -53,9 +53,7 @@ void TupleCell::to_string(std::ostream &os) const
 
 int TupleCell::compare(const TupleCell &other) const
 {
-  if (this->attr_type_ == NULLS || other.attr_type_ == NULLS) {
-    return false;
-  } else if (this->attr_type_ == other.attr_type_) {
+  if (this->attr_type_ == other.attr_type_) {
     switch (this->attr_type_) {
       case DATES: return compare_date(this->data_, other.data_);
     case INTS: return compare_int(this->data_, other.data_);

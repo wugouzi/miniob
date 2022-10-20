@@ -442,7 +442,7 @@ RC Table::make_record(int value_num, const Value *values, char *&record_out)
   for (int i = 0; i < value_num; i++) {
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     const Value &value = values[i];
-    size_t copy_len = field->len();
+    size_t copy_len = field->len()-1;
     if (value.type != AttrType::NULLS) {
       if (field->type() == CHARS) {
         const size_t data_len = strlen((const char *)value.data);
@@ -451,6 +451,8 @@ RC Table::make_record(int value_num, const Value *values, char *&record_out)
         }
       }
       memcpy(record + field->offset(), value.data, copy_len);
+    } else {
+      record[field->offset() + field->len() - 1] = 1;
     }
   }
 
@@ -867,20 +869,20 @@ RC Table::delete_record(Trx *trx, Record *record)
     return rc;
   }
 
-  // if (trx != nullptr) {
-  //   rc = trx->delete_record(this, record);
+  if (trx != nullptr) {
+    rc = trx->delete_record(this, record);
 
-  //   CLogRecord *clog_record = nullptr;
-  //   rc = clog_manager_->clog_gen_record(CLogType::REDO_DELETE, trx->get_current_id(), clog_record, name(), 0, record);
-  //   if (rc != RC::SUCCESS) {
-  //     LOG_ERROR("Failed to create a clog record. rc=%d:%s", rc, strrc(rc));
-  //     return rc;
-  //   }
-  //   rc = clog_manager_->clog_append_record(clog_record);
-  //   if (rc != RC::SUCCESS) {
-  //     return rc;
-  //   }
-  // }
+    CLogRecord *clog_record = nullptr;
+    rc = clog_manager_->clog_gen_record(CLogType::REDO_DELETE, trx->get_current_id(), clog_record, name(), 0, record);
+    if (rc != RC::SUCCESS) {
+      LOG_ERROR("Failed to create a clog record. rc=%d:%s", rc, strrc(rc));
+      return rc;
+    }
+    rc = clog_manager_->clog_append_record(clog_record);
+    if (rc != RC::SUCCESS) {
+      return rc;
+    }
+  }
 
   return rc;
 }

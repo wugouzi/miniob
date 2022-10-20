@@ -61,13 +61,17 @@ typedef enum
   INTS,
   DATES,
   NULLS,
+  SELECTS,
   FLOATS
 } AttrType;
+
+struct _Selects;
 
 //属性值
 typedef struct _Value {
   AttrType type;  // type of value
   void *data;     // value
+  struct _Selects *select;
 } Value;
 
 typedef struct {
@@ -88,7 +92,7 @@ typedef struct _Condition {
 } Condition;
 
 // struct of select
-typedef struct {
+typedef struct _Selects {
   size_t attr_num;                // Length of attrs in Select clause
   RelAttr attributes[MAX_NUM];    // attrs in Select clause
   size_t relation_num;            // Length of relations in Fro clause
@@ -96,7 +100,7 @@ typedef struct {
   size_t condition_num;           // Length of conditions in Where clause
   Condition conditions[MAX_NUM];  // conditions in Where clause
   int aggregate_num;              // -1 means error
-} Selects;
+} Selects;;
 
 // struct of insert
 typedef struct {
@@ -115,10 +119,13 @@ typedef struct {
 // struct of update
 typedef struct {
   char *relation_name;            // Relation to update
-  char *attribute_name;           // Attribute to update
-  Value value;                    // update value
+  /* char *attribute_name;           // Attribute to update */
+  /* Value value;                    // update value */
   size_t condition_num;           // Length of conditions in Where clause
   Condition conditions[MAX_NUM];  // conditions in Where clause
+  char *attributes[MAX_NUM];
+  Value *values;
+  int attribute_num;
 } Updates;
 
 typedef struct {
@@ -167,7 +174,7 @@ typedef struct {
 } ShowIndex;
 
 union Queries {
-  Selects selection;
+  Selects *selection;
   Inserts insertion;
   Deletes deletion;
   Updates update;
@@ -179,6 +186,7 @@ union Queries {
   LoadData load_data;
   char *errors;
   ShowIndex show_index;
+  Selects selects[MAX_NUM];
 };
 
 // 修改yacc中相关数字编码为宏定义
@@ -224,6 +232,7 @@ void value_init_null(Value *value);
 void value_init_float(Value *value, float v);
 void value_init_string(Value *value, const char *v);
 void value_init_date(Value *value, const char* v);
+void value_init_select(Value *value, Selects *selects);
 void value_destroy(Value *value);
 
 void condition_init(Condition *condition, CompOp comp, int left_is_attr, RelAttr *left_attr, Value *left_value,
@@ -234,7 +243,7 @@ void attr_info_init(AttrInfo *attr_info, const char *name, AttrType type, size_t
 // void attr_info_init(AttrInfo *attr_info, const char *name, AttrType type, size_t length);
 void attr_info_destroy(AttrInfo *attr_info);
 
-void selects_init(Selects *selects, ...);
+void selects_init(Selects *s1, ...);
 void selects_reverse_relations(Selects *selects);
 void selects_append_attribute(Selects *selects, RelAttr *rel_attr);
 void selects_append_relation(Selects *selects, const char *relation_name);
@@ -250,9 +259,9 @@ void deletes_init_relation(Deletes *deletes, const char *relation_name);
 void deletes_set_conditions(Deletes *deletes, Condition conditions[], size_t condition_num);
 void deletes_destroy(Deletes *deletes);
 
-void updates_init(Updates *updates, const char *relation_name, const char *attribute_name, Value *value,
-    Condition conditions[], size_t condition_num);
+void updates_init(Updates *updates, const char *relation_name, Condition conditions[], size_t condition_num);
 void updates_destroy(Updates *updates);
+void updates_append(Updates *updates, const char *attribute_name, Value *value);
 
 void create_table_append_attribute(CreateTable *create_table, AttrInfo *attr_info);
 void create_table_init_name(CreateTable *create_table, const char *relation_name);
