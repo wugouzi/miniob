@@ -252,8 +252,8 @@ void inserts_destroy(Inserts *inserts)
   free(inserts->relation_name);
   inserts->relation_name = nullptr;
 
-  for (size_t i = 0; i < inserts->valuelist_num; i++) {
-    for (size_t j = 0; j < inserts->valuelist[i].value_num; j++) {
+  for (int i = 0; i < inserts->valuelist_num; i++) {
+    for (int j = 0; j < inserts->valuelist[i].value_num; j++) {
       value_destroy(&inserts->valuelist[i].values[j]);
     }
     inserts->valuelist[i].value_num = 0;
@@ -316,7 +316,7 @@ void updates_append(Updates *updates, const char *attribute_name, Value *value)
 void updates_destroy(Updates *updates)
 {
   free(updates->relation_name);
-  for (size_t i = 0; i < updates->attribute_num; i++) {
+  for (int i = 0; i < updates->attribute_num; i++) {
     free(updates->attributes[i]);
     updates->attributes[i] = nullptr;
     value_destroy(&updates->values[i]);

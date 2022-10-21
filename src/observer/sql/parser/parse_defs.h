@@ -101,7 +101,7 @@ typedef struct _Selects {
   char *relations[MAX_NUM];       // relations in From clause
   size_t condition_num;           // Length of conditions in Where clause
   Condition conditions[MAX_NUM];  // conditions in Where clause
-  int aggregate_num;              // -1 means error
+  size_t aggregate_num;              // -1 means error
 } Selects;;
 
 // struct of insert

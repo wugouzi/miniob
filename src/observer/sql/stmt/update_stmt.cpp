@@ -39,7 +39,7 @@ RC UpdateStmt::create(Db *db, Updates &update, Stmt *&stmt)
 
   std::vector<Value *> values;
   std::vector<const FieldMeta *> metas;
-  for (size_t i = 0; i < update.attribute_num; i++) {
+  for (int i = 0; i < update.attribute_num; i++) {
     Value &value = update.values[i];
     const char *attr_name = update.attributes[i];
 

@@ -426,7 +426,7 @@ Pretable *ExecuteStage::select_to_pretable(SelectStmt *select_stmt, RC *rc)
 
   *rc = RC::SUCCESS;
 
-  for (int i = 0; i < select_stmt->tables().size(); i++) {
+  for (size_t i = 0; i < select_stmt->tables().size(); i++) {
     Pretable *pre = new Pretable;
     *rc = pre->init(select_stmt->tables()[i], filter_stmt);
     if (*rc != RC::RECORD_EOF) {
@@ -1032,13 +1032,13 @@ void TupleSet::filter_fields(const std::vector<Field> &fields) {
   std::vector<std::pair<Table*, FieldMeta>> metas(fields.size());
   std::vector<TupleCell> cells(fields.size());
   data_.clear();
-  for (int i = 0; i < fields.size(); i++) {
+  for (size_t i = 0; i < fields.size(); i++) {
     mp[fields[i].table_name()][fields[i].field_name()] = i+1;
   }
 
   table_num_ = mp.size();
 
-  for (int i = 0; i < metas_.size(); i++) {
+  for (size_t i = 0; i < metas_.size(); i++) {
     auto &p = metas_[i];
     int j = mp[p.first->name()][p.second.name()];
     if (j > 0) {
@@ -1071,7 +1071,7 @@ int TupleSet::index(const Field &field) const
   if (!field.has_table() || !field.has_field()) {
     return -1;
   }
-  for (int i = 0; i < metas_.size(); i++) {
+  for (size_t i = 0; i < metas_.size(); i++) {
     if (strcmp(metas_[i].first->name(), field.table_name()) == 0 &&
         strcmp(metas_[i].second.name(), field.field_name()) == 0) {
       return i;

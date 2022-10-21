@@ -518,7 +518,7 @@ aggregation_func LBRACE ID aggregation_extra_id RBRACE {
 | aggregation_func LBRACE FLOAT aggregation_extra_id RBRACE {
   RelAttr attr;
   char *buf = malloc(20 * sizeof(char));
-  snprintf(buf, sizeof(buf), "%.10f", $3);
+  snprintf(buf, 20, "%.2f", $3);
   size_t len = strlen(buf);
   while (buf[len - 1] == '0') {
     len--;

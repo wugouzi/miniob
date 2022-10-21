@@ -1898,7 +1898,7 @@ CONTEXT->value_length = 0;
                                                             {
   RelAttr attr;
   char *buf = malloc(20 * sizeof(char));
-  snprintf(buf, sizeof(buf), "%.10f", (yyvsp[-2].floats));
+  snprintf(buf, 20, "%.2f", (yyvsp[-2].floats));
   size_t len = strlen(buf);
   while (buf[len - 1] == '0') {
     len--;
