@@ -982,7 +982,10 @@ TupleSet::TupleSet(const Tuple *t, Table *table) {
     t->cell_at(i, cell);
     cells_.push_back(cell);
     if (is_null(cell, &metas_[i].second)) {
+      LOG_DEBUG("cell %d is null", i);
       cell.set_type(NULLS);
+    } else {
+      LOG_DEBUG("cell %d is not null", i);
     }
   }
 }

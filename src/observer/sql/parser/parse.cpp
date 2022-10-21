@@ -68,6 +68,7 @@ void value_init_integer(Value *value, int v)
 {
   value->type = INTS;
   value->data = malloc(sizeof(v)+1);
+  memset(value->data, 0, 5);
   memcpy(value->data, &v, sizeof(v));
 }
 bool is_leap(int y)
@@ -109,6 +110,7 @@ void value_init_date(Value *value, const char* v)
 
   int dv = y * 10000 + m * 100 + d;
   value->data = malloc(sizeof(int)+1);
+  memset(value->data, 0, 5);
   bool b = check_date(y, m, d);
   if (!b) {
     dv = -1;
@@ -119,13 +121,15 @@ void value_init_float(Value *value, float v)
 {
   value->type = FLOATS;
   value->data = malloc(sizeof(v)+1);
+  memset(value->data, 0, 5);
   memcpy(value->data, &v, sizeof(v));
 }
 void value_init_string(Value *value, const char *v)
 {
   value->type = CHARS;
   value->data = malloc(strlen(v)+2);
-  memcpy(value->data, v, strlen(v)+1);
+  memset(value->data, 0, strlen(v)+2);
+  memcpy(value->data, v, strlen(v));
 }
 void value_init_select(Value *value, Selects *selects)
 {

@@ -139,27 +139,31 @@ bool DefaultConditionFilter::filter(const Record &rec) const
 {
   char *left_value = nullptr;
   char *right_value = nullptr;
+  bool left_is_null = left_type_ == AttrType::NULLS;
+  bool right_is_null = right_type_ == AttrType::NULLS;
 
   if (left_.is_attr) {  // value
     left_value = (char *)(rec.data() + left_.attr_offset);
+    left_is_null |= left_value[left_.attr_length - 1];
   } else {
     left_value = (char *)left_.value;
   }
 
   if (right_.is_attr) {
     right_value = (char *)(rec.data() + right_.attr_offset);
+    right_is_null |= right_value[right_.attr_length - 1];
   } else {
     right_value = (char *)right_.value;
   }
 
   int cmp_result = 0;
-  if (left_type_ == AttrType::NULLS && right_type_ == AttrType::NULLS &&
+  if (left_is_null && right_is_null &&
       comp_op_ == IS_EQUAL) {
     return true;
-  } else if (left_type_ != AttrType::NULLS && right_type_ == AttrType::NULLS &&
+  } else if (!left_is_null && right_is_null &&
              comp_op_ == IS_NOT_EQUAL) {
     return true;
-  } else if (left_type_ == AttrType::NULLS || right_type_ == AttrType::NULLS) {
+  } else if (left_is_null || right_is_null) {
     return false;
   } else if (left_type_ == right_type_) {
     switch (left_type_) {

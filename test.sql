@@ -1,3 +1,241 @@
+CREATE TABLE null_table(id int, num int nullable, price float not null, birthday date nullable);
+CREATE TABLE null_table2(id int, num int nullable, price float not null, birthday date nullable);
+INSERT INTO null_table VALUES (1, 18, 10.0, '2020-01-01');
+INSERT INTO null_table VALUES (2, null, 20.0, '2010-01-11');
+INSERT INTO null_table VALUES (3, 12, 30.0, null);
+INSERT INTO null_table VALUES (4, 15, 30.0, '2021-01-31');
+INSERT INTO null_table2 VALUES (1, 18, 30.0, '2021-01-31');
+INSERT INTO null_table2 VALUES (2, null, 40.0, null);
+SELECT null_table.num,null_table2.num,null_table.birthday FROM null_table,null_table2 where null_table.num=null_table2.num;
+
+
+
+CREATE TABLE null_table(id int, num int nullable, price float not null, birthday date nullable);
+CREATE TABLE null_table2(id int, num int nullable, price float not null, birthday date nullable);
+CREATE INDEX index_num on null_table(num);
+
+INSERT INTO null_table VALUES (1, 18, 10.0, '2020-01-01');
+INSERT INTO null_table VALUES (2, null, 20.0, '2010-01-11');
+INSERT INTO null_table VALUES (3, 12, 30.0, null);
+INSERT INTO null_table VALUES (4, 15, 30.0, '2021-01-31');
+INSERT INTO null_table2 VALUES (1, 18, 30.0, '2021-01-31');
+INSERT INTO null_table2 VALUES (2, null, 40.0, null);
+
+INSERT INTO null_table VALUES (5, 15, null, '2021-01-31');
+INSERT INTO null_table VALUES (null, 15, 30.0, '2021-01-31');
+
+SELECT * FROM null_table;
+SELECT * FROM null_table where 1 is null;
+SELECT * FROM null_table where 1 is not null;
+SELECT * FROM null_table where null=1;
+SELECT * FROM null_table where 1=null;
+SELECT * FROM null_table where 1<>null;
+SELECT * FROM null_table where 1<null;
+SELECT * FROM null_table where 1>null;
+SELECT * FROM null_table where null is null;
+SELECT * FROM null_table where null is not null;
+
+SELECT * FROM null_table WHERE null=null;
+
+SELECT * FROM null_table WHERE null<>null;
+
+SELECT * FROM null_table WHERE null>null;
+
+SELECT * FROM null_table WHERE null<null;
+
+
+SELECT * FROM null_table where 'a' is null;
+
+SELECT * FROM null_table where 'a' is not null;
+
+SELECT * FROM null_table WHERE null='a';
+
+SELECT * FROM null_table WHERE 'a'=null;
+SELECT * FROM null_table WHERE 'a'<>null;
+SELECT * FROM null_table WHERE 'a'>null;
+SELECT * FROM null_table WHERE 'a'<null;
+
+
+SELECT * FROM null_table where '2021-01-31' is null;
+SELECT * FROM null_table where '2021-01-31' is not null;
+SELECT * FROM null_table WHERE null='2021-01-31';
+SELECT * FROM null_table WHERE '2021-01-31'=null;
+SELECT * FROM null_table WHERE '2021-01-31'>null;
+SELECT * FROM null_table WHERE '2021-01-31'<null;
+
+
+SELECT * FROM null_table where birthday is not null;
+SELECT * FROM null_table where birthday is null;
+SELECT * FROM null_table where birthday = null;
+SELECT * FROM null_table where null = birthday;
+SELECT * FROM null_table where birthday <> null;
+SELECT * FROM null_table where birthday > null;
+SELECT * FROM null_table where birthday < null;
+SELECT * FROM null_table where num is not null;
+SELECT * FROM null_table where num is null;
+SELECT * FROM null_table where num = null;
+SELECT * FROM null_table where null = num;
+SELECT * FROM null_table where num <> null;
+SELECT * FROM null_table where num > null;
+SELECT * FROM null_table where num < null;
+SELECT null_table.num,null_table2.num,null_table.birthday FROM null_table,null_table2 where null_table.num=null_table2.num;
+
+5. AGGREGATION
+SELECT count(*) FROM null_table;
+COUNT(*)
+4
+SELECT count(price) FROM null_table;
+COUNT(PRICE)
+4
+SELECT count(birthday) FROM null_table;
+COUNT(BIRTHDAY)
+3
+SELECT avg(num) FROM null_table;
+AVG(NUM)
+15
+
+6. AGGREGATION WITH NULL COLUMNS
+CREATE TABLE null_table3(id int, num int nullable);
+SUCCESS
+INSERT INTO null_table3 VALUES (1, null);
+SUCCESS
+INSERT INTO null_table3 VALUES (2, null);
+SUCCESS
+SELECT count(num) FROM null_table3;
+COUNT(NUM)
+0
+SELECT min(num) FROM null_table3;
+MIN(NUM)
+NULL
+SELECT max(num) FROM null_table3;
+MAX(NUM)
+NULL
+SELECT avg(num) FROM null_table3;
+AVG(NUM)
+NULL
+
+/*
+
+1 | 18 | 10 | 2020-01-01
+2 | NULL | 20 | 2010-01-11
+3 | 12 | 30 | NULL
+4 | 15 | 30 | 2021-01-31
+ID | NUM | PRICE | BIRTHDAY
+
+ID | NUM | PRICE | BIRTHDAY
+
+1 | 18 | 10 | 2020-01-01
+2 | NULL | 20 | 2010-01-11
+3 | 12 | 30 | NULL
+4 | 15 | 30 | 2021-01-31
+ID | NUM | PRICE | BIRTHDAY
+
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+
+1 | 18 | 10 | 2020-01-01
+2 | NULL | 20 | 2010-01-11
+3 | 12 | 30 | NULL
+4 | 15 | 30 | 2021-01-31
+ID | NUM | PRICE | BIRTHDAY
+
+
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+
+1 | 18 | 10 | 2020-01-01
+2 | NULL | 20 | 2010-01-11
+3 | 12 | 30 | NULL
+4 | 15 | 30 | 2021-01-31
+ID | NUM | PRICE | BIRTHDAY
+
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+
+1 | 18 | 10 | 2020-01-01
+2 | NULL | 20 | 2010-01-11
+3 | 12 | 30 | NULL
+4 | 15 | 30 | 2021-01-31
+ID | NUM | PRICE | BIRTHDAY
+
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+
+
+1 | 18 | 10 | 2020-01-01
+2 | NULL | 20 | 2010-01-11
+4 | 15 | 30 | 2021-01-31
+ID | NUM | PRICE | BIRTHDAY
+
+3 | 12 | 30 | NULL
+ID | NUM | PRICE | BIRTHDAY
+
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+
+1 | 18 | 10 | 2020-01-01
+3 | 12 | 30 | NULL
+4 | 15 | 30 | 2021-01-31
+ID | NUM | PRICE | BIRTHDAY
+
+2 | NULL | 20 | 2010-01-11
+ID | NUM | PRICE | BIRTHDAY
+
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+ID | NUM | PRICE | BIRTHDAY
+
+18 | 18 | 2020-01-01
+NULL_TABLE.NUM | NULL_TABLE2.NUM | NULL_TABLE.BIRTHDAY
+
+
+*/
+
+
+
+
+create table t1(id int, col float);
+create table t2(id int, col float);
+insert into t1 values(2,1);
+insert into t1 values(1,1);
+insert into t2 values(1,2);
+select * from t1,t2;
+update t1 set id=3,col=3 where id=1;
+update t1 set ild=3,col=3 where id=1;
+update t1 set id=3,cokl=3 where id=1;
+update t1 set id=3,col=3 where idd=1;
+update t1 set id='12',col=1.33 where id=3;
+select * from t1;
+update t1 set id=1.44, col='13' where id=12;
+select * from t1;
+update t1 set col=(select col from t2 where t2.id=1) where t1.id=2;
+select * from t1,t2;
+update t2 set id=1,col=1 where id=1;
+select * from t1,t2;
+update t1 set col=(select id from t2 where id=1), id=(select id from t2 where id=1) where id=2;
+select * from t1;
+drop table t1;
+drop table t2;
+
+
 FAILURE
 7. UPDATE WITH INVALID CONDITION
 UPDATE Update_table_2 SET t_name='N4',col1=1 where col3=1;
