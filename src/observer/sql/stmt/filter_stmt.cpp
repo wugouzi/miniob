@@ -113,7 +113,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       LOG_WARN("cannot find attr");
       return rc;
     }
-    if (!Stmt::check_type(condition.right_value.type, field->type())) {
+    if (!Stmt::check_type(condition.left_value.type, field->type())) {
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
   }
