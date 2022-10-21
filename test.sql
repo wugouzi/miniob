@@ -1,3 +1,32 @@
+FAILURE
+7. UPDATE WITH INVALID CONDITION
+UPDATE Update_table_2 SET t_name='N4',col1=1 where col3=1;
+-FAILURE
+
+2. MIN
+SELECT min(num) FROM aggregation_func;
+-MIN(NUM)
+-12
++FAILURE
+SELECT min(price) FROM aggregation_func;
+-MIN(PRICE)
+-10
++FAILURE
+...
+
+FAILURE
+2. SELECT
+SELECT * FROM null_table;
+-1 | 18 | 10 | 2020-01-01
+-2 | NULL | 20 | 2010-01-11
+-3 | 12 | 30 | NULL
+-4 | 15 | 30 | 2021-01-31
+-ID | NUM | PRICE | BIRTHDAY
+-3. SELECT WITH CONSTANT
+-SELECT * FROM null_table where 1 is null;
+...
+
+
 create table t1 (id int, num1 int);
 create table t2 (id int, num2 int);
 create table t3 (id int, num3 int);

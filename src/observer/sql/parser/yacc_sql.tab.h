@@ -90,31 +90,32 @@ extern int yydebug;
     DATA_T = 291,                  /* DATA_T  */
     INFILE = 292,                  /* INFILE  */
     EQ = 293,                      /* EQ  */
-    LT = 294,                      /* LT  */
-    GT = 295,                      /* GT  */
-    LE = 296,                      /* LE  */
-    GE = 297,                      /* GE  */
-    NE = 298,                      /* NE  */
-    DATE_T = 299,                  /* DATE_T  */
-    UNIQUE_T = 300,                /* UNIQUE_T  */
-    MAX = 301,                     /* MAX  */
-    MIN = 302,                     /* MIN  */
-    COUNT = 303,                   /* COUNT  */
-    AVG = 304,                     /* AVG  */
-    SUM = 305,                     /* SUM  */
-    NULLABLE = 306,                /* NULLABLE  */
-    NULL_V = 307,                  /* NULL_V  */
-    NOT = 308,                     /* NOT  */
-    INNER = 309,                   /* INNER  */
-    JOIN = 310,                    /* JOIN  */
-    NUMBER = 311,                  /* NUMBER  */
-    DATE_STR = 312,                /* DATE_STR  */
-    FLOAT = 313,                   /* FLOAT  */
-    ID = 314,                      /* ID  */
-    PATH = 315,                    /* PATH  */
-    SSS = 316,                     /* SSS  */
-    STAR = 317,                    /* STAR  */
-    STRING_V = 318                 /* STRING_V  */
+    IS = 294,                      /* IS  */
+    LT = 295,                      /* LT  */
+    GT = 296,                      /* GT  */
+    LE = 297,                      /* LE  */
+    GE = 298,                      /* GE  */
+    NE = 299,                      /* NE  */
+    DATE_T = 300,                  /* DATE_T  */
+    UNIQUE_T = 301,                /* UNIQUE_T  */
+    MAX = 302,                     /* MAX  */
+    MIN = 303,                     /* MIN  */
+    COUNT = 304,                   /* COUNT  */
+    AVG = 305,                     /* AVG  */
+    SUM = 306,                     /* SUM  */
+    NULLABLE = 307,                /* NULLABLE  */
+    NULL_V = 308,                  /* NULL_V  */
+    NOT = 309,                     /* NOT  */
+    INNER = 310,                   /* INNER  */
+    JOIN = 311,                    /* JOIN  */
+    NUMBER = 312,                  /* NUMBER  */
+    DATE_STR = 313,                /* DATE_STR  */
+    FLOAT = 314,                   /* FLOAT  */
+    ID = 315,                      /* ID  */
+    PATH = 316,                    /* PATH  */
+    SSS = 317,                     /* SSS  */
+    STAR = 318,                    /* STAR  */
+    STRING_V = 319                 /* STRING_V  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -123,7 +124,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 131 "yacc_sql.y"
+#line 132 "yacc_sql.y"
 
   struct _Attr *attr;
   struct _Condition *condition1;
@@ -133,7 +134,7 @@ union YYSTYPE
   float floats;
 	char *position;
 
-#line 137 "yacc_sql.tab.h"
+#line 138 "yacc_sql.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

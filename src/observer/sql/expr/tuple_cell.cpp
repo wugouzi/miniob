@@ -85,6 +85,6 @@ int TupleCell::compare(const TupleCell &other) const
     float ans = Stmt::char_to_float(data_);
     return compare_float(&ans, other.data_);
   }
-  LOG_WARN("not supported");
+  LOG_ERROR("not supported");
   return -1; // TODO return rc?
 }

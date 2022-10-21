@@ -1212,7 +1212,7 @@ RC Pretable::aggregate_max(int idx, TupleCell *res)
       if (tmp->attr_type() == NULLS) {
         tmp = &cell;
       } else {
-        int comp = cell.compare(*res);
+        int comp = cell.compare(*tmp);
         if (comp > 0) {
           tmp = &cell;
         }

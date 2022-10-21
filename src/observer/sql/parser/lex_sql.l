@@ -50,6 +50,7 @@ QUOTE            [\'\"]
 [Nn][Uu][Ll][Ll]                                     RETURN_TOKEN(NULL_V);
 [Ii][Nn][Nn][Ee][Rr]                                 RETURN_TOKEN(INNER);
 [Jj][Oo][Ii][Nn]                                     RETURN_TOKEN(JOIN);
+[Ii][Ss]                                             RETURN_TOKEN(IS);
 [Nn][Oo][Tt]                                         RETURN_TOKEN(NOT);
 [Mm][Ii][Nn]                                         RETURN_TOKEN(MIN);
 [Aa][Vv][Gg]                                         RETURN_TOKEN(AVG);

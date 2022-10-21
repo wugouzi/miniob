@@ -153,7 +153,13 @@ bool DefaultConditionFilter::filter(const Record &rec) const
   }
 
   int cmp_result = 0;
-  if (left_type_ == AttrType::NULLS || right_type_ == AttrType::NULLS) {
+  if (left_type_ == AttrType::NULLS && right_type_ == AttrType::NULLS &&
+      comp_op_ == IS_EQUAL) {
+    return true;
+  } else if (left_type_ != AttrType::NULLS && right_type_ == AttrType::NULLS &&
+             comp_op_ == IS_NOT_EQUAL) {
+    return true;
+  } else if (left_type_ == AttrType::NULLS || right_type_ == AttrType::NULLS) {
     return false;
   } else if (left_type_ == right_type_) {
     switch (left_type_) {
@@ -230,7 +236,7 @@ bool DefaultConditionFilter::filter(const Record &rec) const
   }
 
   switch (comp_op_) {
-    case EQUAL_TO:
+    case EQUAL_TO: case IS_EQUAL:
       return 0 == cmp_result;
     case LESS_EQUAL:
       return cmp_result <= 0;

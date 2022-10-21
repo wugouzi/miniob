@@ -17,3 +17,4 @@
     * [ ] fix aggr order issue
     * [ ] there is no need to return in get_subfilter
     * [ ] problem when select same table, select * from t,t;
+    * [ ] unique多条
