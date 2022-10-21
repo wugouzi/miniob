@@ -606,6 +606,7 @@ inner_joins:
   selects_append_relation(&CONTEXT->ssql->selects[CONTEXT->selects_num], $3);
   CONTEXT->joins++;
 }
+;
 rel_list:
     /* empty */
     | COMMA rel_name rel_list {

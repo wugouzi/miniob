@@ -1,3 +1,11 @@
+create table t(id int, name char);
+insert into t values (1, 'wefwef');
+insert into t values (2, 'wwwws');
+insert into t values (3, '313');
+select * from t where name like 'w%';
+drop table t;
+select * from table where name like
+
 FAILURE
 7. UPDATE WITH INVALID CONDITION
 UPDATE Update_table_2 SET t_name='N4',col1=1 where col3=1;
