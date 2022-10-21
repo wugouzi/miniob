@@ -1,3 +1,42 @@
+create table t1 (id int, num1 int);
+create table t2 (id int, num2 int);
+create table t3 (id int, num3 int);
+create table t4 (id int, num4 int);
+create table t5 (id int, num5 int);
+create table t6 (id int, num6 int);
+insert into t1 values (1,1);
+insert into t2 values (1,1);
+insert into t3 values (1,1);
+insert into t4 values (1,1);
+insert into t5 values (2,100);
+insert into t6 values (2,1);
+select * from t1 inner join t2 on t1.id=t2.id inner join t3 on t1.id=t3.id inner join t4 on t3.id=t4.id and t4.num4 <= 5 inner join t5 on 1=1 inner join t6 on t5.id=t6.id where t3.num3 <10 and t5.num5>90;
+drop table t1;
+drop table t2;
+drop table t3;
+drop table t4;
+drop table t5;
+drop table t6;
+select * from t1
+              inner join t2 on t1.id=t2.id
+              inner join t3 on t1.id=t3.id
+              inner join t4 on t3.id=t4.id and t4.num4 <= 5
+              inner join t5 on 1=1
+              inner join t6 on t5.id=t6.id
+where t3.num3 <10 and t5.num5>90;
+
+
+1 | A | 18 | 5
+JOIN_TABLE_1.ID | JOIN_TABLE_1.NAME | JOIN_TABLE_2.AGE | JOIN_TABLE_3.LEVEL
+Select * from join_table_1 inner join join_table_2 on join_table_1.id=join_table_2.id and join_table_2.age>15;
+-1 | A | 1 | 18
+-JOIN_TABLE_1.ID | JOIN_TABLE_1.NAME | JOIN_TABLE_2.ID | JOIN_TABLE_2.AGE
++FAILED TO PARSE SQL
+Select * from join_table_1 inner join join_table_2 on join_table_1.id=join_table_2.id and join_table_2.age>15 where join_table_1.name='b';
+-JOIN_TABLE_1.ID | JOIN_TABLE_1.NAME | JOIN_TABLE_2.ID | JOIN_TABLE_2.AGE
++FAILED TO PARSE SQL
+Select * from join_table_1 inner join join_table_2 on join_table_1.id=join_table_2.id and join_table_2.age>15 inner join join_table_3 on join_table_1.id=join_table_2.id and join_table_3.level>=5;
+
 create table t1(id int, age float, addr char(4));
 create table t2(id int, age float, addr char(4));
 create table t3(id int, age float, addr char(4));
@@ -7,8 +46,8 @@ insert into t2 values (1,-1.9,'aa');
 insert into t3 values (3,9,'zz');
 insert into t3 values (2,1,'zz');
 insert into t3 values ('1',7,'zz');
-
 select * from t1,t2,t3;
+select * from t1 inner join t2 on t1.id<=t2.id and t1.age> t2.age;
 select t1.id, t2.id,t3.id from t1 inner join t2 on t1.id=t2.id inner join t3 on t1.id=t3.id;
 select * from t1 inner join t3 on t1.id=t3.id, t2 inner join t3 on t2.id=t3.id;
 select * from t1,t2,t3;
@@ -211,6 +250,25 @@ drop table t;
 create table t(id int);
 insert into t values (1),(2),(3);
 select avg(id) from t;
+drop table t;
+
+create table t(id int);
+insert into t values(null);
+insert into t values(null);
+insert into t values(null);
+select count(*) from t;
+select count(id) from t;
+drop table t;
+
+create table t(id int nullable, age float nullable, addr char nullable, d date nullable);
+insert into t values (null, null, null, null);
+select * from t;
+select count(*) from t;
+select count(id) from t;
+select min(id) from t;
+select max(id) from t;
+select avg(id) from t;
+select sum(id) from t;
 drop table t;
 
 CREATE TABLE aggregation_func(id int, num int, price float, addr char, birthday date);
@@ -560,29 +618,29 @@ ID | U_DATE
 
 --update
 
-CREATE TABLE Update_table_1(id int, t_name char(4), col1 int, col2 int);
-CREATE INDEX index_id on Update_table_1(id);
-INSERT INTO Update_table_1 VALUES (1,'N1',1,1);
-INSERT INTO Update_table_1 VALUES (2,'N2',1,1);
-INSERT INTO Update_table_1 VALUES (3,'N3',2,1);
-UPDATE Update_table_1 SET t_name='N01' WHERE id=1;
-SELECT * FROM Update_table_1;
-UPDATE Update_table_1 SET col2=0 WHERE col1=1;
-SELECT * FROM Update_table_1;
-UPDATE Update_table_1 SET id=4 WHERE t_name='N3';
-SELECT * FROM Update_table_1;
-UPDATE Update_table_1 SET col1=0;
-SELECT * FROM Update_table_1;
-UPDATE Update_table_1 SET t_name='N02' WHERE col1=0 AND col2=0;
-SELECT * FROM Update_table_1;
-UPDATE Update_table_2 SET t_name='N01' WHERE id=1;
-UPDATE Update_table_1 SET t_name_false='N01' WHERE id=1;
-UPDATE Update_table_1 SET t_name='N01' WHERE id_false=1;
-UPDATE Update_table_1 SET t_name='N01' WHERE id=100;
-SELECT * FROM Update_table_1;
-UPDATE Update_table_1 SET col1='N01' WHERE id=1;
-SELECT * FROM Update_table_1;
-drop table Update_table_1;
+CREATE TABLE t(id int, t_name char(4), col1 int, col2 int);
+CREATE INDEX index_id on t(id);
+INSERT INTO t VALUES (1,'N1',1,1);
+INSERT INTO t VALUES (2,'N2',1,1);
+INSERT INTO t VALUES (3,'N3',2,1);
+UPDATE t SET t_name='N01' WHERE id=1;
+SELECT * FROM t;
+UPDATE t SET col2=0 WHERE col1=1;
+SELECT * FROM t;
+UPDATE t SET id=4 WHERE t_name='N3';
+SELECT * FROM t;
+UPDATE t SET col1=0;
+SELECT * FROM t;
+UPDATE t SET t_name='N02' WHERE col1=0 AND col2=0;
+SELECT * FROM t;
+UPDATE Update_table_2 SET t_name='N01', id=1 WHERE id=1;
+UPDATE t SET t_name_false='N01', id=13 WHERE id=1;
+UPDATE t SET t_name='N01', www='3' WHERE id_false=1;
+UPDATE t SET t_name='N01', id=199 WHERE id=100;
+SELECT * FROM t;
+UPDATE t SET col1='N01' WHERE id=1;
+SELECT * FROM t;
+drop table t;
 /*
 SUCCESS
 SUCCESS

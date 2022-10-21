@@ -600,7 +600,7 @@ ID inner_joins {
 
 inner_joins:
 
-| INNER JOIN ID ON condition inner_joins {
+| INNER JOIN ID ON condition condition_list inner_joins {
   selects_append_relation(&CONTEXT->ssql->selects[CONTEXT->selects_num], $3);
   CONTEXT->joins++;
 }

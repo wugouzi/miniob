@@ -443,18 +443,15 @@ RC Table::make_record(int value_num, const Value *values, char *&record_out)
   for (int i = 0; i < value_num; i++) {
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     const Value &value = values[i];
-    size_t copy_len = field->len()-1;
-    if (value.type != AttrType::NULLS) {
-      if (field->type() == CHARS) {
-        const size_t data_len = strlen((const char *)value.data);
-        if (copy_len > data_len) {
-          copy_len = data_len + 1;
-        }
+    size_t copy_len = field->len();
+
+    if (value.type != NULLS && field->type() == CHARS) {
+      const size_t data_len = strlen((const char *)value.data);
+      if (copy_len > data_len) {
+        copy_len = data_len + 1 - 1;
       }
-      memcpy(record + field->offset(), value.data, copy_len);
-    } else {
-      record[field->offset() + field->len() - 1] = 1;
     }
+    memcpy(record + field->offset(), value.data, copy_len);
   }
 
   record_out = record;

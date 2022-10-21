@@ -966,6 +966,11 @@ RC ExecuteStage::do_clog_sync(SQLStageEvent *sql_event)
   return rc;
 }
 
+bool is_null(const TupleCell &cell, const FieldMeta *field)
+{
+  return static_cast<const char*>(cell.data())[field->len()-1] == 1;
+}
+
 TupleSet::TupleSet(const Tuple *t, Table *table) {
   table_num_ = 1;
   data_ = std::string(t->get_record().data(), table->table_meta().record_size());
@@ -976,6 +981,9 @@ TupleSet::TupleSet(const Tuple *t, Table *table) {
     TupleCell cell;
     t->cell_at(i, cell);
     cells_.push_back(cell);
+    if (is_null(cell, &metas_[i].second)) {
+      cell.set_type(NULLS);
+    }
   }
 }
 
@@ -1190,39 +1198,92 @@ const FieldMeta *Pretable::field(const Field &field) const {
 
 RC Pretable::aggregate_max(int idx, TupleCell *res)
 {
-  *res = tuples_[0].get_cell(idx);
+  const FieldMeta &meta = tuples_[0].meta(idx);
+  size_t len = meta.len();
+  res->set_length(len);
+  char *data = new char[len];
+  memset(data, 0, len);
+
+  const TupleCell *tmp = &tuples_[0].get_cell(idx);
+
   for (TupleSet &tuple : tuples_) {
     const TupleCell &cell = tuple.get_cell(idx);
     if (cell.attr_type() != NULLS) {
-      if (res->attr_type() == NULLS) {
-        *res = cell;
+      if (tmp->attr_type() == NULLS) {
+        tmp = &cell;
       } else {
         int comp = cell.compare(*res);
         if (comp > 0) {
-          *res = cell;
+          tmp = &cell;
         }
       }
     }
   }
+  if (tmp->attr_type() == NULLS) {
+    res->set_type(NULLS);
+    data[len-1] = 1;
+  } else {
+    res->set_type(meta.type());
+    memcpy(data, tmp->data(), len-1);
+  }
+  res->set_data(data);
   return RC::SUCCESS;
 }
 
 RC Pretable::aggregate_min(int idx, TupleCell *res)
 {
-  *res = tuples_[0].get_cell(idx);
+  const FieldMeta &meta = tuples_[0].meta(idx);
+  size_t len = meta.len();
+  res->set_length(len);
+  char *data = new char[len];
+  memset(data, 0, len);
+
+  const TupleCell *tmp = &tuples_[0].get_cell(idx);
   for (TupleSet &tuple : tuples_) {
     const TupleCell &cell = tuple.get_cell(idx);
     if (cell.attr_type() != NULLS) {
-      if (res->attr_type() == NULLS) {
-        *res = cell;
+      if (tmp->attr_type() == NULLS) {
+        tmp = &cell;
       } else {
-        int comp = res->compare(cell);
+        int comp = tmp->compare(cell);
         if (comp > 0) {
-          *res = cell;
+          tmp = &cell;
         }
       }
     }
   }
+  if (tmp->attr_type() == NULLS) {
+    res->set_type(NULLS);
+    data[len-1] = 1;
+  } else {
+    res->set_type(meta.type());
+    memcpy(data, tmp->data(), len-1);
+  }
+  res->set_data(data);
+  return RC::SUCCESS;
+}
+
+RC Pretable::aggregate_count(int idx, TupleCell *res)
+{
+  int ans = 0;
+  size_t len = sizeof(int) + 1;
+  char *data = new char[len];
+
+  if (idx == -1) {
+    ans = tuples_.size();
+  } else {
+    for (TupleSet &tuple : tuples_) {
+      const TupleCell &cell = tuple.get_cell(idx);
+      if (cell.attr_type() != NULLS) {
+        ans++;
+      }
+    }
+  }
+
+  memcpy(data, &ans, sizeof(int));
+  res->set_type(INTS);
+  res->set_length(len);
+  res->set_data(data);
   return RC::SUCCESS;
 }
 
@@ -1257,39 +1318,41 @@ RC Pretable::aggregate_sum(int idx, TupleCell *res)
     }
   }
   res->set_type(type);
-  res->set_length(sizeof(float));
+  size_t len = sizeof(float)+1;
+  res->set_length(len);
+  char *data = new char[len];
+  memset(data, 0, len);
   if (cnt == 0) {
     res->set_type(NULLS);
+    data[len - 1] = 1;
+
   } else if (type == INTS) {
-    int *a = new int();
-    *a = ans;
-    res->set_data((char *)a);
+    int a = ans;
+    memcpy(data, &a, sizeof(int));
   } else if (type == FLOATS || type == CHARS) {
-    float *a = new float();
-    *a = ans;
-    res->set_data((char *)a);
+    memcpy(data, &ans, sizeof(float));
   }
+  res->set_data(data);
   return RC::SUCCESS;
 }
 
 RC Pretable::aggregate_avg(int idx, TupleCell *res)
 {
-  float *ans = (float *)malloc(sizeof(float));
-  *ans = 0;
+  float ans = 0;
   int cnt = 0;
   for (TupleSet &tuple : tuples_) {
     const TupleCell &cell = tuple.get_cell(idx);
     switch (cell.attr_type()) {
       case INTS: {
-        *ans += *(int *)cell.data();
+        ans += *(int *)cell.data();
         cnt++;
       } break;
       case FLOATS: {
-        *ans += *(float *)cell.data();
+        ans += *(float *)cell.data();
         cnt++;
       } break;
       case CHARS: {
-        *ans += Stmt::char_to_float(cell.data());
+        ans += Stmt::char_to_float(cell.data());
         cnt++;
       } break;
       case NULLS: {
@@ -1301,55 +1364,20 @@ RC Pretable::aggregate_avg(int idx, TupleCell *res)
       }
     }
   }
+  size_t len = sizeof(float)+1;
+  char *data = new char[len];
+  res->set_length(len);
   if (cnt == 0) {
+    data[len - 1] = 1;
     res->set_type(NULLS);
   } else {
+    ans /= cnt;
+    memcpy(data, &ans, len-1);
     res->set_type(FLOATS);
-    res->set_length(sizeof(float));
-    *ans = *ans / tuples_.size();
-    // TODO: dangerous
-    res->set_data((char *)ans);
   }
-
-  return RC::SUCCESS;
-  // float *ans = new float();
-  // *ans = 0;
-  // for (TupleSet &tuple : tuples_) {
-  //   const TupleCell &cell = tuple.get_cell(idx);
-  //   switch (cell.attr_type()) {
-  //     case INTS: {
-  //       *ans += *(int *)cell.data();
-  //     } break;
-  //     case FLOATS: {
-  //       *ans += *(float *)cell.data();
-  //     } break;
-  //     case DATES: case CHARS:
-  //     default: {
-  //       return RC::INTERNAL;
-  //     }
-  //   }
-  // }
-  // res->set_type(FLOATS);
-  // res->set_length(sizeof(float));
-  // *ans = *ans / tuples_.size();
-  // // TODO: dangerous
-  // res->set_data((char *)ans);
-  // return RC::SUCCESS;
-}
-
-// TODO: invisible
-RC Pretable::aggregate_count(int idx, TupleCell *res)
-{
-  int *ans = new int();
-  *ans = tuples_.size();
-
-  res->set_type(INTS);
-  res->set_length(sizeof(int));
-  res->set_data((char *)ans);
+  res->set_data(data);
   return RC::SUCCESS;
 }
-
-
 
 RC Pretable::aggregate(const std::vector<Field> fields)
 {

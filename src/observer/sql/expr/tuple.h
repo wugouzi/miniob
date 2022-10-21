@@ -120,14 +120,11 @@ public:
     const TupleCellSpec *spec = speces_[index];
     FieldExpr *field_expr = (FieldExpr *)spec->expression();
     const FieldMeta *field_meta = field_expr->field().meta();
-    if (this->record_->data()[field_meta->offset()+field_meta->len()-1] == 1) {
+    cell.set_data(this->record_->data() + field_meta->offset());
+    cell.set_length(field_meta->len());
+    cell.set_type(field_meta->type());
+    if (this->record_->data()[field_meta->offset() + field_meta->len()-1] == 1) {
       cell.set_type(NULLS);
-      cell.set_length(0);
-      cell.set_data((char *)nullptr);
-    } else {
-      cell.set_type(field_meta->type());
-      cell.set_data(this->record_->data() + field_meta->offset());
-      cell.set_length(field_meta->len() - 1);
     }
     return RC::SUCCESS;
   }

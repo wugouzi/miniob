@@ -60,7 +60,8 @@ void relation_attr_destroy(RelAttr *relation_attr)
 void value_init_null(Value *value)
 {
   value->type = NULLS;
-  value->data = NULL;
+  value->data = malloc(sizeof(int)+1);
+  ((char *)value->data)[4] = 1;
 }
 
 void value_init_integer(Value *value, int v)
