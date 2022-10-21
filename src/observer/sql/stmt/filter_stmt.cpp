@@ -93,6 +93,24 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     return RC::INVALID_ARGUMENT;
   }
 
+  if (comp == STR_LIKE || comp == STR_NOT_LIKE) {
+    if (!condition.left_is_attr || condition.right_is_attr) {
+      LOG_INFO("left is not an attribute");
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
+    Table *table = nullptr;
+    const FieldMeta *field = nullptr;
+    rc = get_table_and_field(db, default_table, tables, condition.left_attr, table, field);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("cannot find attr 1");
+      return rc;
+    }
+    if (!(field->type() == AttrType::CHARS && condition.right_value.type == AttrType::CHARS)) {
+      LOG_INFO("not all chars");
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
+  }
+
   if (condition.left_is_attr && !condition.right_is_attr) {
     Table *table = nullptr;
     const FieldMeta *field = nullptr;

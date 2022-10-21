@@ -810,7 +810,7 @@ class TestSuite:
           return False
       return True
 
-  def run_case(self, test_case, timeout=20):
+  def run_case(self, test_case, timeout=10):
     # eventlet.monkey_patch()
     #@timeout_decorator.timeout(timeout)
     #def decorator():

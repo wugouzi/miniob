@@ -1,4 +1,13 @@
-/usr/local/lib64/libjsoncpp.so.25
+FAILURE
+7. UPDATE WITH INVALID CONDITION
+UPDATE Update_table_2 SET t_name='N4',col1=1 where col3=1;
+-FAILURE
+-8. UPDATE IN VAIN
+-UPDATE Update_table_3 SET t_name='N1',col1=1 where col1=100;
+-SUCCESS
+-SELECT * FROM Update_table_3;
+-1 | N01 | 1 | 2
+-2 | N01 | 1 | 2
 
 CREATE TABLE null_table(id int, num int nullable, price float not null, birthday date nullable);
 CREATE TABLE null_table2(id int, num int nullable, price float not null, birthday date nullable);

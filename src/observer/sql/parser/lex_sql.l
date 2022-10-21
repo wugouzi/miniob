@@ -53,6 +53,7 @@ QUOTE            [\'\"]
 [Ii][Ss]                                             RETURN_TOKEN(IS);
 [Nn][Oo][Tt]                                         RETURN_TOKEN(NOT);
 [Mm][Ii][Nn]                                         RETURN_TOKEN(MIN);
+[Ll][Ii][Kk][Ee]                                     RETURN_TOKEN(LIKE);
 [Aa][Vv][Gg]                                         RETURN_TOKEN(AVG);
 [Ss][Uu][Mm]                                         RETURN_TOKEN(SUM);
 [Ee][Xx][Ii][Tt]                                     RETURN_TOKEN(EXIT);

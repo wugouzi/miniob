@@ -52,6 +52,8 @@ typedef enum {
   GREAT_THAN,   //">"     5
   IS_EQUAL,
   IS_NOT_EQUAL,
+  STR_LIKE,
+  STR_NOT_LIKE,
   NO_OP
 } CompOp;
 

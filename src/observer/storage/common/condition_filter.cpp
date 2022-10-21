@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/record/record_manager.h"
 #include "sql/stmt/stmt.h"
 #include "common/log/log.h"
+#include "util/util.h"
 #include "storage/common/table.h"
 
 using namespace common;
@@ -157,6 +158,7 @@ bool DefaultConditionFilter::filter(const Record &rec) const
   }
 
   int cmp_result = 0;
+
   if (left_is_null && right_is_null &&
       comp_op_ == IS_EQUAL) {
     return true;
@@ -165,10 +167,17 @@ bool DefaultConditionFilter::filter(const Record &rec) const
     return true;
   } else if (left_is_null || right_is_null) {
     return false;
-  } else if (left_type_ == right_type_) {
+  }
+
+  if (left_type_ == right_type_) {
     switch (left_type_) {
       case CHARS: {  // 字符串都是定长的，直接比较
         // 按照C字符串风格来定
+        if (comp_op_ == STR_LIKE) {
+          return string_like(left_value, right_value);
+        } else if (comp_op_ == STR_NOT_LIKE) {
+          return !string_like(left_value, right_value);
+        }
         cmp_result = strcmp(left_value, right_value);
       } break;
       case INTS: {
