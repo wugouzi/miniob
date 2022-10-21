@@ -13,7 +13,7 @@ compile_commands.json
 ./vcs.xml
 ./workspace.xml
 ./modules.xml
-test/
+test/case/miniob
 GRTAGS
 GPATH
 GTAGS
