@@ -1201,6 +1201,7 @@ const FieldMeta *Pretable::field(const Field &field) const {
 
 RC Pretable::aggregate_max(int idx, TupleCell *res)
 {
+  LOG_INFO("aggregate max");
   const FieldMeta &meta = tuples_[0].meta(idx);
   size_t len = meta.len();
   res->set_length(len);
@@ -1235,6 +1236,7 @@ RC Pretable::aggregate_max(int idx, TupleCell *res)
 
 RC Pretable::aggregate_min(int idx, TupleCell *res)
 {
+  LOG_INFO("aggregate min");
   const FieldMeta &meta = tuples_[0].meta(idx);
   size_t len = meta.len();
   res->set_length(len);
@@ -1268,6 +1270,7 @@ RC Pretable::aggregate_min(int idx, TupleCell *res)
 
 RC Pretable::aggregate_count(int idx, TupleCell *res)
 {
+  LOG_INFO("aggregate count");
   int ans = 0;
   size_t len = sizeof(int) + 1;
   char *data = new char[len];
@@ -1292,6 +1295,7 @@ RC Pretable::aggregate_count(int idx, TupleCell *res)
 
 RC Pretable::aggregate_sum(int idx, TupleCell *res)
 {
+  LOG_INFO("aggregate sum");
   float ans = 0;
   AttrType type = UNDEFINED;
   int cnt = 0;
@@ -1328,7 +1332,6 @@ RC Pretable::aggregate_sum(int idx, TupleCell *res)
   if (cnt == 0) {
     res->set_type(NULLS);
     data[len - 1] = 1;
-
   } else if (type == INTS) {
     int a = ans;
     memcpy(data, &a, sizeof(int));
@@ -1341,6 +1344,7 @@ RC Pretable::aggregate_sum(int idx, TupleCell *res)
 
 RC Pretable::aggregate_avg(int idx, TupleCell *res)
 {
+  LOG_INFO("aggregate avg");
   float ans = 0;
   int cnt = 0;
   for (TupleSet &tuple : tuples_) {
@@ -1384,6 +1388,7 @@ RC Pretable::aggregate_avg(int idx, TupleCell *res)
 
 RC Pretable::aggregate(const std::vector<Field> fields)
 {
+  LOG_INFO("begin aggregate");
   if (tuples_.size() == 0) {
     return RC::SUCCESS;
   }
@@ -1393,6 +1398,7 @@ RC Pretable::aggregate(const std::vector<Field> fields)
     int idx = tuples_[0].index(field);
     TupleCell cell;
     if (idx == -1 && field.aggr_type() != AggreType::A_COUNT) {
+      LOG_INFO("log i don't know");
       cell.set_type(AttrType::CHARS);
       const std::string &s = field.aggr_str();
       cell.set_length(s.size());

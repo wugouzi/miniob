@@ -1,0 +1,5 @@
+if(EXISTS "/Users/wu/miscellaneous/courses/miniob/test/case/miniob/build/unitest/mem_pool_test[1]_tests.cmake")
+  include("/Users/wu/miscellaneous/courses/miniob/test/case/miniob/build/unitest/mem_pool_test[1]_tests.cmake")
+else()
+  add_test(mem_pool_test_NOT_BUILT mem_pool_test_NOT_BUILT)
+endif()

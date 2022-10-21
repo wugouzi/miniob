@@ -1,0 +1,31 @@
+{
+	"fields" : 
+	[
+		{
+			"len" : 5,
+			"name" : "__trx",
+			"nullable" : false,
+			"offset" : 0,
+			"type" : "ints",
+			"visible" : false
+		},
+		{
+			"len" : 5,
+			"name" : "id",
+			"nullable" : false,
+			"offset" : 5,
+			"type" : "ints",
+			"visible" : true
+		},
+		{
+			"len" : 5,
+			"name" : "age",
+			"nullable" : false,
+			"offset" : 10,
+			"type" : "ints",
+			"visible" : true
+		}
+	],
+	"indexes" : null,
+	"table_name" : "t_group_by_2"
+}

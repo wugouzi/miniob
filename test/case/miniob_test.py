@@ -1200,6 +1200,7 @@ def git_clone(repo: str, branch: str, repo_prefix: str,
   从指定仓库拉取代码。
   to_path： 拉取的代码放的目录。比如 test-tmp/ob_rookie/miniob
   '''
+  timeout = 1000
   if os.path.exists(to_path):
     # 目标目录已经存在，可以尝试直接执行git pull
     result = git_pull(to_path, timeout, eval_result)

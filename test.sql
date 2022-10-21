@@ -1,3 +1,5 @@
+/usr/local/lib64/libjsoncpp.so.25
+
 CREATE TABLE null_table(id int, num int nullable, price float not null, birthday date nullable);
 CREATE TABLE null_table2(id int, num int nullable, price float not null, birthday date nullable);
 INSERT INTO null_table VALUES (1, 18, 10.0, '2020-01-01');
@@ -7,7 +9,8 @@ INSERT INTO null_table VALUES (4, 15, 30.0, '2021-01-31');
 INSERT INTO null_table2 VALUES (1, 18, 30.0, '2021-01-31');
 INSERT INTO null_table2 VALUES (2, null, 40.0, null);
 SELECT null_table.num,null_table2.num,null_table.birthday FROM null_table,null_table2 where null_table.num=null_table2.num;
-
+drop table null_table;
+drop table null_table2;
 
 
 CREATE TABLE null_table(id int, num int nullable, price float not null, birthday date nullable);
