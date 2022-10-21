@@ -436,6 +436,9 @@ void query_init(Query *query)
   query->flag = SCF_ERROR;
   memset(&query->sstr, 0, sizeof(query->sstr));
   query->selects_num = 0;
+  for (int i = 0; i < MAX_NUM; i++) {
+    memset(&query->selects[i], 0, sizeof(query->selects[i]));
+  }
 }
 
 Query *query_create()
