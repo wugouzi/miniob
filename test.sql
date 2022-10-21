@@ -1,3 +1,12 @@
+-- index
+create table t(id int, age float, name char);
+SHOW INDEX FROM t;
+CREATE INDEX index_id on t(id);
+SHOW INDEX FROM t;
+
+-INDEX_TABLE_1 | 1 | INDEX_ID | 1 | ID
+-TABLE | NON_UNIQUE | KEY_NAME | SEQ_IN_INDEX | COLUMN_NAME
+
 create table t(id int, name char);
 insert into t values (1, 'wefwef');
 insert into t values (2, 'wwwws');

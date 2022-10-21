@@ -628,6 +628,7 @@ RC ExecuteStage::do_show_index(SQLStageEvent *sql_event)
 
   std::stringstream ss;
   table->show_index(ss);
+  session_event->set_response(ss.str());
   return RC::SUCCESS;
 }
 

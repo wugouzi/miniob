@@ -158,11 +158,15 @@ RC Table::drop()
 
 void Table::show_index(std::stringstream &ss)
 {
+  ss << " Table | Non_unique | Key_name | Seq_in_index | Column_name\n";
   for (int i = 0; i < table_meta().index_num(); i++) {
     Index *index = indexes_[i];
     ss << name() << " | ";
     ss << 1-index->is_unique() << " | ";
     ss << index->index_meta().name() << " | ";
+    ss << 1 << " | ";
+    ss << index->index_meta().field();
+    ss << "\n";
   }
 }
 
