@@ -1,3 +1,39 @@
+create table t1(id int, age float, addr char(4));
+create table t2(id int, age float, addr char(4));
+create table t3(id int, age float, addr char(4));
+insert into t1 values (1,3,'434');
+insert into t2 values (2,6,'aa');
+insert into t2 values (1,-1.9,'aa');
+insert into t3 values (3,9,'zz');
+insert into t3 values (2,1,'zz');
+insert into t3 values ('1',7,'zz');
+
+select * from t1,t2,t3;
+select t1.id, t2.id,t3.id from t1 inner join t2 on t1.id=t2.id inner join t3 on t1.id=t3.id;
+select * from t1 inner join t3 on t1.id=t3.id, t2 inner join t3 on t2.id=t3.id;
+select * from t1,t2,t3;
+drop table t1;
+drop table t2;
+drop table t3;
+
+
+create table t1(id int, col int);
+create table t2(id int, col int);
+insert into t1 values(2,1);
+insert into t1 values(1,1);
+insert into t2 values(1,2);
+select * from t1,t2;
+update t1 set id=3,col=3 where id=1;
+select * from t1,t2;
+update t1 set col=(select col from t2 where t2.id=1) where t1.id=2;
+select * from t1,t2;
+update t2 set id=1,col=1 where id=1;
+select * from t1,t2;
+update t1 set col=(select id from t2 where id=1), id=(select id from t2 where id=1) where id=2;
+select * from t1;
+drop table t1;
+drop table t2;
+
 -- null
 -- insert null -> nullable
 -- insert null -> non-nullable
@@ -464,8 +500,8 @@ SUCCESS
 SELECT_TABLES_1.ID | SELECT_TABLES_6.ID
 
 */
-
-
+CREATE TABLE date_table(id int, u_date date);
+INSERT INTO date_table VALUES (1,'2020-01-21');
 --date
 CREATE TABLE date_table(id int, u_date date);
 CREATE INDEX index_id on date_table(u_date);

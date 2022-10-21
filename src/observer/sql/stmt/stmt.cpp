@@ -25,6 +25,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/delete_stmt.h"
 #include "sql/stmt/select_stmt.h"
 #include "sql/stmt/update_stmt.h"
+#include "storage/common/field_meta.h"
 #include "util/util.h"
 
 
@@ -43,9 +44,9 @@ RC Stmt::create_stmt(Db *db, Query &query, Stmt *&stmt)
   case SCF_SELECT: {
     return SelectStmt::create(db, query.sstr.selection, stmt);
   }
-  case SCF_UPDATE: {
-    return UpdateStmt::create(db, query.sstr.update, stmt);
-  }
+  // case SCF_UPDATE: {
+  //   return UpdateStmt::create(db, query.sstr.update, stmt);
+  // }
   default: {
       LOG_WARN("unknown query command");
     }
@@ -100,51 +101,48 @@ float Stmt::char_to_float(const char *s)
   return ans;
 }
 
-bool Stmt::convert_type(AttrType type, Value *value)
+// 1 extra byte for bull
+bool Stmt::convert_type(const FieldMeta *field, Value *value)
 {
   if (value->type == AttrType::NULLS) {
     return true;
   }
+  AttrType type = field->type();
+  // char *data = new char(field->len());
+  void *data = malloc(field->len());
+  memset(data, 0, field->len());
   if (type == AttrType::INTS && value->type == AttrType::FLOATS) {
     // float -> int
-    int *tp = new int();
-    *tp = *(float *)value->data + 0.5;
-    free(value->data);
-    value->data = tp;
+    int tp = *(float *)value->data + 0.5;
+    memcpy(data, &tp, sizeof(tp));
     value->type = AttrType::INTS;
     // LOG_DEBUG("%f converts to %d", tp, );
   } else if (type == AttrType::FLOATS && value->type == AttrType::INTS) {
     // int -> float
-    float *tp = new float();
-    *tp = *(int *)value->data;
-    free(value->data);
-    value->data = tp;
+    float tp = *(int *)value->data;
+    memcpy(data, &tp, sizeof(tp));
     value->type = AttrType::FLOATS;
     // LOG_DEBUG("%d converts to %f", (int)tp, tp);
   } else if (type == AttrType::INTS && value->type == AttrType::CHARS) {
     // char -> int
     char *s = (char *)value->data;
-    int *tp = new int();
-    *tp = char_to_int(s);
-    free(value->data);
-    value->data = tp;
+    int tp = char_to_int(s);
+    memcpy(data, &tp, sizeof(tp));
     value->type = AttrType::INTS;
     // LOG_DEBUG("%s converts to %d", (char *)value->data, ans);
   } else if (type == AttrType::FLOATS && value->type == AttrType::CHARS) {
     char *s = (char *)value->data;
-    float *tp = new float();
-    *tp = char_to_float(s);
-    value->data = tp;
+    float tp = char_to_float(s);
+    memcpy(data, &tp, sizeof(tp));
     value->type = AttrType::FLOATS;
     // LOG_DEBUG("%s converts to %f", (char *)value->data, ans);
   } else if (type == AttrType::CHARS && value->type == AttrType::INTS) {
     // int -> chars
-    char *str = strdup(std::to_string(*(int*)value->data).c_str());
-    sprintf(str, "%d", *(int *)value->data);
-    LOG_DEBUG("%d converts to %s", *(int *)value->data, str);
-    free(value->data);
-    value->data = (void *)str;
+    std::string s = std::to_string(*(int*)value->data);
+    memcpy(data, s.c_str(), s.size() + 1);
     value->type = AttrType::CHARS;
+    // sprintf(str, "%d", *(int *)value->data);
+    // LOG_DEBUG("%d converts to %s", *(int *)value->data, str);
   } else if (type == AttrType::CHARS && value->type == AttrType::FLOATS) {
     // char *str = strdup(std::to_string(*(float*)value->data).c_str());
     // for (int i = strlen(str) - 1; i > 0; i--) {
@@ -154,14 +152,15 @@ bool Stmt::convert_type(AttrType type, Value *value)
     //     break;
     //   }
     // }
-    char *str = strdup(double2string(*(float*)value->data).c_str());
-    LOG_DEBUG("%f converts to %s", *(float *)value->data, str);
-    free(value->data);
-    value->data = (void *)str;
+    std::string s = double2string(*(float*)value->data);
+    memcpy(data, s.c_str(), s.size() + 1);
     value->type = AttrType::CHARS;
+    // LOG_DEBUG("%f converts to %s", *(float *)value->data, str);
   } else {
     return false;
   }
+  free(value->data);
+  value->data = data;
   return value;
 }
 

@@ -65,16 +65,17 @@ protected:
   RC do_select2(SQLStageEvent *sql_event);
   RC do_insert(SQLStageEvent *sql_event);
   RC do_delete(SQLStageEvent *sql_event);
-  RC do_update(SQLStageEvent *sql_event);
+  // RC do_update(SQLStageEvent *sql_event);
   RC do_begin(SQLStageEvent *sql_event);
   RC do_commit(SQLStageEvent *sql_event);
   RC do_clog_sync(SQLStageEvent *sql_event);
   RC do_drop_table(SQLStageEvent *sql_event);
-  // RC do_update_table(SQLStageEvent *sql_event);
+  RC do_update_table(SQLStageEvent *sql_event);
   RC value_check(const int &value_num, const Value *values) const;
   void print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi);
   Pretable *select_to_pretable(SelectStmt *select_stmt, RC *rc);
-  RC compute_value_from_select(Db *db, Value *value, AttrType type, Selects *select);
+  RC compute_value_from_select(Db *db, Value *value, AttrType type);
+  RC check_updates(Db *db, Updates &updates);
 
 protected:
 private:

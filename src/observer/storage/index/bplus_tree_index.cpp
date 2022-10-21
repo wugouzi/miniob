@@ -32,7 +32,8 @@ RC BplusTreeIndex::create(const char *file_name, const IndexMeta &index_meta, co
 
   Index::init(index_meta, field_meta);
 
-  RC rc = index_handler_.create(file_name, field_meta.type(), field_meta.len());
+  // eliminate the extra bit
+  RC rc = index_handler_.create(file_name, field_meta.type(), field_meta.len() - 1);
   if (RC::SUCCESS != rc) {
     LOG_WARN("Failed to create index_handler, file_name:%s, index:%s, field:%s, rc:%s",
         file_name,

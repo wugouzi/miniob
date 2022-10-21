@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "common/defs.h"
 #include "sql/parser/parse_defs.h"
+#include "storage/common/field_meta.h"
 #include "storage/common/table.h"
 #include "storage/common/table_meta.h"
 #include "common/log/log.h"
@@ -759,7 +760,6 @@ RC Table::update_record(Trx *trx, Record *record)
   return rc;
 }
 
-
 RC Table::update_record(Trx *trx, const char *attribute_name, const Value *value, int condition_num,
                         const Condition conditions[], int *updated_count)
 {
@@ -800,6 +800,64 @@ RC Table::update_record(Trx *trx, const char *attribute_name, const Value *value
       if (rc != RC::SUCCESS) {
         LOG_WARN("failed to update");
         return rc;
+      }
+      (*updated_count)++;
+    }
+  }
+
+  scanner.close_scan();
+  return rc;
+}
+
+RC Table::update_record(Trx *trx, char *const *attributes, const Value *values, int attr_num,
+                   int condition_num, const Condition conditions[], int *updated_count)
+{
+  RC rc = RC::SUCCESS;
+
+  CompositeConditionFilter filter;
+  filter.init(*this, conditions, condition_num);
+
+  RecordFileScanner scanner;
+  rc = scanner.open_scan(*data_buffer_pool_, &filter);
+  if (rc != RC::SUCCESS) {
+    LOG_ERROR("failed to open scanner. rc=%d:%s", rc, strrc(rc));
+  }
+
+  std::vector<const FieldMeta*> fields;
+  for (int i = 0; i < attr_num; i++) {
+    fields.push_back(table_meta_.field(attributes[i]));
+  }
+
+  *updated_count = 0;
+  Record record;
+  while (scanner.has_next()) {
+    rc = scanner.next(record);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to fetch next record. rc=%d:%s", rc, strrc(rc));
+      return rc;
+    }
+    if (trx == nullptr || trx->is_visible(this, &record)) {
+      for (int i = 0; i < attr_num; i++) {
+        // prepare data
+        size_t copy_len = fields[i]->len();
+        if (fields[i]->type() == CHARS && values[i].type != NULLS) {
+          const size_t data_len = strlen((const char *)values[i].data);
+          if (copy_len > data_len) {
+            copy_len = data_len + 1;
+          }
+        }
+        if (values[i].type == NULLS) {
+          record.data()[fields[i]->offset() + copy_len - 1] = 1;
+        } else {
+          memcpy(record.data() + fields[i]->offset(), values[i].data, copy_len);
+        }
+
+        // update
+        rc = update_record(trx, &record);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("failed to update");
+          return rc;
+        }
       }
       (*updated_count)++;
     }

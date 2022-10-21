@@ -27,6 +27,8 @@ typedef struct ParserContext {
   char id[MAX_NUM];
 
   AggreType a_type;
+
+  size_t joins;
 } ParserContext;
 
 //获取子串
@@ -54,6 +56,7 @@ void yyerror(yyscan_t scanner, const char *str)
   context->ssql->sstr.insertion.valuelist_num = 0;
   context->selects_num = 0;
   context->a_type = A_NO;
+  context->joins = 0;
   printf("parse sql failed. error=%s", str);
 }
 
@@ -122,6 +125,8 @@ ParserContext *get_context(yyscan_t scanner)
         NULLABLE
         NULL_V
         NOT
+        INNER
+        JOIN
 
 %union {
   struct _Attr *attr;
@@ -405,7 +410,7 @@ ID EQ value {
 }
 | ID EQ internal_select {
   value_init_select(&CONTEXT->values[CONTEXT->value_length],
-                    &CONTEXT->ssql->sstr.selects[CONTEXT->selects_num - 1]);
+                    &CONTEXT->ssql->selects[CONTEXT->selects_num - 1]);
   updates_append(&CONTEXT->ssql->sstr.update, $1, &CONTEXT->values[CONTEXT->value_length++]);
 }
 ;
@@ -416,11 +421,11 @@ updates_sets:
 ;
 
 internal_select:
-SELECT select_attr FROM ID rel_list where SEMICOLON {
+LBRACE SELECT select_attr FROM ID rel_list where RBRACE {
   int num = CONTEXT->selects_num;
-  selects_append_relation(&CONTEXT->ssql->sstr.selects[num], $4);
-  selects_reverse_relations(&CONTEXT->ssql->sstr.selects[num]);
-  selects_append_conditions(&CONTEXT->ssql->sstr.selects[num], CONTEXT->conditions, CONTEXT->condition_length);
+  selects_append_relation(&CONTEXT->ssql->selects[num], $5);
+  // selects_reverse_relations(&CONTEXT->ssql->selects[num]);
+  selects_append_conditions(&CONTEXT->ssql->selects[num], CONTEXT->conditions, CONTEXT->condition_length);
 
   //临时变量清零
   CONTEXT->condition_length=0;
@@ -428,18 +433,19 @@ SELECT select_attr FROM ID rel_list where SEMICOLON {
   CONTEXT->select_length=0;
   CONTEXT->value_length = 0;
   CONTEXT->selects_num++;
+  CONTEXT->ssql->selects_num = CONTEXT->selects_num;
 }
 ;
 select:				/*  select 语句的语法解析树*/
-SELECT select_attr FROM ID rel_list where SEMICOLON
+SELECT select_attr FROM rel_name rel_list where SEMICOLON
 {
   // CONTEXT->ssql->sstr.selection.relations[CONTEXT->from_length++]=$4;
   // &CONTEXT->ssql->sstr.selects[CONTEXT->selects_num]
   int num = CONTEXT->selects_num;
-  selects_append_relation(&CONTEXT->ssql->sstr.selects[num], $4);
-  selects_reverse_relations(&CONTEXT->ssql->sstr.selects[num]);
-  selects_append_conditions(&CONTEXT->ssql->sstr.selects[num], CONTEXT->conditions, CONTEXT->condition_length);
-  CONTEXT->ssql->sstr.selection = &CONTEXT->ssql->sstr.selects[num];
+  // selects_append_relation(&CONTEXT->ssql->selects[num], $4);
+  // selects_reverse_relations(&CONTEXT->ssql->selects[num]);
+  selects_append_conditions(&CONTEXT->ssql->selects[num], CONTEXT->conditions, CONTEXT->condition_length);
+  CONTEXT->ssql->sstr.selection = &CONTEXT->ssql->selects[num];
 
   CONTEXT->ssql->flag=SCF_SELECT;//"select";
   // CONTEXT->ssql->sstr.selection.attr_num = CONTEXT->select_length;
@@ -450,24 +456,25 @@ SELECT select_attr FROM ID rel_list where SEMICOLON
   CONTEXT->select_length=0;
   CONTEXT->value_length = 0;
   CONTEXT->selects_num++;
+  CONTEXT->ssql->selects_num = CONTEXT->selects_num;
 }
 ;
 select_attr:
 STAR attr_list {
   RelAttr attr;
   relation_attr_init(&attr, NULL, "*");
-  selects_append_attribute(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], &attr);
+  selects_append_attribute(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr);
 }
 | ID attr_list {
 
   RelAttr attr;
   relation_attr_init(&attr, NULL, $1);
-  selects_append_attribute(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], &attr);
+  selects_append_attribute(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr);
 }
 | ID DOT ID attr_list {
   RelAttr attr;
   relation_attr_init(&attr, $1, $3);
-  selects_append_attribute(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], &attr);
+  selects_append_attribute(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr);
 }
 | aggregation_attr attr_list {
 
@@ -478,25 +485,25 @@ aggregation_attr:
 aggregation_func LBRACE ID aggregation_extra_id RBRACE {
   RelAttr attr;
   aggregation_attr_init(&attr, NULL, $3, CONTEXT->a_type, 0);
-  selects_append_attribute(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], &attr);
+  selects_append_attribute(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr);
   CONTEXT->a_type = A_NO;
 }
 | aggregation_func LBRACE ID DOT ID aggregation_extra_id RBRACE {
   RelAttr attr;
   aggregation_attr_init(&attr, $3, $5, CONTEXT->a_type, 0);
-  selects_append_attribute(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], &attr);
+  selects_append_attribute(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr);
   CONTEXT->a_type = A_NO;
 }
 | aggregation_func LBRACE RBRACE {
   RelAttr attr;
   aggregation_attr_init(&attr, NULL, "fail", A_FAILURE, 0);
-  selects_append_attribute(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], &attr);
+  selects_append_attribute(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr);
   CONTEXT->a_type = A_NO;
 }
 | aggregation_func LBRACE STAR aggregation_extra_id RBRACE {
   RelAttr attr;
   aggregation_attr_init(&attr, NULL, "*", CONTEXT->a_type != A_COUNT ? A_FAILURE : CONTEXT->a_type, 0);
-  selects_append_attribute(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], &attr);
+  selects_append_attribute(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr);
   CONTEXT->a_type = A_NO;
 }
 | aggregation_func LBRACE NUMBER aggregation_extra_id RBRACE {
@@ -504,7 +511,7 @@ aggregation_func LBRACE ID aggregation_extra_id RBRACE {
   char *str = malloc(10 * sizeof(char));
   snprintf(str, 10, "%d", $3);
   aggregation_attr_init(&attr, NULL, str, CONTEXT->a_type, 1);
-  selects_append_attribute(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], &attr);
+  selects_append_attribute(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr);
   CONTEXT->a_type = A_NO;
 }
 | aggregation_func LBRACE FLOAT aggregation_extra_id RBRACE {
@@ -520,7 +527,7 @@ aggregation_func LBRACE ID aggregation_extra_id RBRACE {
   }
   buf[len] = '\0';
   aggregation_attr_init(&attr, NULL, buf, CONTEXT->a_type, 1);
-  selects_append_attribute(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], &attr);
+  selects_append_attribute(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr);
   CONTEXT->a_type = A_NO;
 }
 ;
@@ -563,31 +570,44 @@ attr_list:
     | COMMA ID attr_list {
 			RelAttr attr;
 			relation_attr_init(&attr, NULL, $2);
-			selects_append_attribute(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], &attr);
+			selects_append_attribute(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr);
      	  // CONTEXT->ssql->sstr.selection.attributes[CONTEXT->select_length].relation_name = NULL;
         // CONTEXT->ssql->sstr.selection.attributes[CONTEXT->select_length++].attribute_name=$2;
       }
     | COMMA ID DOT ID attr_list {
 			RelAttr attr;
 			relation_attr_init(&attr, $2, $4);
-			selects_append_attribute(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], &attr);
+			selects_append_attribute(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr);
         // CONTEXT->ssql->sstr.selection.attributes[CONTEXT->select_length].attribute_name=$4;
         // CONTEXT->ssql->sstr.selection.attributes[CONTEXT->select_length++].relation_name=$2;
   	  }
     | COMMA STAR attr_list {
 			RelAttr attr;
 			relation_attr_init(&attr, NULL, "*");
-			selects_append_attribute(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], &attr);
+			selects_append_attribute(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr);
     }
 | COMMA aggregation_attr attr_list {
 
 }
 ;
+rel_name:
+ID inner_joins {
+  selects_append_relation(&CONTEXT->ssql->selects[CONTEXT->selects_num], $1);
+  selects_reverse_relations(&CONTEXT->ssql->selects[CONTEXT->selects_num], ++CONTEXT->joins);
+  CONTEXT->joins = 0;
+}
+;
 
+inner_joins:
+
+| INNER JOIN ID ON condition inner_joins {
+  selects_append_relation(&CONTEXT->ssql->selects[CONTEXT->selects_num], $3);
+  CONTEXT->joins++;
+}
 rel_list:
     /* empty */
-    | COMMA ID rel_list {	
-				selects_append_relation(&CONTEXT->ssql->sstr.selects[CONTEXT->selects_num], $2);
+    | COMMA rel_name rel_list {
+      // selects_append_relation(&CONTEXT->ssql->selects[CONTEXT->selects_num], $2);
 		  }
     ;
 where:

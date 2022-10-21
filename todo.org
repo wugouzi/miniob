@@ -2,12 +2,18 @@
 
 
 
-* TODO [0/8]
-    * [ ] updates
-    * [ ] join
+* TODO [2/14]
+    * [X] updates
+    * [X] join
     * [ ] order
     * [ ] many selects
     * [ ] inserts init takes all values, might not be true in complex queries
     * [ ] like
     * [ ] update with very long string
     * [ ] update with null value
+    * [ ] make index to accept the null byte
+    * [ ] transaction
+    * [ ] what's default handler
+    * [ ] fix aggr order issue
+    * [ ] there is no need to return in get_subfilter
+    * [ ] problem when select same table, select * from t,t;

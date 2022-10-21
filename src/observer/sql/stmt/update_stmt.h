@@ -45,14 +45,17 @@ public:
   std::vector<Value *> &values() { return values_; }
   std::vector<const FieldMeta *> &metas() { return attr_metas_; }
   const FieldMeta *attr_meta(int i) const { return attr_metas_[i]; }
-  FilterStmt *filter_stmt() const { return filter_stmt_; }
+  const Condition *conditions() const { return conditions_; }
+  int condition_num() const { return condition_num_; }
 
 private:
   Table *table_ = nullptr;
   std::vector<Value *> values_;
   std::vector<const FieldMeta *> attr_metas_;
+  Condition *conditions_;
+  int condition_num_;
   // Value *value_ = nullptr;
   // const FieldMeta *attr_meta_ = nullptr;
-  FilterStmt *filter_stmt_ = nullptr;
+  // FilterStmt *filter_stmt_ = nullptr;
 };
 

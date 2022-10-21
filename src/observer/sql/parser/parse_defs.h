@@ -124,7 +124,7 @@ typedef struct {
   size_t condition_num;           // Length of conditions in Where clause
   Condition conditions[MAX_NUM];  // conditions in Where clause
   char *attributes[MAX_NUM];
-  Value *values;
+  Value values[MAX_NUM];
   int attribute_num;
 } Updates;
 
@@ -186,7 +186,6 @@ union Queries {
   LoadData load_data;
   char *errors;
   ShowIndex show_index;
-  Selects selects[MAX_NUM];
 };
 
 // 修改yacc中相关数字编码为宏定义
@@ -216,6 +215,8 @@ enum SqlCommandFlag {
 typedef struct Query {
   enum SqlCommandFlag flag;
   union Queries sstr;
+  Selects selects[MAX_NUM];
+  int selects_num;
 } Query;
 
 #ifdef __cplusplus
@@ -244,7 +245,7 @@ void attr_info_init(AttrInfo *attr_info, const char *name, AttrType type, size_t
 void attr_info_destroy(AttrInfo *attr_info);
 
 void selects_init(Selects *s1, ...);
-void selects_reverse_relations(Selects *selects);
+void selects_reverse_relations(Selects *selects, int len);
 void selects_append_attribute(Selects *selects, RelAttr *rel_attr);
 void selects_append_relation(Selects *selects, const char *relation_name);
 void selects_append_conditions(Selects *selects, Condition conditions[], size_t condition_num);

@@ -43,6 +43,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/filter_stmt.h"
 #include "sql/stmt/select_stmt.h"
+#include "sql/stmt/stmt.h"
 #include "sql/stmt/update_stmt.h"
 #include "storage/common/field_meta.h"
 #include "storage/common/table_meta.h"
@@ -149,9 +150,9 @@ void ExecuteStage::handle_request(common::StageEvent *event)
     case StmtType::INSERT: {
       do_insert(sql_event);
     } break;
-    case StmtType::UPDATE: {
-      do_update(sql_event);
-    } break;
+    // case StmtType::UPDATE: {
+    //   do_update(sql_event);
+    // } break;
     case StmtType::DELETE: {
       do_delete(sql_event);
     } break;
@@ -179,9 +180,9 @@ void ExecuteStage::handle_request(common::StageEvent *event)
     case SCF_DESC_TABLE: {
       do_desc_table(sql_event);
     } break;
-    // case SCF_UPDATE: {
-    //   do_update_table(sql_event);
-    // } break;
+    case SCF_UPDATE: {
+      do_update_table(sql_event);
+    } break;
     case SCF_DROP_TABLE: {
       do_drop_table(sql_event);
     } break;
@@ -482,13 +483,14 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
   // FilterStmt *filter_stmt = select_stmt->filter_stmt();
 
   RC rc;
+  reorder_fields(select_stmt->query_fields());
   Pretable *res = select_to_pretable(select_stmt, &rc);
   if (res == nullptr) {
     session_event->set_response("FAILURE\n");
     return rc;
   }
   std::stringstream ss;
-  reorder_fields(select_stmt->query_fields());
+
   print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1);
   res->print(ss);
 
@@ -671,81 +673,104 @@ bool check_attr_in_table(Table *table, const RelAttr &attr)
   return table->table_meta().field(attr.attribute_name) != nullptr;
 }
 
-/*
-RC check_updates(Db *db, const Updates &updates)
+// type conversion is in compare
+RC ExecuteStage::check_updates(Db *db, Updates &updates)
 {
   const char *table_name = updates.relation_name;
-  int condition_num = updates.condition_num;
-  const Condition *conditions = updates.conditions;
-  const char *attr_name = updates.attribute_name;
-  const Value *value = &updates.value;
   Table *table = db->find_table(table_name);
+  const TableMeta &meta = table->table_meta();
   if (table == nullptr) {
     return RC::SCHEMA_TABLE_NOT_EXIST;
   }
-  if (value->type == DATES && *(int *)value->data == -1) {
-    return RC::RECORD_INVALID_KEY;
+  RC rc = RC::SUCCESS;
+  for (int i = 0; i < updates.attribute_num; i++) {
+    const char *attr_name = updates.attributes[i];
+    Value *value = &updates.values[i];
+    if (value->type == DATES && *(int *)value->data == -1) {
+      return RC::RECORD_INVALID_KEY;
+    }
+
+    const FieldMeta *fmeta = meta.field(attr_name);
+    if (fmeta == nullptr) {
+      return RC::SCHEMA_FIELD_MISSING;
+    }
+    if (value->type == SELECTS) {
+      rc = compute_value_from_select(db, value, fmeta->type());
+      if (rc != RC::SUCCESS) {
+        return rc;
+      }
+    }
+    if (fmeta->type() != value->type && !Stmt::convert_type(fmeta, value)) {
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
   }
 
-  const TableMeta &meta = table->table_meta();
-  const FieldMeta *fmeta = meta.field(attr_name);
-  if (fmeta == nullptr) {
-    return RC::SCHEMA_FIELD_MISSING;
-  }
-  if (fmeta->type() != value->type) {
-    return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-  }
+  int condition_num = updates.condition_num;
+  const Condition *conditions = updates.conditions;
   for (int i = 0; i < condition_num; i++) {
     const Condition &c = conditions[i];
-    if (!c.left_is_attr && !c.right_is_attr) {
-      return RC::INVALID_ARGUMENT;
-    }
-    if (c.left_is_attr) {
-      if (!check_attr_in_table(table, c.left_attr)) {
+
+    if (c.left_is_attr && !c.right_is_attr) {
+      const FieldMeta *meta = table->table_meta().field(c.left_attr.attribute_name);
+      if (meta == nullptr) {
         return RC::SCHEMA_FIELD_NAME_ILLEGAL;
       }
       if (c.right_value.type == DATES && *(int*)c.right_value.data == -1) {
         return RC::INVALID_ARGUMENT;
       }
-      printf("%d\n", c.right_value.type);
-      if (c.right_value.type != meta.field(c.left_attr.attribute_name)->type()) {
+      if (!Stmt::check_type(c.right_value.type, meta->type())) {
         return RC::SCHEMA_FIELD_TYPE_MISMATCH;
       }
-    } else {
-      if (!check_attr_in_table(table, c.right_attr)) {
+      // if (c.right_value.type != meta->type() && !Stmt)
+      // if (c.right_value.type != meta.field(c.left_attr.attribute_name)->type()) {
+
+      // }
+    } else if (c.right_is_attr && !c.left_is_attr) {
+      const FieldMeta *meta = table->table_meta().field(c.right_attr.attribute_name);
+      if (meta == nullptr) {
         return RC::SCHEMA_FIELD_NAME_ILLEGAL;
       }
       if (c.left_value.type == DATES && *(int*)c.left_value.data == -1) {
         return RC::INVALID_ARGUMENT;
       }
-      if (c.left_value.type != meta.field(c.right_attr.attribute_name)->type()) {
+      if (!Stmt::check_type(c.left_value.type, meta->type())) {
         return RC::SCHEMA_FIELD_TYPE_MISMATCH;
       }
+      // if (!check_attr_in_table(table, c.right_attr)) {
+      //   return RC::SCHEMA_FIELD_NAME_ILLEGAL;
+      // }
+      // if (c.left_value.type == DATES && *(int*)c.left_value.data == -1) {
+      //   return RC::INVALID_ARGUMENT;
+      // }
+      // if (c.left_value.type != meta.field(c.right_attr.attribute_name)->type()) {
+      //   return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      // }
     }
   }
   return RC::SUCCESS;
 }
-*/
-// RC ExecuteStage::do_update_table(SQLStageEvent *sql_event)
-// {
-//   const Updates &updates = sql_event->query()->sstr.update;
-//   SessionEvent *session_event = sql_event->session_event();
-//   Db *db = session_event->session()->get_current_db();
-//   RC rc = check_updates(db, updates);
-//   if (rc == RC::SUCCESS) {
-//     rc = db->update_table(updates.relation_name, updates.attribute_name, &updates.value,
-//                            updates.condition_num, updates.conditions);
-//   }
 
-//   if (rc == RC::SUCCESS) {
-//     session_event->set_response("SUCCESS\n");
-//   } else {
-//     session_event->set_response("FAILURE\n");
-//   }
+RC ExecuteStage::do_update_table(SQLStageEvent *sql_event)
+{
+  Updates &updates = sql_event->query()->sstr.update;
+  SessionEvent *session_event = sql_event->session_event();
+  Db *db = session_event->session()->get_current_db();
+  RC rc = check_updates(db, updates);
 
-//   // TODO: CLOG
-//   return rc;
-// }
+  if (rc == RC::SUCCESS) {
+    rc = db->update_table(updates.relation_name, &updates.attributes[0], updates.values,
+                          updates.attribute_num, updates.condition_num, updates.conditions);
+  }
+
+  if (rc == RC::SUCCESS) {
+    session_event->set_response("SUCCESS\n");
+  } else {
+    session_event->set_response("FAILURE\n");
+  }
+
+  // TODO: CLOG
+  return rc;
+}
 
 RC ExecuteStage::value_check(const int &value_num, const Value *values) const
 {
@@ -756,15 +781,16 @@ RC ExecuteStage::value_check(const int &value_num, const Value *values) const
   return RC::SUCCESS;
 }
 
-RC ExecuteStage::compute_value_from_select(Db *db, Value *value, AttrType type, Selects *select)
+RC ExecuteStage::compute_value_from_select(Db *db, Value *value, AttrType type)
 {
   Stmt *stmt = nullptr;
-  RC rc = SelectStmt::create(db, select, stmt);
+  RC rc = SelectStmt::create(db, value->select, stmt);
   if (rc != RC::SUCCESS) {
     return rc;
   }
   SelectStmt *select_stmt = dynamic_cast<SelectStmt*>(stmt);
   Pretable *res = select_to_pretable(select_stmt, &rc);
+  value->select = nullptr;
   if (res == nullptr) {
     return rc;
   }
@@ -772,102 +798,6 @@ RC ExecuteStage::compute_value_from_select(Db *db, Value *value, AttrType type, 
   return rc;
 }
 
-RC ExecuteStage::do_update(SQLStageEvent *sql_event)
-{
-  Stmt *stmt = sql_event->stmt();
-  SessionEvent *session_event = sql_event->session_event();
-  Session *session = session_event->session();
-  Db *db = session->get_current_db();
-  Trx *trx = session->current_trx();
-  // CLogManager *clog_manager = db->get_clog_manager();
-
-  if (stmt == nullptr) {
-    LOG_WARN("cannot find statement");
-    session_event->set_response("FAILURE\n");
-    return RC::GENERIC_ERROR;
-  }
-
-  UpdateStmt *update_stmt = (UpdateStmt *)stmt;
-  Table *table = update_stmt->table();
-
-  Operator *scan_oper = try_to_create_index_scan_operator(update_stmt->filter_stmt());
-  if (nullptr == scan_oper) {
-    scan_oper = new TableScanOperator(update_stmt->table());
-  }
-
-  DEFER([&] () {delete scan_oper;});
-
-  PredicateOperator pred_oper(update_stmt->filter_stmt());
-  pred_oper.add_child(scan_oper);
-
-  RC rc = pred_oper.open();
-  if (rc != RC::SUCCESS) {
-    session_event->set_response("FAILURE\n");
-    LOG_WARN("failed to open operator");
-    return rc;
-  }
-
-  std::vector<Value *> &values = update_stmt->values();
-  std::vector<const FieldMeta *> &metas = update_stmt->metas();
-  for (int i  = 0; i < values.size(); i++) {
-    if (values[i]->type == AttrType::SELECTS) {
-      rc = compute_value_from_select(db, values[i], metas[i]->type(), values[i]->select);
-      if (rc != RC::SUCCESS) {
-        session_event->set_response("FAILURE\n");
-        LOG_DEBUG("selects in update isn't good");
-        return rc;
-      }
-    }
-  }
-  while ((rc = pred_oper.next()) == RC::SUCCESS) {
-    // get current record
-    // write to response
-    RowTuple *tuple = dynamic_cast<RowTuple*>(pred_oper.current_tuple());
-    if (nullptr == tuple) {
-      rc = RC::INTERNAL;
-      LOG_WARN("failed to get current record. rc=%s", strrc(rc));
-      break;
-    }
-    Record record = tuple->record();
-    if (trx == nullptr || trx->is_visible(table, &record)) {
-      for (size_t i = 0; i < values.size(); i++) {
-        const FieldMeta *field = metas[i];
-        Value *value = values[i];
-        // prepare data
-        size_t copy_len = field->len();
-        if (field->type() == CHARS) {
-          const size_t data_len = strlen((const char *)value->data);
-          if (copy_len > data_len) {
-            copy_len = data_len + 1;
-          }
-        }
-        memcpy(record.data() + field->offset(), value->data, copy_len);
-
-        // update
-        rc = table->update_record(trx, &record);
-        if (rc != RC::SUCCESS) {
-          LOG_WARN("failed to update");
-          return rc;
-        }
-      }
-    }
-  }
-
-  // TODO: CLOG
-
-  if (rc != RC::RECORD_EOF) {
-    LOG_WARN("something wrong while iterate operator. rc=%s", strrc(rc));
-    pred_oper.close();
-  } else {
-    rc = pred_oper.close();
-  }
-  if (rc == RC::SUCCESS) {
-    session_event->set_response("SUCCESS\n");
-  } else {
-    session_event->set_response("FAILURE\n");
-  }
-  return rc;
-}
 
 RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
 {
@@ -1090,6 +1020,7 @@ void TupleSet::filter_fields(const std::vector<Field> &fields) {
   std::unordered_map<std::string, std::unordered_map<std::string, int>> mp;
   std::vector<std::pair<Table*, FieldMeta>> metas(fields.size());
   std::vector<TupleCell> cells(fields.size());
+  data_.clear();
   for (int i = 0; i < fields.size(); i++) {
     mp[fields[i].table_name()][fields[i].field_name()] = i+1;
   }
@@ -1107,6 +1038,12 @@ void TupleSet::filter_fields(const std::vector<Field> &fields) {
 
   cells_.swap(cells);
   metas_.swap(metas);
+  int offset = 0;
+  for (size_t i = 0; i < cells_.size(); i++) {
+    metas_[i].second.set_offset(offset);
+    offset += metas_[i].second.len();
+    data_ += std::string(cells_[i].data(), metas_[i].second.len());
+  }
 }
 
 // used for aggregate, and they have 4 bytes
@@ -1653,16 +1590,117 @@ void Pretable::print(std::stringstream &ss)
 
 RC Pretable::assign_row_to_value(Value *value, AttrType type)
 {
-  if (tuples_.size() == 1 && tuples_[0].metas().size() == 0 &&
+  if (tuples_.size() == 1 && tuples_[0].metas().size() == 1 &&
       tuples_[0].meta(0).type() == type) {
     const FieldMeta &meta = tuples_[0].meta(0);
     value->type = type;
-    value->data = new char(meta.len());
+    value->data = new char[meta.len()];
     memcpy(value->data, tuples_[0].get_cell(0).data(), meta.len());
     // null case
     if (((char *)value->data)[meta.len() - 1] == 1) {
       value->type = NULLS;
     }
+    return RC::SUCCESS;
   }
   return RC::SCHEMA_FIELD_TYPE_MISMATCH;
 }
+
+
+/*
+RC ExecuteStage::do_update(SQLStageEvent *sql_event)
+{
+  Stmt *stmt = sql_event->stmt();
+  SessionEvent *session_event = sql_event->session_event();
+  Session *session = session_event->session();
+  Db *db = session->get_current_db();
+  Trx *trx = session->current_trx();
+  // CLogManager *clog_manager = db->get_clog_manager();
+
+  if (stmt == nullptr) {
+    LOG_WARN("cannot find statement");
+    session_event->set_response("FAILURE\n");
+    return RC::GENERIC_ERROR;
+  }
+
+  UpdateStmt *update_stmt = (UpdateStmt *)stmt;
+  Table *table = update_stmt->table();
+
+  RC rc = RC::SUCCESS;
+
+  std::vector<Value *> &values = update_stmt->values();
+  std::vector<const FieldMeta *> &metas = update_stmt->metas();
+  for (int i  = 0; i < values.size(); i++) {
+    if (values[i]->type == AttrType::SELECTS) {
+      rc = compute_value_from_select(db, values[i], metas[i]->type(), values[i]->select);
+      if (rc != RC::SUCCESS) {
+        session_event->set_response("FAILURE\n");
+        LOG_DEBUG("selects in update isn't good");
+        return rc;
+      }
+    }
+  }
+  Operator *scan_oper = try_to_create_index_scan_operator(update_stmt->filter_stmt());
+  if (nullptr == scan_oper) {
+    scan_oper = new TableScanOperator(update_stmt->table());
+  }
+
+  DEFER([&] () {delete scan_oper;});
+
+  PredicateOperator pred_oper(update_stmt->filter_stmt());
+  pred_oper.add_child(scan_oper);
+
+  rc = pred_oper.open();
+  if (rc != RC::SUCCESS) {
+    session_event->set_response("FAILURE\n");
+    LOG_WARN("failed to open operator");
+    return rc;
+  }
+  while ((rc = pred_oper.next()) == RC::SUCCESS) {
+    // get current record
+    // write to response
+    RowTuple *tuple = dynamic_cast<RowTuple*>(pred_oper.current_tuple());
+    if (nullptr == tuple) {
+      rc = RC::INTERNAL;
+      LOG_WARN("failed to get current record. rc=%s", strrc(rc));
+      break;
+    }
+    Record record = tuple->record();
+    for (size_t i = 0; i < values.size(); i++) {
+      const FieldMeta *field = metas[i];
+      Value *value = values[i];
+      // prepare data
+      size_t copy_len = field->len();
+      if (field->type() == CHARS) {
+        const size_t data_len = strlen((const char *)value->data);
+        if (copy_len > data_len) {
+          copy_len = data_len + 1;
+        }
+      }
+      memcpy(record.data() + field->offset(), value->data, copy_len);
+
+      // update
+      rc = table->update_record(trx, &record);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("failed to update");
+        return rc;
+      }
+    }
+  }
+
+  // TODO: CLOG
+
+  if (rc != RC::RECORD_EOF) {
+    LOG_WARN("something wrong while iterate operator. rc=%s", strrc(rc));
+    pred_oper.close();
+  } else {
+    rc = pred_oper.close();
+  }
+  if (rc == RC::SUCCESS) {
+    session_event->set_response("SUCCESS\n");
+  } else {
+    session_event->set_response("FAILURE\n");
+  }
+  return rc;
+}
+
+ */

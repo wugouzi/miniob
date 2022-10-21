@@ -58,7 +58,7 @@ public:
 
 public:
   static RC create_stmt(Db *db, Query &query, Stmt *&stmt);
-  static bool convert_type(AttrType type, Value *value);
+  static bool convert_type(const FieldMeta *field, Value *value);
   static RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
                                 const RelAttr &attr, Table *&table, const FieldMeta *&field);
   static bool check_type(AttrType t1, AttrType t2);

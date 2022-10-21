@@ -15,7 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include <cstddef>
 #include <mutex>
 #include "sql/parser/parse.h"
-#include "rc.h"
+// #include "rc.h"
 #include "common/log/log.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/parser/yacc_sql.tab.h"
@@ -66,7 +66,7 @@ void value_init_null(Value *value)
 void value_init_integer(Value *value, int v)
 {
   value->type = INTS;
-  value->data = malloc(sizeof(v));
+  value->data = malloc(sizeof(v)+1);
   memcpy(value->data, &v, sizeof(v));
 }
 bool is_leap(int y)
@@ -107,7 +107,7 @@ void value_init_date(Value *value, const char* v)
   std::sscanf(v, "'%d-%d-%d'", &y, &m, &d);
 
   int dv = y * 10000 + m * 100 + d;
-  value->data = std::malloc(sizeof(int));
+  value->data = malloc(sizeof(int)+1);
   bool b = check_date(y, m, d);
   if (!b) {
     dv = -1;
@@ -117,13 +117,14 @@ void value_init_date(Value *value, const char* v)
 void value_init_float(Value *value, float v)
 {
   value->type = FLOATS;
-  value->data = malloc(sizeof(v));
+  value->data = malloc(sizeof(v)+1);
   memcpy(value->data, &v, sizeof(v));
 }
 void value_init_string(Value *value, const char *v)
 {
   value->type = CHARS;
-  value->data = strdup(v);
+  value->data = malloc(strlen(v)+2);
+  memcpy(value->data, v, strlen(v)+1);
 }
 void value_init_select(Value *value, Selects *selects)
 {
@@ -186,12 +187,13 @@ void attr_info_destroy(AttrInfo *attr_info)
 }
 
 void selects_init(Selects *s1, ...);
-void selects_reverse_relations(Selects *selects)
+void selects_reverse_relations(Selects *selects, int len)
 {
-  for (int i = 0; i < selects->relation_num / 2; i++) {
-    char *tp = selects->relations[i];
-    selects->relations[i] = selects->relations[selects->relation_num-1-i];
-    selects->relations[selects->relation_num-1-i] = tp;
+  for (int i = 0; i < len / 2; i++) {
+    int j = i + selects->relation_num - len;
+    char *tp = selects->relations[j];
+    selects->relations[j] = selects->relations[selects->relation_num-1-j];
+    selects->relations[selects->relation_num-1-j] = tp;
   }
 }
 void selects_append_attribute(Selects *selects, RelAttr *rel_attr)
@@ -300,6 +302,9 @@ void updates_init(Updates *updates, const char *relation_name, Condition conditi
 void updates_append(Updates *updates, const char *attribute_name, Value *value)
 {
   updates->attributes[updates->attribute_num] = strdup(attribute_name);
+  // updates->values[updates->attribute_num].data = value->data;
+  // updates->values[updates->attribute_num].type = value->type;
+  // updates->values[updates->attribute_num].select = value->select;
   updates->values[updates->attribute_num++] = *value;
 }
 
@@ -425,6 +430,7 @@ void query_init(Query *query)
 {
   query->flag = SCF_ERROR;
   memset(&query->sstr, 0, sizeof(query->sstr));
+  query->selects_num = 0;
 }
 
 Query *query_create()
@@ -441,8 +447,8 @@ Query *query_create()
 
 void query_reset(Query *query)
 {
-  for (int i = 0; i < MAX_NUM; i++) {
-    selects_destroy(&query->sstr.selects[i]);
+  for (int i = 0; i < query->selects_num; i++) {
+    selects_destroy(&query->selects[i]);
   }
   switch (query->flag) {
     case SCF_SELECT: {

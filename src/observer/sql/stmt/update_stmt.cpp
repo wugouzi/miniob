@@ -39,8 +39,7 @@ RC UpdateStmt::create(Db *db, Updates &update, Stmt *&stmt)
 
   std::vector<Value *> values;
   std::vector<const FieldMeta *> metas;
-  for (size_t i = update.attribute_num - 1; i >= 0; i--) {
-
+  for (size_t i = 0; i < update.attribute_num; i++) {
     Value &value = update.values[i];
     const char *attr_name = update.attributes[i];
 
@@ -57,31 +56,20 @@ RC UpdateStmt::create(Db *db, Updates &update, Stmt *&stmt)
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
     if (value.type != SELECTS && fmeta->type() != value.type &&
-        !convert_type(fmeta->type(), &value)) {
+        !convert_type(fmeta, &value)) {
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
     values.push_back(&update.values[i]);
     metas.push_back(fmeta);
   }
 
-  int condition_num = update.condition_num;
-  Condition *conditions = update.conditions;
-
-  FilterStmt *filter_stmt = nullptr;
-  std::unordered_map<std::string, Table *> table_map;
-  table_map[table->name()] = table;
-  RC rc = FilterStmt::create(db, table, &table_map, conditions, condition_num, filter_stmt);
-
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("cannot construct filter stmt");
-    return rc;
-  }
-
   UpdateStmt *update_stmt = new UpdateStmt();
   update_stmt->table_ = table;
-  update_stmt->filter_stmt_ = filter_stmt;
+  update_stmt->condition_num_ = update.condition_num;
+  update_stmt->conditions_ = update.conditions;
   update_stmt->attr_metas_.swap(metas);
   update_stmt->values_.swap(values);
+  stmt = update_stmt;
   return RC::SUCCESS;
 }
 
