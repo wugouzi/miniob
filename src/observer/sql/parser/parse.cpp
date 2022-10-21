@@ -213,6 +213,13 @@ void selects_append_relation(Selects *selects, const char *relation_name)
   selects->relations[selects->relation_num++] = strdup(relation_name);
 }
 
+void selects_append_order_field(Selects *selects, const char *relation_name, size_t is_desc)
+{
+  selects->order_fields[selects->order_by_num].name = strdup(relation_name);
+  selects->order_fields[selects->order_by_num].is_desc = is_desc;
+  selects->order_by_num++;
+}
+
 void selects_append_conditions(Selects *selects, Condition conditions[], size_t condition_num)
 {
   assert(condition_num <= sizeof(selects->conditions) / sizeof(selects->conditions[0]));

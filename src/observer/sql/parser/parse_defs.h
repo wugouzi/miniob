@@ -95,6 +95,11 @@ typedef struct _Condition {
   Value right_value;   // right-hand side value if right_is_attr = FALSE
 } Condition;
 
+typedef struct {
+  char* name;
+  size_t is_desc;
+} OrderField;
+
 // struct of select
 typedef struct _Selects {
   size_t attr_num;                // Length of attrs in Select clause
@@ -104,7 +109,9 @@ typedef struct _Selects {
   size_t condition_num;           // Length of conditions in Where clause
   Condition conditions[MAX_NUM];  // conditions in Where clause
   size_t aggregate_num;              // -1 means error
-} Selects;;
+  size_t order_by_num;
+  OrderField order_fields[MAX_NUM];
+} Selects;
 
 // struct of insert
 typedef struct {
@@ -252,7 +259,12 @@ void selects_init(Selects *s1, ...);
 void selects_reverse_relations(Selects *selects, int len);
 void selects_append_attribute(Selects *selects, RelAttr *rel_attr);
 void selects_append_relation(Selects *selects, const char *relation_name);
-void selects_append_conditions(Selects *selects, Condition conditions[], size_t condition_num);
+void selects_append_order_field(Selects* selects,
+                                const char* relation_name,
+                                size_t is_desc);
+void selects_append_conditions(Selects* selects,
+                               Condition conditions[],
+                               size_t condition_num);
 void selects_destroy(Selects *selects);
 
 //void inserts_init(Inserts *inserts, const char *relation_name, Value values[], size_t value_num);

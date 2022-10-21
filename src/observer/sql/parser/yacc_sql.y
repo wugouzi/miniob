@@ -132,6 +132,7 @@ ParserContext *get_context(yyscan_t scanner)
         ORDER
         GROUP
         BY
+        ASC
 
 %union {
   struct _Attr *attr;
@@ -442,7 +443,7 @@ LBRACE SELECT select_attr FROM ID rel_list where RBRACE {
 }
 ;
 select:				/*  select 语句的语法解析树*/
-SELECT select_attr FROM rel_name rel_list where SEMICOLON
+SELECT select_attr FROM rel_name rel_list where order SEMICOLON
 {
   // CONTEXT->ssql->sstr.selection.relations[CONTEXT->from_length++]=$4;
   // &CONTEXT->ssql->sstr.selects[CONTEXT->selects_num]
@@ -609,6 +610,25 @@ inner_joins:
   selects_append_relation(&CONTEXT->ssql->selects[CONTEXT->selects_num], $3);
   CONTEXT->joins++;
 }
+;
+order: 
+    /* empty */
+    | ORDER BY order_component order_component_list {
+    }
+;
+order_component:
+  | ID ASC {
+      selects_append_order_field(&CONTEXT->ssql->selects[CONTEXT->selects_num], $1, 0);
+  }
+  | ID DESC {
+      selects_append_order_field(&CONTEXT->ssql->selects[CONTEXT->selects_num], $1, 1);
+  }
+;
+order_component_list:
+    /* empty */
+    | COMMA order_component order_component_list {
+      // 啥都不干
+    }
 ;
 rel_list:
     /* empty */
