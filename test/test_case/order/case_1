@@ -1,6 +1,0 @@
-create table t (a char);
-insert into t values('b');
-insert into t values('c');
-insert into t values('a');
-select * from t order by a;
-drop table t;

@@ -1,4 +1,0 @@
-create table simple(a int);
-insert into simple values (1);
-insert into simple values (2);
-insert into simple values (3);

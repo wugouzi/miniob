@@ -1,3 +1,0 @@
-create table t (a int,b int);
-create index t1 on t(a,b);
-drop table t;

@@ -1,5 +1,0 @@
-if(EXISTS "/Users/wu/miscellaneous/courses/miniob/test/case/miniob/build/unitest/bplus_tree_test[1]_tests.cmake")
-  include("/Users/wu/miscellaneous/courses/miniob/test/case/miniob/build/unitest/bplus_tree_test[1]_tests.cmake")
-else()
-  add_test(bplus_tree_test_NOT_BUILT bplus_tree_test_NOT_BUILT)
-endif()
