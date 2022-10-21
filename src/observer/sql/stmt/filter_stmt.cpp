@@ -101,16 +101,10 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       LOG_WARN("cannot find attr");
       return rc;
     }
-    // if (!field->nullable() && condition.right_value.type == AttrType::NULLS) {
-    //   return RC::SCHEMA_FIELD_TYPE_MISMATCH;;
-    // }
+    // only check dates, and don't check null
     if (!Stmt::check_type(condition.right_value.type, field->type())) {
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
-    // if (condition.right_value.type != field->type() &&
-    //     !Stmt::convert_type(field->type(), &condition.right_value)) {
-    //   return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-    // }
   } else if (!condition.left_is_attr && condition.right_is_attr) {
     Table *table = nullptr;
     const FieldMeta *field = nullptr;
@@ -119,16 +113,9 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       LOG_WARN("cannot find attr");
       return rc;
     }
-    if (!field->nullable() && condition.left_value.type == AttrType::NULLS) {
-      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-    }
     if (!Stmt::check_type(condition.right_value.type, field->type())) {
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
-    // if (condition.left_value.type != field->type() &&
-    //     !Stmt::convert_type(field->type(), &condition.left_value)) {
-    //   return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-    // }
   }
 
   Expression *left = nullptr;
