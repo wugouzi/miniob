@@ -49,7 +49,7 @@ bool string_like(const char *s1, const char *s2)
         if (match(s2[j-1], s1[i-1])) {
           dp[i][j] = dp[i-1][j-1];
         } else {
-          return false;
+          dp[i][j] = false;
         }
       }
     }

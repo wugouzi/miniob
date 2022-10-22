@@ -130,6 +130,7 @@ void value_init_float(Value *value, float v)
 }
 void value_init_string(Value *value, const char *v)
 {
+  printf("string: %s\n", v);
   value->type = CHARS;
   value->select = nullptr;
   value->data = malloc(strlen(v)+2);

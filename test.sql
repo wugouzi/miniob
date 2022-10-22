@@ -1,3 +1,26 @@
+SUCCESS
+3. like
+SELECT * FROM like_table WHERE name LIKE 'c%';
+-10 | cherry
+-7 | coconut
+-ID | NAME
++FAILED TO PARSE SQL
+SELECT * FROM like_table WHERE name LIKE '%e';
+-1 | apple
+-11 | pineapple
+...
+
+UPDATE Update_table_3 SET t_name=2,col1=2.0 WHERE id=2;
+SUCCESS
+UPDATE Update_table_3 SET t_name=(select Update_table_2.col1 from Update_table_2 where Update_table_2.id=1),col1=(select avg(Update_table_2.col1) from Update_table_2) where id=1;
+-SUCCESS
++FAILURE
+SELECT * FROM Update_table_3;
+-1 | 1 | 1 | 2
++1 | N01 | 1 | 2
+2 | 2 | 2 | 2
+3 | N01 | 1 | 2
+
 -- index
 create table t(id int, age float, name char);
 SHOW INDEX FROM t;
@@ -7,14 +30,27 @@ SHOW INDEX FROM t;
 -INDEX_TABLE_1 | 1 | INDEX_ID | 1 | ID
 -TABLE | NON_UNIQUE | KEY_NAME | SEQ_IN_INDEX | COLUMN_NAME
 
-create table t(id int, name char);
+create table t(id int, name char(8));
 insert into t values (1, 'wefwef');
 insert into t values (2, 'wwwws');
 insert into t values (3, '313');
-select * from t where name like 'w%';
+select * from t where name like 'w%' and name not like 'a';
 drop table t;
 select * from table where name like
 
+create table t(id int nullable, num )
+
+3 | 3 | N3
+ID | NUM | NAME
+UPDATE null_table4 SET id=null where num is null;
+-FAILURE
++SUCCESS
+UPDATE null_table4 SET num=(SELECT null_table3.num from null_table3 where null_table3.id=1)
+where id=2;
+SUCCESS
+SELECT * FROM null_table4;
+-1 | NULL | NULL
+2 | NULL | N2
 
 CREATE TABLE null_table(id int, num int nullable, price float not null, birthday date nullable);
 CREATE TABLE null_table2(id int, num int nullable, price float not null, birthday date nullable);
@@ -244,6 +280,8 @@ UPDATE Update_table_2 SET t_name='N4',col1=1 where col3=1;
 create table t1(id int, col float, name char);
 insert into t1 values(1,1,'2');
 update t1 set id=1.4,name='A32' where id=1;
+update t1 set col=1,coll='wefwe' where id=1;
+update t1 set col=1,name='1' where coll=1;
 update t1 set
 
 create table t2(id int, col float, name char);

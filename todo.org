@@ -2,7 +2,7 @@
 
 
 
-* TODO [2/14]
+* TODO [2/16]
     * [X] updates
     * [X] join
     * [ ] order
@@ -18,3 +18,4 @@
     * [ ] there is no need to return in get_subfilter
     * [ ] problem when select same table, select * from t,t;
     * [ ] unique多条
+    * [ ] 过长的string
