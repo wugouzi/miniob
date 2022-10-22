@@ -61,6 +61,7 @@ void value_init_null(Value *value)
 {
   value->type = NULLS;
   value->data = malloc(sizeof(int)+1);
+  value->select = nullptr;
   ((char *)value->data)[4] = 1;
 }
 
@@ -68,6 +69,7 @@ void value_init_integer(Value *value, int v)
 {
   value->type = INTS;
   value->data = malloc(sizeof(v)+1);
+  value->select = nullptr;
   memset(value->data, 0, 5);
   memcpy(value->data, &v, sizeof(v));
 }
@@ -105,6 +107,7 @@ bool check_date(int y, int m, int d)
 void value_init_date(Value *value, const char* v)
 {
   value->type = DATES;
+  value->select = nullptr;
   int y, m, d;
   std::sscanf(v, "'%d-%d-%d'", &y, &m, &d);
 
@@ -120,13 +123,16 @@ void value_init_date(Value *value, const char* v)
 void value_init_float(Value *value, float v)
 {
   value->type = FLOATS;
+  value->select = nullptr;
   value->data = malloc(sizeof(v)+1);
   memset(value->data, 0, 5);
   memcpy(value->data, &v, sizeof(v));
 }
 void value_init_string(Value *value, const char *v)
 {
+  printf("string: %s\n", v);
   value->type = CHARS;
+  value->select = nullptr;
   value->data = malloc(strlen(v)+2);
   memset(value->data, 0, strlen(v)+2);
   memcpy(value->data, v, strlen(v));
@@ -135,6 +141,7 @@ void value_init_select(Value *value, Selects *selects)
 {
   value->type = SELECTS;
   value->select = selects;
+  value->data = nullptr;
 }
 
 void value_destroy(Value *value)
@@ -314,9 +321,6 @@ void updates_init(Updates *updates, const char *relation_name, Condition conditi
 void updates_append(Updates *updates, const char *attribute_name, Value *value)
 {
   updates->attributes[updates->attribute_num] = strdup(attribute_name);
-  // updates->values[updates->attribute_num].data = value->data;
-  // updates->values[updates->attribute_num].type = value->type;
-  // updates->values[updates->attribute_num].select = value->select;
   updates->values[updates->attribute_num++] = *value;
 }
 
@@ -368,12 +372,17 @@ void drop_table_destroy(DropTable *drop_table)
   drop_table->relation_name = nullptr;
 }
 
+void create_index_append(CreateIndex *create_index, const char *attribute_name)
+{
+  create_index->attribute_names[create_index->attribute_num++] = strdup(attribute_name);
+}
+
 void create_index_init(
-    CreateIndex *create_index, const char *index_name, const char *relation_name, const char *attr_name, int unique)
+    CreateIndex *create_index, const char *index_name, const char *relation_name, int unique)
 {
   create_index->index_name = strdup(index_name);
   create_index->relation_name = strdup(relation_name);
-  create_index->attribute_name = strdup(attr_name);
+  // create_index->attribute_name = strdup(attr_name);
   create_index->unique = unique;
 }
 
@@ -386,11 +395,13 @@ void create_index_destroy(CreateIndex *create_index)
 {
   free(create_index->index_name);
   free(create_index->relation_name);
-  free(create_index->attribute_name);
+  for (int i = 0; i < create_index->attribute_num; i++) {
+    free(create_index->attribute_names[i]);
+    create_index->attribute_names[i] = nullptr;
+  }
 
   create_index->index_name = nullptr;
   create_index->relation_name = nullptr;
-  create_index->attribute_name = nullptr;
 }
 
 void drop_index_init(DropIndex *drop_index, const char *index_name)

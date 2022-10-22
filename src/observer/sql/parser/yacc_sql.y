@@ -4,7 +4,9 @@
 #include "sql/parser/parse_defs.h"
 #include "sql/parser/yacc_sql.tab.h"
 #include "sql/parser/lex.yy.h"
-
+#ifdef YYDEBUG
+  yydebug = 1;
+#endif
 // #include "common/log/log.h" // 包含C++中的头文件
 
 #include<stdio.h>
@@ -248,12 +250,20 @@ SHOW INDEX FROM ID SEMICOLON {
 ;
 
 create_index:		/*create index 语句的语法解析树*/
-    CREATE INDEX ID ON ID LBRACE ID RBRACE SEMICOLON
-		{
-			CONTEXT->ssql->flag = SCF_CREATE_INDEX;//"create_index";
-			create_index_init(&CONTEXT->ssql->sstr.create_index, $3, $5, $7, 0);
-		}
-    ;
+CREATE INDEX ID ON ID LBRACE ID index_ids RBRACE SEMICOLON
+{
+  CONTEXT->ssql->flag = SCF_CREATE_INDEX;//"create_index";
+  create_index_append(&CONTEXT->ssql->sstr.create_index, $7);
+  create_index_init(&CONTEXT->ssql->sstr.create_index, $3, $5, 0);
+}
+;
+
+index_ids:
+/* empty */
+| COMMA ID index_ids {
+  create_index_append(&CONTEXT->ssql->sstr.create_index, $2);
+}
+;
 
 drop_index:			/*drop index 语句的语法解析树*/
     DROP INDEX ID  SEMICOLON
@@ -793,7 +803,8 @@ condition:
 			// $$->right_attr.relation_name=$5;
 			// $$->right_attr.attribute_name=$7;
     }
-    ;
+;
+
 
 comOp:
   	  EQ { CONTEXT->comp = EQUAL_TO; }
@@ -804,8 +815,8 @@ comOp:
     | NE { CONTEXT->comp = NOT_EQUAL; }
 | IS { CONTEXT->comp = IS_EQUAL; }
 | IS NOT { CONTEXT->comp = IS_NOT_EQUAL; }
-| LIKE { CONTEXT->comp = STR_LIKE; }
 | NOT LIKE { CONTEXT->comp = STR_NOT_LIKE; }
+| LIKE { CONTEXT->comp = STR_LIKE; }
     ;
 
 load_data:

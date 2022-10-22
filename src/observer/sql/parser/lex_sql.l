@@ -7,6 +7,7 @@ struct ParserContext;
 #include "yacc_sql.tab.h"
 extern int atoi();
 extern double atof();
+//{QUOTE}[\40\42\47A-Za-z0-9_/\.\-]*{QUOTE}            yylval->string=strdup(yytext); RETURN_TOKEN(SSS);
 
 #if YYDEBUG > 0
 #define debug_printf  printf
@@ -51,6 +52,9 @@ QUOTE            [\'\"]
 [Ii][Nn][Nn][Ee][Rr]                                 RETURN_TOKEN(INNER);
 [Jj][Oo][Ii][Nn]                                     RETURN_TOKEN(JOIN);
 [Ii][Ss]                                             RETURN_TOKEN(IS);
+[Oo][Rr][Dd][Ee][Rr]                                 RETURN_TOKEN(ORDER);
+[Gg][Rr][Oo][Uu][Pp]                                 RETURN_TOKEN(GROUP);
+[Bb][Yy]                                             RETURN_TOKEN(BY);
 [Nn][Oo][Tt]                                         RETURN_TOKEN(NOT);
 [Mm][Ii][Nn]                                         RETURN_TOKEN(MIN);
 [Ll][Ii][Kk][Ee]                                     RETURN_TOKEN(LIKE);
@@ -103,8 +107,8 @@ QUOTE            [\'\"]
 "<"                                                  RETURN_TOKEN(LT);
 ">="                                                 RETURN_TOKEN(GE);
 ">"                                                  RETURN_TOKEN(GT);
-{QUOTE}[\40\42\47A-Za-z0-9_/\.\-]*{QUOTE}            yylval->string=strdup(yytext); RETURN_TOKEN(SSS);
 
+{QUOTE}[\42\47A-Za-z0-9_/\.\-\%]*{QUOTE}            yylval->string=strdup(yytext); RETURN_TOKEN(SSS);
 .                                                    printf("Unknown character [%c]\n",yytext[0]); return yytext[0];
 %%
 

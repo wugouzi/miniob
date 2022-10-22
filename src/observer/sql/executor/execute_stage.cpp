@@ -612,7 +612,7 @@ RC ExecuteStage::do_create_index(SQLStageEvent *sql_event)
     return RC::SCHEMA_TABLE_NOT_EXIST;
   }
 
-  RC rc = table->create_index(nullptr, create_index.index_name, create_index.attribute_name, create_index.unique);
+  RC rc = table->create_index(nullptr, create_index.index_name, create_index.attribute_names, create_index.attribute_num, create_index.unique);
   sql_event->session_event()->set_response(rc == RC::SUCCESS ? "SUCCESS\n" : "FAILURE\n");
   return rc;
 }
@@ -630,6 +630,7 @@ RC ExecuteStage::do_show_index(SQLStageEvent *sql_event)
 
   std::stringstream ss;
   table->show_index(ss);
+  session_event->set_response(ss.str());
   return RC::SUCCESS;
 }
 
@@ -696,12 +697,19 @@ RC ExecuteStage::check_updates(Db *db, Updates &updates)
     if (fmeta == nullptr) {
       return RC::SCHEMA_FIELD_MISSING;
     }
+
     if (value->type == SELECTS) {
-      rc = compute_value_from_select(db, value, fmeta->type());
+      rc = compute_value_from_select(db, value);
       if (rc != RC::SUCCESS) {
         return rc;
       }
     }
+
+    if (value->type == NULLS && !fmeta->nullable()) {
+      LOG_ERROR("the field is not nullable");
+      return RC::SCHEMA_FIELD_MISSING;
+    }
+
     if (fmeta->type() != value->type && !Stmt::convert_type(fmeta, value)) {
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
@@ -783,7 +791,7 @@ RC ExecuteStage::value_check(const int &value_num, const Value *values) const
   return RC::SUCCESS;
 }
 
-RC ExecuteStage::compute_value_from_select(Db *db, Value *value, AttrType type)
+RC ExecuteStage::compute_value_from_select(Db *db, Value *value)
 {
   Stmt *stmt = nullptr;
   RC rc = SelectStmt::create(db, value->select, stmt);
@@ -796,7 +804,7 @@ RC ExecuteStage::compute_value_from_select(Db *db, Value *value, AttrType type)
   if (res == nullptr) {
     return rc;
   }
-  rc = res->assign_row_to_value(value, type);
+  rc = res->assign_row_to_value(value);
   return rc;
 }
 
@@ -1375,6 +1383,7 @@ RC Pretable::aggregate_avg(int idx, TupleCell *res)
   }
   size_t len = sizeof(float)+1;
   char *data = new char[len];
+  memset(data, 0, len);
   res->set_length(len);
   if (cnt == 0) {
     data[len - 1] = 1;
@@ -1627,12 +1636,11 @@ void Pretable::print(std::stringstream &ss)
 }
 
 
-RC Pretable::assign_row_to_value(Value *value, AttrType type)
+RC Pretable::assign_row_to_value(Value *value)
 {
-  if (tuples_.size() == 1 && tuples_[0].metas().size() == 1 &&
-      tuples_[0].meta(0).type() == type) {
+  if (tuples_.size() == 1 && tuples_[0].metas().size() == 1) {
     const FieldMeta &meta = tuples_[0].meta(0);
-    value->type = type;
+    value->type = meta.type();
     value->data = new char[meta.len()];
     memcpy(value->data, tuples_[0].get_cell(0).data(), meta.len());
     // null case

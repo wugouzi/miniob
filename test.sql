@@ -1,21 +1,264 @@
-create table t(id int, name char);
+1. MULTI INDEX OF EMPTY TABLE
+CREATE TABLE multi_index(id int, col1 int, col2 float, col3 char, col4 date, col5 int, col6 int);
+SUCCESS
+CREATE INDEX i_1_12 ON multi_index(col1,col2);
+SUCCESS
+CREATE INDEX i_1_345 ON multi_index(col3, col4, col5);
+SUCCESS
+CREATE INDEX i_1_56 ON multi_index(col5, col6);
+SUCCESS
+CREATE INDEX i_1_456 ON multi_index(col4, col5, col6);
+SUCCESS
+SELECT * FROM multi_index;
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+2. MULTI INDEX OF NON-EMPTY TABLE
+all success
+CREATE TABLE multi_index2(id int, col1 int, col2 float, col3 char, col4 date, col5 int, col6 int);
+INSERT INTO multi_index2 VALUES (1, 1, 11.2, 'a', '2021-01-02', 1, 1);
+INSERT INTO multi_index2 VALUES (2, 1, 16.2, 'x', '2021-01-02', 1, 61);
+INSERT INTO multi_index2 VALUES (3, 1, 11.6, 'h', '2023-01-02', 10, 17);
+CREATE INDEX i_2_12 ON multi_index2(col1,col2);
+CREATE INDEX i_2_345 ON multi_index2(col3, col4, col5);
+CREATE INDEX i_2_56 ON multi_index2(col5, col6);
+CREATE INDEX i_2_456 ON multi_index2(col4, col5, col6);
+show index from multi_index2;
+SELECT * FROM multi_index2;
+drop table multi_index2;
+1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
+2 | 1 | 16.2 | X | 2021-01-02 | 1 | 61
+3 | 1 | 11.6 | H | 2023-01-02 | 10 | 17
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+3. INFLUENCE OF INSERTING
+all success
+
+CREATE TABLE multi_index3(id int, col1 int, col2 float, col3 char, col4 date, col5 int, col6 int);
+CREATE INDEX i_3_i1 ON multi_index3(id,col1);
+INSERT INTO multi_index3 VALUES (1, 1, 11.2, 'a', '2021-01-02', 1, 1);
+INSERT INTO multi_index3 VALUES (1, 1, 11.2, 'a', '2021-01-02', 1, 1);
+SELECT * FROM multi_index3;
+CREATE INDEX i_3_14 ON multi_index3(col1,col4);
+INSERT INTO multi_index3 VALUES (2, 1, 16.2, 'x', '2021-01-02', 1, 61);
+INSERT INTO multi_index3 VALUES (3, 1, 11.6, 'h', '2023-01-02', 10, 17);
+INSERT INTO multi_index3 VALUES (4, 2, 12.2, 'e', '2022-01-04', 13, 10);
+INSERT INTO multi_index3 VALUES (5, 3, 14.2, 'd', '2020-04-02', 12, 2);
+show index from multi_index3;
+SELECT * FROM multi_index3;
+drop table multi_index3;
+
+1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
+1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
+1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
+2 | 1 | 16.2 | X | 2021-01-02 | 1 | 61
+3 | 1 | 11.6 | H | 2023-01-02 | 10 | 17
+4 | 2 | 12.2 | E | 2022-01-04 | 13 | 10
+5 | 3 | 14.2 | D | 2020-04-02 | 12 | 2
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+4. QUERY WITH INDEXS
+SELECT * FROM multi_index3 WHERE id = 1;
+SELECT * FROM multi_index3 WHERE col1 > 1 and col4 = '2021-01-02';
+SELECT * FROM multi_index3 WHERE col1 <> 1 and col4 >= '2021-01-02';
+SELECT * FROM multi_index3 WHERE col2 < 15.0 and col4 <> '2021-01-02';
+
+1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
+1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+4 | 2 | 12.2 | E | 2022-01-04 | 13 | 10
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+3 | 1 | 11.6 | H | 2023-01-02 | 10 | 17
+4 | 2 | 12.2 | E | 2022-01-04 | 13 | 10
+5 | 3 | 14.2 | D | 2020-04-02 | 12 | 2
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+5. INFLUENCE OF DELETING
+DELETE FROM multi_index3 WHERE id = 1;
+DELETE FROM multi_index3 WHERE id = 61;
+SELECT * FROM multi_index3;
+2 | 1 | 16.2 | X | 2021-01-02 | 1 | 61
+3 | 1 | 11.6 | H | 2023-01-02 | 10 | 17
+4 | 2 | 12.2 | E | 2022-01-04 | 13 | 10
+5 | 3 | 14.2 | D | 2020-04-02 | 12 | 2
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+DELETE FROM multi_index3 WHERE col3 = 'x';
+SUCCESS
+SELECT * FROM multi_index3;
+3 | 1 | 11.6 | H | 2023-01-02 | 10 | 17
+4 | 2 | 12.2 | E | 2022-01-04 | 13 | 10
+5 | 3 | 14.2 | D | 2020-04-02 | 12 | 2
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+DELETE FROM multi_index3 WHERE id = 4 and col1 = 1;
+SUCCESS
+DELETE FROM multi_index3 WHERE id = 90 and col1 = 13;
+SUCCESS
+DELETE FROM multi_index3 WHERE id = 90 and col1 = 1;
+SUCCESS
+DELETE FROM multi_index3 WHERE id = 4 and col1 = 13;
+SUCCESS
+DELETE FROM multi_index3 WHERE id = 3 and col1 = 1;
+SUCCESS
+DELETE FROM multi_index3 WHERE id = 3 and col1 = 1;
+SUCCESS
+SELECT * FROM multi_index3;
+4 | 2 | 12.2 | E | 2022-01-04 | 13 | 10
+5 | 3 | 14.2 | D | 2020-04-02 | 12 | 2
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+INSERT INTO multi_index3 VALUES (1, 1, 11.2, 'a', '2021-01-02', 1, 1);
+SUCCESS
+INSERT INTO multi_index3 VALUES (2, 1, 11.2, 'x', '2021-01-02', 1, 61);
+SUCCESS
+INSERT INTO multi_index3 VALUES (3, 1, 11.2, 'h', '2023-01-02', 10, 17);
+SUCCESS
+SELECT * FROM multi_index3;
+1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
+2 | 1 | 11.2 | X | 2021-01-02 | 1 | 61
+3 | 1 | 11.2 | H | 2023-01-02 | 10 | 17
+4 | 2 | 12.2 | E | 2022-01-04 | 13 | 10
+5 | 3 | 14.2 | D | 2020-04-02 | 12 | 2
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+6. INFLUENCE OF UPDATING
+UPDATE multi_index3 SET col6=49 where id=2;
+SUCCESS
+UPDATE multi_index3 SET col4='1999-02-01' where id=2;
+SUCCESS
+UPDATE multi_index3 SET col1=2 where id=2;
+SUCCESS
+UPDATE multi_index3 SET col1=5 where col6=49;
+SUCCESS
+SELECT * FROM multi_index3;
+1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
+2 | 5 | 11.2 | X | 1999-02-01 | 1 | 49
+3 | 1 | 11.2 | H | 2023-01-02 | 10 | 17
+4 | 2 | 12.2 | E | 2022-01-04 | 13 | 10
+5 | 3 | 14.2 | D | 2020-04-02 | 12 | 2
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+7. INFLUENCE OF DROPPING TABLE
+DROP table multi_index;
+SUCCESS
+
+8. ERROR
+CREATE TABLE multi_index4(id int, col1 int, col2 float, col3 char, col4 date, col5 int, col6 int);
+SUCCESS
+
+CREATE INDEX i_4_i7 ON multi_index4(id,col7);
+FAILURE
+CREATE INDEX i_4_78 ON multi_index4(col7,col8);
+FAILURE
+CREATE INDEX i_4_i78 ON multi_index4(id,col7,col8);
+FAILURE
+
+
+
+SUCCESS
+UPDATE Update_table_3 SET t_name=
+(select Update_table_2.col1 from Update_table_2 where Update_table_2.id=1),
+col1=(select avg(Update_table_2.col1) from Update_table_2)
+where id=1;
+
+SUCCESS
+SELECT * FROM Update_table_3;
+-1 | 1 | 1 | 2
++1 | 1 | 1065353216 | 2
+2 | 2 | 2 | 2
+3 | N01 | 1 | 2
+ID | T_NAME | COL1 | COL2
+
+UPDATE Update_table_3 SET t_name=2,col1=2.0 WHERE id=2;
+SUCCESS
+UPDATE Update_table_3 SET t_name=(select Update_table_2.col1 from Update_table_2 where Update_table_2.id=1),col1=(select avg(Update_table_2.col1) from Update_table_2) where id=1;
+-SUCCESS
++FAILURE
+SELECT * FROM Update_table_3;
+-1 | 1 | 1 | 2
++1 | N01 | 1 | 2
+2 | 2 | 2 | 2
+3 | N01 | 1 | 2
+
+create table t1(id int, name char(10));
+insert into t1 values(1,'test');
+insert into t1 values(34, 33);
+select * from t1;
+update t1 set name=(select id from t1 where name='33') where id=1;
+select * from t1;
+drop table t1;
+
+-- index
+create table t(id int, age float, name char);
+SHOW INDEX FROM t;
+CREATE INDEX index_id on t(id);
+SHOW INDEX FROM t;
+
+-INDEX_TABLE_1 | 1 | INDEX_ID | 1 | ID
+-TABLE | NON_UNIQUE | KEY_NAME | SEQ_IN_INDEX | COLUMN_NAME
+
+3. like
+SELECT * FROM like_table WHERE name LIKE 'c%';
+-10 | cherry
+-7 | coconut
+-ID | NAME
++FAILED TO PARSE SQL
+SELECT * FROM like_table WHERE name LIKE '%e';
+-1 | apple
+-11 | pineapple
+...
+
+SELECT * FROM like_table WHERE name LIKE '%e';
+-1 | apple
+-11 | pineapple
+-2 | orange
+-6 | grape
+ID | NAME
+SELECT * FROM like_table WHERE name LIKE '%pp%';
+-1 | apple
+
+create table t(id int, name char(8));
 insert into t values (1, 'wefwef');
 insert into t values (2, 'wwwws');
 insert into t values (3, '313');
-select * from t where name like 'w%';
+select * from t where name like '%f';
+select * from t where name like 'w%' and name not like 'a';
+select * from t
 drop table t;
 select * from table where name like
 
-FAILURE
-7. UPDATE WITH INVALID CONDITION
-UPDATE Update_table_2 SET t_name='N4',col1=1 where col3=1;
+create table t(id int nullable, num )
+
+3 | 3 | N3
+ID | NUM | NAME
+UPDATE null_table4 SET id=null where num is null;
 -FAILURE
--8. UPDATE IN VAIN
--UPDATE Update_table_3 SET t_name='N1',col1=1 where col1=100;
--SUCCESS
--SELECT * FROM Update_table_3;
--1 | N01 | 1 | 2
--2 | N01 | 1 | 2
++SUCCESS
+UPDATE null_table4 SET num=(SELECT null_table3.num from null_table3 where null_table3.id=1)
+where id=2;
+SUCCESS
+SELECT * FROM null_table4;
+-1 | NULL | NULL
+2 | NULL | N2
+
+create table t(id int, num int nullable);
+insert into t values (1, null);
+update t set id=null where num is null;
+select * from t;
+drop table t;
+
+create table t(id int, num int);
+insert into t values (1, null);
+update t set id=null where num is null;
+select * from t;
+drop table t;
 
 CREATE TABLE null_table(id int, num int nullable, price float not null, birthday date nullable);
 CREATE TABLE null_table2(id int, num int nullable, price float not null, birthday date nullable);
@@ -229,12 +472,32 @@ NULL_TABLE.NUM | NULL_TABLE2.NUM | NULL_TABLE.BIRTHDAY
 
 */
 
+FAILURE
+7. UPDATE WITH INVALID CONDITION
+UPDATE Update_table_2 SET t_name='N4',col1=1 where col3=1;
+-FAILURE
+-8. UPDATE IN VAIN
+-UPDATE Update_table_3 SET t_name='N1',col1=1 where col1=100;
+-SUCCESS
+-SELECT * FROM Update_table_3;
+-1 | N01 | 1 | 2
+-2 | N01 | 1 | 2
 
 
 
-create table t1(id int, col float);
-create table t2(id int, col float);
-insert into t1 values(2,1);
+create table t1(id int, col float, name char);
+insert into t1 values(1,1,'2');
+insert into t1 values(2,9.72,'tes');
+update t1 set id=1.4,name='A32' where id=1;
+update t1 set col=1,coll='wefwe' where id=1;
+update t1 set col=1,name='1' where coll=1;
+update t1 set id=(select avg(col) from t1) where id =1;
+select * from t1;
+drop table t1;
+update t1 set
+
+create table t2(id int, col float, name char);
+
 insert into t1 values(1,1);
 insert into t2 values(1,2);
 select * from t1,t2;

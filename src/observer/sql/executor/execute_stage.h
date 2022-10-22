@@ -74,7 +74,7 @@ protected:
   RC value_check(const int &value_num, const Value *values) const;
   void print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi);
   Pretable *select_to_pretable(SelectStmt *select_stmt, RC *rc);
-  RC compute_value_from_select(Db *db, Value *value, AttrType type);
+  RC compute_value_from_select(Db *db, Value *value);
   RC check_updates(Db *db, Updates &updates);
 
 protected:
@@ -143,7 +143,7 @@ class Pretable {
   std::vector<TupleSet>::iterator begin() { return tuples_.begin(); }
   std::vector<TupleSet>::iterator end() { return tuples_.end(); }
 
-  RC assign_row_to_value(Value *value, AttrType type);
+  RC assign_row_to_value(Value *value);
 
   std::vector<TupleSet> tuples_;
   std::vector<Table*> tables_;

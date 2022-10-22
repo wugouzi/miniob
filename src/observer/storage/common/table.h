@@ -74,7 +74,8 @@ public:
   RC scan_record(Trx *trx, ConditionFilter *filter, int limit, void *context,
       void (*record_reader)(const char *data, void *context));
 
-  RC create_index(Trx *trx, const char *index_name, const char *attribute_name, bool unique);
+  RC create_index(Trx *trx, const char *index_name, char *const *attribute_names, int attribute_num, bool unique);
+  // RC create_index(Trx *trx, const char *index_name, const char *attribute_name, bool unique);
   void show_index(std::stringstream &ss);
 
   RC get_record_scanner(RecordFileScanner &scanner);
