@@ -15,16 +15,6 @@ select * from t where name like 'w%';
 drop table t;
 select * from table where name like
 
-FAILURE
-7. UPDATE WITH INVALID CONDITION
-UPDATE Update_table_2 SET t_name='N4',col1=1 where col3=1;
--FAILURE
--8. UPDATE IN VAIN
--UPDATE Update_table_3 SET t_name='N1',col1=1 where col1=100;
--SUCCESS
--SELECT * FROM Update_table_3;
--1 | N01 | 1 | 2
--2 | N01 | 1 | 2
 
 CREATE TABLE null_table(id int, num int nullable, price float not null, birthday date nullable);
 CREATE TABLE null_table2(id int, num int nullable, price float not null, birthday date nullable);
@@ -238,12 +228,26 @@ NULL_TABLE.NUM | NULL_TABLE2.NUM | NULL_TABLE.BIRTHDAY
 
 */
 
+FAILURE
+7. UPDATE WITH INVALID CONDITION
+UPDATE Update_table_2 SET t_name='N4',col1=1 where col3=1;
+-FAILURE
+-8. UPDATE IN VAIN
+-UPDATE Update_table_3 SET t_name='N1',col1=1 where col1=100;
+-SUCCESS
+-SELECT * FROM Update_table_3;
+-1 | N01 | 1 | 2
+-2 | N01 | 1 | 2
 
 
 
-create table t1(id int, col float);
-create table t2(id int, col float);
-insert into t1 values(2,1);
+create table t1(id int, col float, name char);
+insert into t1 values(1,1,'2');
+update t1 set id=1.4,name='A32' where id=1;
+update t1 set
+
+create table t2(id int, col float, name char);
+
 insert into t1 values(1,1);
 insert into t2 values(1,2);
 select * from t1,t2;

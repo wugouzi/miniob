@@ -61,6 +61,7 @@ void value_init_null(Value *value)
 {
   value->type = NULLS;
   value->data = malloc(sizeof(int)+1);
+  value->select = nullptr;
   ((char *)value->data)[4] = 1;
 }
 
@@ -68,6 +69,7 @@ void value_init_integer(Value *value, int v)
 {
   value->type = INTS;
   value->data = malloc(sizeof(v)+1);
+  value->select = nullptr;
   memset(value->data, 0, 5);
   memcpy(value->data, &v, sizeof(v));
 }
@@ -105,6 +107,7 @@ bool check_date(int y, int m, int d)
 void value_init_date(Value *value, const char* v)
 {
   value->type = DATES;
+  value->select = nullptr;
   int y, m, d;
   std::sscanf(v, "'%d-%d-%d'", &y, &m, &d);
 
@@ -120,6 +123,7 @@ void value_init_date(Value *value, const char* v)
 void value_init_float(Value *value, float v)
 {
   value->type = FLOATS;
+  value->select = nullptr;
   value->data = malloc(sizeof(v)+1);
   memset(value->data, 0, 5);
   memcpy(value->data, &v, sizeof(v));
@@ -127,6 +131,7 @@ void value_init_float(Value *value, float v)
 void value_init_string(Value *value, const char *v)
 {
   value->type = CHARS;
+  value->select = nullptr;
   value->data = malloc(strlen(v)+2);
   memset(value->data, 0, strlen(v)+2);
   memcpy(value->data, v, strlen(v));
@@ -135,6 +140,7 @@ void value_init_select(Value *value, Selects *selects)
 {
   value->type = SELECTS;
   value->select = selects;
+  value->data = nullptr;
 }
 
 void value_destroy(Value *value)
@@ -307,9 +313,6 @@ void updates_init(Updates *updates, const char *relation_name, Condition conditi
 void updates_append(Updates *updates, const char *attribute_name, Value *value)
 {
   updates->attributes[updates->attribute_num] = strdup(attribute_name);
-  // updates->values[updates->attribute_num].data = value->data;
-  // updates->values[updates->attribute_num].type = value->type;
-  // updates->values[updates->attribute_num].select = value->select;
   updates->values[updates->attribute_num++] = *value;
 }
 
