@@ -259,7 +259,7 @@ CREATE INDEX ID ON ID LBRACE ID index_ids RBRACE SEMICOLON
 
 index_ids:
 /* empty */
-| COMMA ID {
+| COMMA ID index_ids {
   create_index_append(&CONTEXT->ssql->sstr.create_index, $2);
 }
 ;

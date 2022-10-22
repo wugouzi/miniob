@@ -63,17 +63,16 @@ public:
       switch (attr_types_[i]) {
         case INTS: {
           comp_res = compare_int((void *)v1, (void *)v2);
-        }
-          break;
+        } break;
         case FLOATS: {
           comp_res = compare_float((void *)v1, (void *)v2);
-        }
+        } break;
         case CHARS: {
           comp_res = compare_string((void *)v1, attr_lengths_[i] - 1, (void *)v2, attr_lengths_[i] - 1);
-        }
+        } break;
         case DATES: {
           comp_res =  compare_date((void *)v1, (void *)v2);
-        }
+        } break;
         default:{
           LOG_ERROR("unknown attr type. %d", attr_types_[i]);
           abort();

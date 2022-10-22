@@ -162,11 +162,11 @@ void Table::show_index(std::stringstream &ss)
   for (int i = 0; i < table_meta().index_num(); i++) {
     Index *index = indexes_[i];
     int size = index->index_meta().fields().size();
-    for (int j = 0; j < size; j++) {
+    for (int j = size-1; j >= 0; j--) {
       ss << name() << " | ";
       ss << 1 - index->is_unique() << " | ";
       ss << index->index_meta().name() << " | ";
-      ss << j + 1 << " | ";
+      ss << size-j << " | ";
       ss << index->index_meta().field(j);
       ss << "\n";
     }

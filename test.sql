@@ -13,54 +13,44 @@ SELECT * FROM multi_index;
 ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
 
 2. MULTI INDEX OF NON-EMPTY TABLE
+all success
 CREATE TABLE multi_index2(id int, col1 int, col2 float, col3 char, col4 date, col5 int, col6 int);
-SUCCESS
 INSERT INTO multi_index2 VALUES (1, 1, 11.2, 'a', '2021-01-02', 1, 1);
-SUCCESS
 INSERT INTO multi_index2 VALUES (2, 1, 16.2, 'x', '2021-01-02', 1, 61);
-SUCCESS
 INSERT INTO multi_index2 VALUES (3, 1, 11.6, 'h', '2023-01-02', 10, 17);
-SUCCESS
-
 CREATE INDEX i_2_12 ON multi_index2(col1,col2);
-SUCCESS
 CREATE INDEX i_2_345 ON multi_index2(col3, col4, col5);
-SUCCESS
 CREATE INDEX i_2_56 ON multi_index2(col5, col6);
-SUCCESS
 CREATE INDEX i_2_456 ON multi_index2(col4, col5, col6);
-SUCCESS
+show index from multi_index2;
 SELECT * FROM multi_index2;
+drop table multi_index2;
 1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
 2 | 1 | 16.2 | X | 2021-01-02 | 1 | 61
 3 | 1 | 11.6 | H | 2023-01-02 | 10 | 17
 ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
 
 3. INFLUENCE OF INSERTING
-CREATE TABLE multi_index3(id int, col1 int, col2 float, col3 char, col4 date, col5 int, col6 int);
-SUCCESS
-CREATE INDEX i_3_i1 ON multi_index3(id,col1);
-SUCCESS
+all success
 
+CREATE TABLE multi_index3(id int, col1 int, col2 float, col3 char, col4 date, col5 int, col6 int);
+CREATE INDEX i_3_i1 ON multi_index3(id,col1);
 INSERT INTO multi_index3 VALUES (1, 1, 11.2, 'a', '2021-01-02', 1, 1);
-SUCCESS
 INSERT INTO multi_index3 VALUES (1, 1, 11.2, 'a', '2021-01-02', 1, 1);
-SUCCESS
 SELECT * FROM multi_index3;
+CREATE INDEX i_3_14 ON multi_index3(col1,col4);
+INSERT INTO multi_index3 VALUES (2, 1, 16.2, 'x', '2021-01-02', 1, 61);
+INSERT INTO multi_index3 VALUES (3, 1, 11.6, 'h', '2023-01-02', 10, 17);
+INSERT INTO multi_index3 VALUES (4, 2, 12.2, 'e', '2022-01-04', 13, 10);
+INSERT INTO multi_index3 VALUES (5, 3, 14.2, 'd', '2020-04-02', 12, 2);
+show index from multi_index3;
+SELECT * FROM multi_index3;
+drop table multi_index3;
+
 1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
 1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
 ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
-CREATE INDEX i_3_14 ON multi_index3(col1,col4);
-SUCCESS
-INSERT INTO multi_index3 VALUES (2, 1, 16.2, 'x', '2021-01-02', 1, 61);
-SUCCESS
-INSERT INTO multi_index3 VALUES (3, 1, 11.6, 'h', '2023-01-02', 10, 17);
-SUCCESS
-INSERT INTO multi_index3 VALUES (4, 2, 12.2, 'e', '2022-01-04', 13, 10);
-SUCCESS
-INSERT INTO multi_index3 VALUES (5, 3, 14.2, 'd', '2020-04-02', 12, 2);
-SUCCESS
-SELECT * FROM multi_index3;
+
 1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
 1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
 2 | 1 | 16.2 | X | 2021-01-02 | 1 | 61
@@ -71,15 +61,19 @@ ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
 
 4. QUERY WITH INDEXS
 SELECT * FROM multi_index3 WHERE id = 1;
-1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
-1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
-ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
 SELECT * FROM multi_index3 WHERE col1 > 1 and col4 = '2021-01-02';
-ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
 SELECT * FROM multi_index3 WHERE col1 <> 1 and col4 >= '2021-01-02';
+SELECT * FROM multi_index3 WHERE col2 < 15.0 and col4 <> '2021-01-02';
+
+1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
+1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
+ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
+
 4 | 2 | 12.2 | E | 2022-01-04 | 13 | 10
 ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
-SELECT * FROM multi_index3 WHERE col2 < 15.0 and col4 <> '2021-01-02';
+
 3 | 1 | 11.6 | H | 2023-01-02 | 10 | 17
 4 | 2 | 12.2 | E | 2022-01-04 | 13 | 10
 5 | 3 | 14.2 | D | 2020-04-02 | 12 | 2
@@ -87,9 +81,7 @@ ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
 
 5. INFLUENCE OF DELETING
 DELETE FROM multi_index3 WHERE id = 1;
-SUCCESS
 DELETE FROM multi_index3 WHERE id = 61;
-SUCCESS
 SELECT * FROM multi_index3;
 2 | 1 | 16.2 | X | 2021-01-02 | 1 | 61
 3 | 1 | 11.6 | H | 2023-01-02 | 10 | 17
