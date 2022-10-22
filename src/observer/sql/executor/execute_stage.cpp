@@ -1638,7 +1638,7 @@ RC Pretable::assign_row_to_value(Value *value)
 {
   if (tuples_.size() == 1 && tuples_[0].metas().size() == 1) {
     const FieldMeta &meta = tuples_[0].meta(0);
-    value->type = meta.type();
+    value->type = tuples_[0].get_cell(0).attr_type();
     value->data = new char[meta.len()];
     memcpy(value->data, tuples_[0].get_cell(0).data(), meta.len());
     // null case

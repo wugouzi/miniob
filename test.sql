@@ -1,3 +1,22 @@
+UPDATE Update_table_3 SET t_name=(select Update_table_2.col1 from Update_table_2 where Update_table_2.id=1),col1=(select avg(Update_table_2.col1) from Update_table_2) where id=1;
+SUCCESS
+SELECT * FROM Update_table_3;
+-1 | 1 | 1 | 2
++1 | 1 | 1065353216 | 2
+2 | 2 | 2 | 2
+3 | N01 | 1 | 2
+ID | T_NAME | COL1 | COL2
+\ No newline at end of file
+
+SELECT * FROM like_table WHERE name NOT LIKE 'p%' AND name NOT LIKE '%e';
++1 | APPLE
+10 | cherry
+12 | strawberry
++2 | ORANGE
+4 | lemon
+5 | banana
++6 | GRAPE
+
 1. MULTI INDEX OF EMPTY TABLE
 CREATE TABLE multi_index(id int, col1 int, col2 float, col3 char, col4 date, col5 int, col6 int);
 SUCCESS
@@ -90,7 +109,6 @@ SELECT * FROM multi_index3;
 ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
 
 DELETE FROM multi_index3 WHERE col3 = 'x';
-SUCCESS
 SELECT * FROM multi_index3;
 3 | 1 | 11.6 | H | 2023-01-02 | 10 | 17
 4 | 2 | 12.2 | E | 2022-01-04 | 13 | 10
@@ -98,28 +116,19 @@ SELECT * FROM multi_index3;
 ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
 
 DELETE FROM multi_index3 WHERE id = 4 and col1 = 1;
-SUCCESS
 DELETE FROM multi_index3 WHERE id = 90 and col1 = 13;
-SUCCESS
 DELETE FROM multi_index3 WHERE id = 90 and col1 = 1;
-SUCCESS
 DELETE FROM multi_index3 WHERE id = 4 and col1 = 13;
-SUCCESS
 DELETE FROM multi_index3 WHERE id = 3 and col1 = 1;
-SUCCESS
 DELETE FROM multi_index3 WHERE id = 3 and col1 = 1;
-SUCCESS
 SELECT * FROM multi_index3;
 4 | 2 | 12.2 | E | 2022-01-04 | 13 | 10
 5 | 3 | 14.2 | D | 2020-04-02 | 12 | 2
 ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
 
 INSERT INTO multi_index3 VALUES (1, 1, 11.2, 'a', '2021-01-02', 1, 1);
-SUCCESS
 INSERT INTO multi_index3 VALUES (2, 1, 11.2, 'x', '2021-01-02', 1, 61);
-SUCCESS
 INSERT INTO multi_index3 VALUES (3, 1, 11.2, 'h', '2023-01-02', 10, 17);
-SUCCESS
 SELECT * FROM multi_index3;
 1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
 2 | 1 | 11.2 | X | 2021-01-02 | 1 | 61
@@ -130,13 +139,9 @@ ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
 
 6. INFLUENCE OF UPDATING
 UPDATE multi_index3 SET col6=49 where id=2;
-SUCCESS
 UPDATE multi_index3 SET col4='1999-02-01' where id=2;
-SUCCESS
 UPDATE multi_index3 SET col1=2 where id=2;
-SUCCESS
 UPDATE multi_index3 SET col1=5 where col6=49;
-SUCCESS
 SELECT * FROM multi_index3;
 1 | 1 | 11.2 | A | 2021-01-02 | 1 | 1
 2 | 5 | 11.2 | X | 1999-02-01 | 1 | 49
@@ -151,16 +156,20 @@ SUCCESS
 
 8. ERROR
 CREATE TABLE multi_index4(id int, col1 int, col2 float, col3 char, col4 date, col5 int, col6 int);
-SUCCESS
 
+failure
 CREATE INDEX i_4_i7 ON multi_index4(id,col7);
-FAILURE
 CREATE INDEX i_4_78 ON multi_index4(col7,col8);
-FAILURE
 CREATE INDEX i_4_i78 ON multi_index4(id,col7,col8);
-FAILURE
 
-
+create table t1(id int, name char(4), col int);
+create table t2(id int, name char(4), col float);
+insert into t1 values(1,1,1);
+insert into t1 values(2,2,2);
+insert into t1 values(3,3,3);
+insert into t2 values(4,4,4.44);
+insert into t2 values(5,5,5.55);
+insert into t2 values(6,6,6.66);
 
 SUCCESS
 UPDATE Update_table_3 SET t_name=
