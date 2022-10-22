@@ -21,6 +21,14 @@ SELECT * FROM Update_table_3;
 2 | 2 | 2 | 2
 3 | N01 | 1 | 2
 
+create table t1(id int, name char(10));
+insert into t1 values(1,'test');
+insert into t1 values(34, 33);
+select * from t1;
+update t1 set name=(select id from t1 where name='33') where id=1;
+select * from t1;
+drop table t1;
+
 -- index
 create table t(id int, age float, name char);
 SHOW INDEX FROM t;
@@ -35,6 +43,7 @@ insert into t values (1, 'wefwef');
 insert into t values (2, 'wwwws');
 insert into t values (3, '313');
 select * from t where name like 'w%' and name not like 'a';
+select * from t
 drop table t;
 select * from table where name like
 
@@ -51,6 +60,18 @@ SUCCESS
 SELECT * FROM null_table4;
 -1 | NULL | NULL
 2 | NULL | N2
+
+create table t(id int, num int nullable);
+insert into t values (1, null);
+update t set id=null where num is null;
+select * from t;
+drop table t;
+
+create table t(id int, num int);
+insert into t values (1, null);
+update t set id=null where num is null;
+select * from t;
+drop table t;
 
 CREATE TABLE null_table(id int, num int nullable, price float not null, birthday date nullable);
 CREATE TABLE null_table2(id int, num int nullable, price float not null, birthday date nullable);

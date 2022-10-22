@@ -104,6 +104,9 @@ float Stmt::char_to_float(const char *s)
 // 1 extra byte for bull
 bool Stmt::convert_type(const FieldMeta *field, Value *value)
 {
+  if (value->type == field->type()) {
+    return true;
+  }
   if (value->type == AttrType::NULLS) {
     return true;
   }
@@ -161,7 +164,7 @@ bool Stmt::convert_type(const FieldMeta *field, Value *value)
   }
   free(value->data);
   value->data = data;
-  return value;
+  return true;
 }
 
 RC Stmt::get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
