@@ -91,9 +91,6 @@ QUOTE            [\'\"]
 [Ll][Oo][Aa][Dd]                                     RETURN_TOKEN(LOAD);
 [Dd][Aa][Tt][Aa]                                     RETURN_TOKEN(DATA_T);
 [Ii][Nn][Ff][Ii][Ll][Ee]                             RETURN_TOKEN(INFILE);
-[Oo][Rr][Dd][Ee][Rr]                                 RETURN_TOKEN(ORDER);
-[Gg][Rr][Oo][Uu][Pp]                                 RETURN_TOKEN(GROUP);
-[Bb][Yy]                                             RETURN_TOKEN(BY);
 [Aa][Ss][Cc]                                         RETURN_TOKEN(ASC);
 {ID}                                                 yylval->string=strdup(yytext); RETURN_TOKEN(ID);
 "("                                                  RETURN_TOKEN(LBRACE);
