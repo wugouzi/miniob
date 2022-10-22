@@ -494,6 +494,8 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
   print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1);
   res->print(ss);
 
+  ss << "\nhahahaha\n";
+
   session_event->set_response(ss.str());
   return rc;
 }
