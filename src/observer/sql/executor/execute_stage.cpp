@@ -468,7 +468,7 @@ Pretable *ExecuteStage::select_to_pretable(SelectStmt *select_stmt, RC *rc)
   } else {
     res->filter_fields(select_stmt->query_fields());
     // order by fields, if necessary
-    // res->order_by(select_stmt->order_by_fields());
+    res->order_by(select_stmt->order_by_fields());
   }
 
   if (*rc != RC::SUCCESS) {
@@ -496,8 +496,6 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
 
   print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1);
   res->print(ss);
-
-  ss << "\nhahahaha\n";
 
   session_event->set_response(ss.str());
   return rc;
@@ -1646,7 +1644,7 @@ void Pretable::order_by(const std::vector<OrderByField> &order_by_fields){
     int index = tuples_[0].index(order_by_field.table, *order_by_field.field_meta);
     index_desc_pairs.push_back({index, order_by_field.is_desc});
   }
-  LOG_WARN("haha");
+  std::reverse(index_desc_pairs.begin(), index_desc_pairs.end());
   sort(tuples_.begin(), tuples_.end(), [&](TupleSet& a, TupleSet& b) -> int {
     for(auto i_d: index_desc_pairs){
       auto& index = i_d.first;
@@ -1657,8 +1655,13 @@ void Pretable::order_by(const std::vector<OrderByField> &order_by_fields){
       if(res == 0){
         continue;
       }
-      return is_desc ? -res : res;
+      if (is_desc) {
+        return res>0;
+      } else {
+        return res<0;
+      }
     }
+    return false;
   });
 }
 

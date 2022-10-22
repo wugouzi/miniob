@@ -651,13 +651,13 @@ order_component:
 ;
 
 order_direction: 
- | ASC  {
+ ASC {
   CONTEXT->is_desc = 0;
  }
  | DESC {
   CONTEXT->is_desc = 1;
  }
- {
+ | {
   CONTEXT->is_desc = 0;
  }
 ;

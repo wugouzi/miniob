@@ -48,13 +48,13 @@ static RC extract_from_order_by_clause(
     // use first table by default
     Table* table = nullptr;
     if(!common::is_blank(order_by_attr.attr.relation_name)){
-      table = table_map[order_by_attr.attr.attribute_name];
+      table = table_map[order_by_attr.attr.relation_name];
     } else if(tables.size() > 0){
       table = tables[0];
     }
     if(table){
       const FieldMeta* field_meta = table->table_meta().field(order_by_attr.attr.attribute_name);
-      if(field_meta){
+      if(!field_meta){
         return RC::SCHEMA_FIELD_MISSING;
       }
       OrderByField order_by_field;
