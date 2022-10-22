@@ -610,7 +610,7 @@ RC ExecuteStage::do_create_index(SQLStageEvent *sql_event)
     return RC::SCHEMA_TABLE_NOT_EXIST;
   }
 
-  RC rc = table->create_index(nullptr, create_index.index_name, create_index.attribute_name, create_index.unique);
+  RC rc = table->create_index(nullptr, create_index.index_name, create_index.attribute_names, create_index.attribute_num, create_index.unique);
   sql_event->session_event()->set_response(rc == RC::SUCCESS ? "SUCCESS\n" : "FAILURE\n");
   return rc;
 }
@@ -1381,6 +1381,7 @@ RC Pretable::aggregate_avg(int idx, TupleCell *res)
   }
   size_t len = sizeof(float)+1;
   char *data = new char[len];
+  memset(data, 0, len);
   res->set_length(len);
   if (cnt == 0) {
     data[len - 1] = 1;

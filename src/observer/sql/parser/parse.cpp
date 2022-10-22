@@ -365,12 +365,17 @@ void drop_table_destroy(DropTable *drop_table)
   drop_table->relation_name = nullptr;
 }
 
+void create_index_append(CreateIndex *create_index, const char *attribute_name)
+{
+  create_index->attribute_names[create_index->attribute_num++] = strdup(attribute_name);
+}
+
 void create_index_init(
-    CreateIndex *create_index, const char *index_name, const char *relation_name, const char *attr_name, int unique)
+    CreateIndex *create_index, const char *index_name, const char *relation_name, int unique)
 {
   create_index->index_name = strdup(index_name);
   create_index->relation_name = strdup(relation_name);
-  create_index->attribute_name = strdup(attr_name);
+  // create_index->attribute_name = strdup(attr_name);
   create_index->unique = unique;
 }
 
@@ -383,11 +388,13 @@ void create_index_destroy(CreateIndex *create_index)
 {
   free(create_index->index_name);
   free(create_index->relation_name);
-  free(create_index->attribute_name);
+  for (int i = 0; i < create_index->attribute_num; i++) {
+    free(create_index->attribute_names[i]);
+    create_index->attribute_names[i] = nullptr;
+  }
 
   create_index->index_name = nullptr;
   create_index->relation_name = nullptr;
-  create_index->attribute_name = nullptr;
 }
 
 void drop_index_init(DropIndex *drop_index, const char *index_name)

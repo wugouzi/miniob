@@ -249,17 +249,18 @@ SHOW INDEX FROM ID SEMICOLON {
 ;
 
 create_index:		/*create index 语句的语法解析树*/
-    CREATE INDEX ID ON ID LBRACE ID index_ids RBRACE SEMICOLON
-		{
-			CONTEXT->ssql->flag = SCF_CREATE_INDEX;//"create_index";
-			create_index_init(&CONTEXT->ssql->sstr.create_index, $3, $5, $7, 0);
-		}
-    ;
+CREATE INDEX ID ON ID LBRACE ID index_ids RBRACE SEMICOLON
+{
+  CONTEXT->ssql->flag = SCF_CREATE_INDEX;//"create_index";
+  create_index_append(&CONTEXT->ssql->sstr.create_index, $7);
+  create_index_init(&CONTEXT->ssql->sstr.create_index, $3, $5, 0);
+}
+;
 
 index_ids:
 /* empty */
-| ID {
-
+| COMMA ID {
+  create_index_append(&CONTEXT->ssql->sstr.create_index, $2);
 }
 ;
 
