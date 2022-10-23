@@ -1,15 +1,55 @@
+create table t(id1 int, id2 int, id3 int);
+create unique index idx on t(id1, id3);
+INSERT INTO t VALUES(1,null,1);
+INSERT INTO t VALUES(1,null,2);
+INSERT INTO t VALUES(null,null,1);
+INSERT INTO t VALUES(null,null,2);
+SELECT * FROM t;
+drop table t;
+
+create table t(id1 int, id2 int, id3 int);
+create unique index idx on t(id2, id3);
+INSERT INTO t VALUES(1,null,1);
+INSERT INTO t VALUES(1,null,2);
+INSERT INTO t VALUES(null,null,1);
+INSERT INTO t VALUES(null,null,2);
+SELECT * FROM t;
+drop table t;
+
+create table t(id1 int, id2 int, id3 int);
+create unique index idx on t(id1, id2);
+INSERT INTO t VALUES(1,null,1);
+INSERT INTO t VALUES(1,null,2);
+INSERT INTO t VALUES(null,null,1);
+INSERT INTO t VALUES(null,null,2);
+SELECT * FROM t;
+drop table t;
+
+create table null_table6(id1 int nullable, id2 int nullable, id3 int);
+create unique index idx on null_table6(id1, id3);
+INSERT INTO null_table6 VALUES(1,null,1);
+INSERT INTO null_table6 VALUES(1,null,2);
+INSERT INTO null_table6 VALUES(null,null,1);
+INSERT INTO null_table6 VALUES(null,null,2);
+SELECT * FROM null_table6;
+drop table null_table6;
+...
+
 create table t(id int, age int);
 create unique index idx on t(id, age);
 insert into t values(1,1);
 insert into t values(1,1);
 insert into t values(null,1);
 insert into t values(null,1);
+select * from t;
+
 
 create table t(id int nullable, age int nullable);
 create unique index idx on t(id, age);
 insert into t values(1,1);
-insert into t values(1,1);
 insert into t values(null,1);
+insert into t values(1,1);
+
 insert into t values(null,1);
 
 create table null_table5(id date nullable, age int);
@@ -94,6 +134,7 @@ CREATE INDEX i_1_12 ON multi_index(col1,col2);
 CREATE INDEX i_1_345 ON multi_index(col3, col4, col5);
 CREATE INDEX i_1_56 ON multi_index(col5, col6);
 CREATE INDEX i_1_456 ON multi_index(col4, col5, col6);
+show index from multi_index;
 SELECT * FROM multi_index;
 ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
 

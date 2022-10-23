@@ -162,11 +162,11 @@ void Table::show_index(std::stringstream &ss)
   for (int i = 0; i < table_meta().index_num(); i++) {
     Index *index = indexes_[i];
     int size = index->index_meta().fields().size();
-    for (int j = size-1; j >= 0; j--) {
+    for (int j = 0; j < size; j++) {
       ss << name() << " | ";
       ss << 1 - index->is_unique() << " | ";
       ss << index->index_meta().name() << " | ";
-      ss << size-j << " | ";
+      ss << j + 1 << " | ";
       ss << index->index_meta().field(j);
       ss << "\n";
     }
@@ -280,7 +280,7 @@ RC Table::rollback_insert(Trx *trx, const RID &rid)
   return rc;
 }
 
-RC Table::insert_record(Trx *trx, Record *record)
+RC Table::insert_record(Trx *trx, Record *record, bool has_null)
 {
   RC rc = RC::SUCCESS;
 
@@ -294,7 +294,7 @@ RC Table::insert_record(Trx *trx, Record *record)
   }
 
   int num = 0;
-  rc = insert_entry_of_indexes(record->data(), record->rid(), &num);
+  rc = insert_entry_of_indexes(record->data(), record->rid(), &num, has_null);
   if (rc != RC::SUCCESS) {
     RC rc2 = delete_entry_of_indexes(record->data(), record->rid(), num, true);
     if (rc2 != RC::SUCCESS) {
@@ -377,9 +377,17 @@ RC Table::insert_records(Trx *trx, int valuelist_num, const ValueList *valuelist
       return rc;
     }
 
+    bool has_null = false;
+    for (int i = 0; i < value_num; i++) {
+      if (values[i].type == AttrType::NULLS) {
+        has_null = true;
+        break;
+      }
+    }
+
     Record record;
     record.set_data(record_data);
-    rc = insert_record(trx, &record);
+    rc = insert_record(trx, &record, has_null);
     if (rc != RC::SUCCESS) {
       for (Record &r : records) {
         recover_insert_record(&r);
@@ -408,9 +416,17 @@ RC Table::insert_record(Trx *trx, int value_num, const Value *values)
     return rc;
   }
 
+  bool has_null = false;
+  for (int i = 0; i < value_num; i++) {
+    if (values[i].type == AttrType::NULLS) {
+      has_null = true;
+      break;
+    }
+  }
+
   Record record;
   record.set_data(record_data);
-  rc = insert_record(trx, &record);
+  rc = insert_record(trx, &record, has_null);
   delete[] record_data;
   return rc;
 }
@@ -1009,11 +1025,16 @@ RC Table::rollback_delete(Trx *trx, const RID &rid)
   return trx->rollback_delete(this, record);  // update record in place
 }
 
-RC Table::insert_entry_of_indexes(const char *record, const RID &rid, int *insert_cnt)
+RC Table::insert_entry_of_indexes(const char *record, const RID &rid, int *insert_cnt, bool has_null)
 {
   RC rc = RC::SUCCESS;
   for (Index *index : indexes_) {
+    bool is_unique = index->is_unique();
+    if (has_null && is_unique) {
+      index->set_unique(false);
+    }
     rc = index->insert_entry(record, &rid);
+    index->set_unique(is_unique);
     if (rc != RC::SUCCESS) {
       break;
     }

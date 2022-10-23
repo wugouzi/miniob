@@ -486,6 +486,10 @@ public:
    */
   bool validate_tree();
 
+  void set_unique(bool f) {
+    unique_ = f;
+  }
+
 public:
   RC print_tree();
   RC print_leafs();
