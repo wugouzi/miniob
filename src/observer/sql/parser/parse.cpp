@@ -381,6 +381,11 @@ void create_index_init(
 {
   create_index->index_name = strdup(index_name);
   create_index->relation_name = strdup(relation_name);
+  for (int i = 0; i < create_index->attribute_num / 2; i++) {
+    char *tp = create_index->attribute_names[i];
+    create_index->attribute_names[i] = create_index->attribute_names[create_index->attribute_num - i - 1];
+    create_index->attribute_names[create_index->attribute_num - i - 1] = tp;
+  }
   // create_index->attribute_name = strdup(attr_name);
   create_index->unique = unique;
 }

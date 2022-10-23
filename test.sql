@@ -1,3 +1,42 @@
+create table t(id int, age int);
+create unique index idx on t(id, age);
+insert into t values(1,1);
+insert into t values(1,1);
+insert into t values(null,1);
+insert into t values(null,1);
+
+create table t(id int nullable, age int nullable);
+create unique index idx on t(id, age);
+insert into t values(1,1);
+insert into t values(1,1);
+insert into t values(null,1);
+insert into t values(null,1);
+
+create table null_table5(id date nullable, age int);
+INSERT INTO null_table5 VALUES(1,1);
+FAILURE
+INSERT INTO null_table5 VALUES(null,1);
+-SUCCESS
++FAILURE
+INSERT INTO null_table5 VALUES(null,2);
+drop table null_table5;
+-SUCCESS
++FAILURE
+SELECT * FROM null_table5;
+1 | 1
+...
+
+INSERT INTO unique_table2 VALUES (1,2,1,1);
+FAILURE
+INSERT INTO unique_table2 VALUES (2,3,1,1);
+-SUCCESS
++FAILURE
+2. SELECT
+SELECT * FROM unique_table1;
+1 | 1 | 1
+...
+
+
 CREATE TABLE unique_table(id int, col1 int, col2 int);
 INSERT INTO unique_table VALUES (1,1,1);
 
@@ -51,15 +90,10 @@ drop table t;
 
 1. MULTI INDEX OF EMPTY TABLE
 CREATE TABLE multi_index(id int, col1 int, col2 float, col3 char, col4 date, col5 int, col6 int);
-SUCCESS
 CREATE INDEX i_1_12 ON multi_index(col1,col2);
-SUCCESS
 CREATE INDEX i_1_345 ON multi_index(col3, col4, col5);
-SUCCESS
 CREATE INDEX i_1_56 ON multi_index(col5, col6);
-SUCCESS
 CREATE INDEX i_1_456 ON multi_index(col4, col5, col6);
-SUCCESS
 SELECT * FROM multi_index;
 ID | COL1 | COL2 | COL3 | COL4 | COL5 | COL6
 
@@ -1124,6 +1158,8 @@ FAILURE
 1 | 18 | A | 1 | 20 | A | 2 | 37 | A
 SELECT_TABLES_1.ID | SELECT_TABLES_1.AGE | SELECT_TABLES_1.U_NAME | SELECT_TABLES_2.ID | SELECT_TABLES_2.AGE | SELECT_TABLES_2.U_NAME | SELECT_TABLES_3.ID | SELECT_TABLES_3.RES | SELECT_TABLES_3.U_NAME
 
+\
+
 1 | 18 | A | 1 | 20 | A | 1 | 35 | A
 2 | 15 | B | 2 | 21 | C | 1 | 35 | A
 SELECT_TABLES_1.ID | SELECT_TABLES_1.AGE | SELECT_TABLES_1.U_NAME | SELECT_TABLES_2.ID | SELECT_TABLES_2.AGE | SELECT_TABLES_2.U_NAME | SELECT_TABLES_3.ID | SELECT_TABLES_3.RES | SELECT_TABLES_3.U_NAME
@@ -1157,6 +1193,13 @@ SELECT_TABLES_1.ID | SELECT_TABLES_6.ID
 
 */
 CREATE TABLE date_table(id int, u_date date);
+CREATE INDEX index_id on date_table(u_date);
+
+INSERT INTO date_table VALUES (1,'2020-01-21');
+DELETE FROM date_table WHERE u_date>'2012-2-29';
+drop table date_table;
+
+CREATE TABLE date_table(id int, u_date date);
 INSERT INTO date_table VALUES (1,'2020-01-21');
 --date
 CREATE TABLE date_table(id int, u_date date);
@@ -1178,6 +1221,7 @@ SELECT * FROM date_table WHERE u_date='2020-1-1';
 
 DELETE FROM date_table WHERE u_date>'2012-2-29';
 SELECT * FROM date_table;
+\
 
 SELECT * FROM date_table WHERE u_date='2017-2-29';
 SELECT * FROM date_table WHERE u_date='2017-21-29';

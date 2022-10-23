@@ -180,7 +180,7 @@ int LeafIndexNodeHandler::min_size() const
 int LeafIndexNodeHandler::lookup(const KeyComparator &comparator, const char *key, bool *found /* = nullptr */) const
 {
   const int size = this->size();
-  for (int i = 0; i < size; i++) {
+  /*for (int i = 0; i < size; i++) {
     int cmp = comparator(__key_at(i), key);
     if (cmp == 0) {
       *found = true;
@@ -188,14 +188,14 @@ int LeafIndexNodeHandler::lookup(const KeyComparator &comparator, const char *ke
       return i;
     }
   }
-  return size;
-  // common::BinaryIterator<char> iter_begin(item_size(), __key_at(0));
-  // common::BinaryIterator<char> iter_end(item_size(), __key_at(size));
-  // common::BinaryIterator<char> iter = lower_bound(iter_begin, iter_end, key, comparator, found);
-  // if (iter != iter_end && comparator(key, *iter) == 0) {
-  //   *found = true;
-  // }
-  // return iter - iter_begin;
+  return size;*/
+  common::BinaryIterator<char> iter_begin(item_size(), __key_at(0));
+  common::BinaryIterator<char> iter_end(item_size(), __key_at(size));
+  common::BinaryIterator<char> iter = lower_bound(iter_begin, iter_end, key, comparator, found);
+  if (iter != iter_end && comparator(key, *iter) == 0) {
+    *found = true;
+  }
+  return iter - iter_begin;
 }
 
 void LeafIndexNodeHandler::insert(int index, const char *key, const char *value)

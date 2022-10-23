@@ -293,22 +293,6 @@ RC Table::insert_record(Trx *trx, Record *record)
     return rc;
   }
 
-  if (trx != nullptr) {
-    rc = trx->insert_record(this, record);
-    if (rc != RC::SUCCESS) {
-      LOG_ERROR("Failed to log operation(insertion) to trx");
-
-      RC rc2 = record_handler_->delete_record(&record->rid());
-      if (rc2 != RC::SUCCESS) {
-        LOG_ERROR("Failed to rollback record data when insert index entries failed. table name=%s, rc=%d:%s",
-            name(),
-            rc2,
-            strrc(rc2));
-      }
-      return rc;
-    }
-  }
-
   int num = 0;
   rc = insert_entry_of_indexes(record->data(), record->rid(), &num);
   if (rc != RC::SUCCESS) {
@@ -327,6 +311,22 @@ RC Table::insert_record(Trx *trx, Record *record)
           strrc(rc2));
     }
     return rc;
+  }
+
+  if (trx != nullptr) {
+    rc = trx->insert_record(this, record);
+    if (rc != RC::SUCCESS) {
+      LOG_ERROR("Failed to log operation(insertion) to trx");
+
+      RC rc2 = record_handler_->delete_record(&record->rid());
+      if (rc2 != RC::SUCCESS) {
+        LOG_ERROR("Failed to rollback record data when insert index entries failed. table name=%s, rc=%d:%s",
+                  name(),
+                  rc2,
+                  strrc(rc2));
+      }
+      return rc;
+    }
   }
 
   if (trx != nullptr) {
@@ -464,6 +464,7 @@ RC Table::make_record(int value_num, const Value *values, char *&record_out)
         copy_len = data_len + 1 - 1;
       }
     }
+    assert(!(value.type == NULLS) || ((char *)value.data)[field->len() - 1] == 1);
     memcpy(record + field->offset(), value.data, copy_len);
   }
 
@@ -1016,7 +1017,7 @@ RC Table::insert_entry_of_indexes(const char *record, const RID &rid, int *inser
     if (rc != RC::SUCCESS) {
       break;
     }
-    *insert_cnt++;
+    (*insert_cnt)++;
   }
   return rc;
 }

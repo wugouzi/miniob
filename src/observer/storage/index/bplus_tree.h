@@ -50,6 +50,7 @@ public:
 
   int operator()(const char *v1, const char *v2) const {
     int offset = 0;
+    // check null first
     for (size_t i = 0; i < attr_types_.size(); i++) {
       // v1 is null
       if (v1[offset + attr_lengths_[i] - 1] == 1) {
@@ -59,6 +60,8 @@ public:
       if (v2[offset + attr_lengths_[i] - 1] == 1) {
         return 1;
       }
+    }
+    for (size_t i = 0; i < attr_types_.size(); i++) {
       int comp_res = 0;
       switch (attr_types_[i]) {
         case INTS: {

@@ -14,6 +14,7 @@ compile_commands.json
 ./workspace.xml
 ./modules.xml
 test/case/miniob
+test/case/result_tmp/
 GRTAGS
 GPATH
 GTAGS
