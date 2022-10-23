@@ -468,7 +468,7 @@ Pretable *ExecuteStage::select_to_pretable(SelectStmt *select_stmt, RC *rc)
   } else {
     res->filter_fields(select_stmt->query_fields());
     // order by fields, if necessary
-    res->order_by(select_stmt->order_by_fields());
+    // res->order_by(select_stmt->order_by_fields());
   }
 
   if (*rc != RC::SUCCESS) {
@@ -1646,7 +1646,8 @@ void Pretable::order_by(const std::vector<OrderByField> &order_by_fields){
     int index = tuples_[0].index(order_by_field.table, *order_by_field.field_meta);
     index_desc_pairs.push_back({index, order_by_field.is_desc});
   }
-  sort(tuples_.begin(), tuples_.end(), [&](TupleSet& a, TupleSet& b) -> bool {
+  LOG_WARN("haha");
+  sort(tuples_.begin(), tuples_.end(), [&](TupleSet& a, TupleSet& b) -> int {
     for(auto i_d: index_desc_pairs){
       auto& index = i_d.first;
       auto& is_desc = i_d.second;

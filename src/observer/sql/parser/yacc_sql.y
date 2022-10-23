@@ -656,7 +656,11 @@ order_direction:
  }
  | DESC {
   CONTEXT->is_desc = 1;
-};
+ }
+ {
+  CONTEXT->is_desc = 0;
+ }
+;
 
 order_component_list:
     /* empty */
