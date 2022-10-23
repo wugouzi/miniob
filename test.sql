@@ -1,3 +1,25 @@
+
+
+
+create table t(id int);
+insert into t values(1);
+insert into t values(2);
+select * from t where id in (1,3,4,5);
+select * from t where id not in (1,3,4,5);
+select * from t where id in (1,3,4,5, null);
+select * from t where id not in (1,3,4,5, null);
+drop table t;
+
+INSERT INTO unique_table2 VALUES (1,2,1,1);
+FAILURE
+INSERT INTO unique_table2 VALUES (2,3,1,1);
+-SUCCESS
++FAILURE
+2. SELECT
+SELECT * FROM unique_table1;
+1 | 1 | 1
+...
+
 create table t(id1 int, id2 int, id3 int);
 create unique index idx on t(id1, id3);
 INSERT INTO t VALUES(1,null,1);
