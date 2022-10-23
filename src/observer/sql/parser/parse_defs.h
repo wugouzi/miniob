@@ -66,6 +66,7 @@ typedef enum
   DATES,
   NULLS,
   SELECTS,
+  TEXTS,     // text don't have null bit
   FLOATS
 } AttrType;
 

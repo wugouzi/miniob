@@ -50,6 +50,7 @@ public:
 
   int operator()(const char *v1, const char *v2) const {
     int offset = 0;
+    // check null first
     for (size_t i = 0; i < attr_types_.size(); i++) {
       // v1 is null
       if (v1[offset + attr_lengths_[i] - 1] == 1) {
@@ -59,6 +60,8 @@ public:
       if (v2[offset + attr_lengths_[i] - 1] == 1) {
         return 1;
       }
+    }
+    for (size_t i = 0; i < attr_types_.size(); i++) {
       int comp_res = 0;
       switch (attr_types_[i]) {
         case INTS: {
@@ -93,7 +96,8 @@ private:
 class KeyComparator
 {
 public:
-  void init(std::vector<AttrType> types, std::vector<int> lens) {
+  void init(std::vector<AttrType> types, std::vector<int> lens, bool check_dup) {
+    check_dup_ = check_dup;
     attr_comparator_.init(types, lens);
   }
   // void init(AttrType type, int length)
@@ -107,7 +111,7 @@ public:
 
   int operator() (const char *v1, const char *v2) const {
     int result = attr_comparator_(v1, v2);
-    if (result != 0) {
+    if (check_dup_ || result != 0) {
       return result;
     }
 
@@ -118,6 +122,7 @@ public:
 
 private:
   AttrComparator attr_comparator_;
+  bool check_dup_;
 };
 
 class AttrPrinter
@@ -432,7 +437,7 @@ public:
    * attrType描述被索引属性的类型，attrLength描述被索引属性的长度
    */
   RC create(const char *file_name, std::vector<AttrType> attr_type, std::vector<int> attr_length,
-	    int internal_max_size = -1, int leaf_max_size = -1);
+            bool unique, int internal_max_size = -1, int leaf_max_size = -1);
 
   /**
    * 打开名为fileName的索引文件。
@@ -480,6 +485,10 @@ public:
    * @return
    */
   bool validate_tree();
+
+  void set_unique(bool f) {
+    unique_ = f;
+  }
 
 public:
   RC print_tree();
@@ -529,6 +538,7 @@ private:
   char *make_key(const char * &user_keys, const RID &rid);
   void  free_key(char *key);
 protected:
+  bool unique_ = false;
   DiskBufferPool *disk_buffer_pool_ = nullptr;
   bool header_dirty_ = false;
   IndexFileHeader file_header_;

@@ -42,6 +42,10 @@ public:
 
   RC sync() override;
 
+  void set_unique(bool f) override {
+    index_handler_.set_unique(f);
+  }
+
 private:
   bool inited_ = false;
   BplusTreeHandler index_handler_;

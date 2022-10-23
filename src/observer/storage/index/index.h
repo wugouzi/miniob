@@ -55,6 +55,8 @@ public:
     return index_meta_.is_unique();
   }
 
+  virtual void set_unique(bool f) = 0;
+
 protected:
   RC init(const IndexMeta &index_meta, const std::vector<FieldMeta> &field_metas);
 

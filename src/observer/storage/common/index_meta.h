@@ -53,6 +53,7 @@ public:
   int field_num() { return fields_.size(); }
   // const char *field() const;
   bool is_unique() const { return unique_; }
+  void set_unique(bool f) { unique_ = f; }
 
   void desc(std::ostream &os) const;
 

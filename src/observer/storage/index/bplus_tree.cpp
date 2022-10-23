@@ -180,9 +180,21 @@ int LeafIndexNodeHandler::min_size() const
 int LeafIndexNodeHandler::lookup(const KeyComparator &comparator, const char *key, bool *found /* = nullptr */) const
 {
   const int size = this->size();
+  /*for (int i = 0; i < size; i++) {
+    int cmp = comparator(__key_at(i), key);
+    if (cmp == 0) {
+      *found = true;
+    } else if (cmp < 0) {
+      return i;
+    }
+  }
+  return size;*/
   common::BinaryIterator<char> iter_begin(item_size(), __key_at(0));
   common::BinaryIterator<char> iter_end(item_size(), __key_at(size));
   common::BinaryIterator<char> iter = lower_bound(iter_begin, iter_end, key, comparator, found);
+  if (iter != iter_end && comparator(key, *iter) == 0) {
+    *found = true;
+  }
   return iter - iter_begin;
 }
 
@@ -738,8 +750,9 @@ RC BplusTreeHandler::sync()
 }
 
 RC BplusTreeHandler::create(const char *file_name, std::vector<AttrType> attr_types, std::vector<int> attr_lengths,
-			    int internal_max_size /* = -1*/, int leaf_max_size /* = -1 */)
+                            bool unique, int internal_max_size /* = -1*/, int leaf_max_size /* = -1 */)
 {
+  unique_ = unique;
   BufferPoolManager &bpm = BufferPoolManager::instance();
   RC rc = bpm.create_file(file_name);
   if (rc != RC::SUCCESS) {
@@ -805,7 +818,7 @@ RC BplusTreeHandler::create(const char *file_name, std::vector<AttrType> attr_ty
     return RC::NOMEM;
   }
 
-  key_comparator_.init(file_header->attr_types, file_header->attr_lengths);
+  key_comparator_.init(file_header->attr_types, file_header->attr_lengths, unique_);
   // TODO
   key_printer_.init(file_header->attr_types[0], file_header->attr_lengths[0]);
   LOG_INFO("Successfully create index %s", file_name);
@@ -850,7 +863,7 @@ RC BplusTreeHandler::open(const char *file_name)
   // close old page_handle
   disk_buffer_pool->unpin_page(frame);
 
-  key_comparator_.init(file_header_.attr_types, file_header_.attr_lengths);
+  key_comparator_.init(file_header_.attr_types, file_header_.attr_lengths, unique_);
   // TODO:
   key_printer_.init(file_header_.attr_types[0], file_header_.attr_lengths[0]);
   LOG_INFO("Successfully open index %s", file_name);
@@ -1156,7 +1169,7 @@ RC BplusTreeHandler::insert_entry_into_leaf_node(Frame *frame, const char *key, 
   LeafIndexNodeHandler leaf_node(file_header_, frame);
   bool exists = false;
   int insert_position = leaf_node.lookup(key_comparator_, key, &exists);
-  if (exists) {
+  if (exists && unique_) {
     LOG_TRACE("entry exists");
     return RC::RECORD_DUPLICATE_KEY;
   }

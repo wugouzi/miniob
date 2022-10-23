@@ -79,46 +79,44 @@ bool PredicateOperator::do_predicate(RowTuple &tuple)
     right_expr->get_value(tuple, right_cell);
     // NULL COMPARE
 
+    bool filter_result = false;
     if (left_cell.attr_type() == AttrType::NULLS && right_cell.attr_type() == AttrType::NULLS &&
         comp == IS_EQUAL) {
-      return true;
+      filter_result = true;
     } else if (left_cell.attr_type() != AttrType::NULLS && right_cell.attr_type() == AttrType::NULLS &&
                comp == IS_NOT_EQUAL) {
-      return true;
+      filter_result = true;
     } else if (left_cell.attr_type() == AttrType::NULLS || right_cell.attr_type() == AttrType::NULLS) {
       return false;
-    }
-
-    if (comp == STR_LIKE) {
-      return string_like(left_cell.data(), right_cell.data());
+    } else if (comp == STR_LIKE) {
+      filter_result = string_like(left_cell.data(), right_cell.data());
     } else if (comp == STR_NOT_LIKE) {
-      return !string_like(left_cell.data(), right_cell.data());
-    }
-
-    const int compare = left_cell.compare(right_cell);
-    bool filter_result = false;
-    switch (comp) {
-    case EQUAL_TO: {
-      filter_result = (0 == compare); 
-    } break;
-    case LESS_EQUAL: {
-      filter_result = (compare <= 0); 
-    } break;
-    case NOT_EQUAL: {
-      filter_result = (compare != 0);
-    } break;
-    case LESS_THAN: {
-      filter_result = (compare < 0);
-    } break;
-    case GREAT_EQUAL: {
-      filter_result = (compare >= 0);
-    } break;
-    case GREAT_THAN: {
-      filter_result = (compare > 0);
-    } break;
-    default: {
-      LOG_WARN("invalid compare type: %d", comp);
-    } break;
+      filter_result = !string_like(left_cell.data(), right_cell.data());
+    } else {
+      const int compare = left_cell.compare(right_cell);
+      switch (comp) {
+        case EQUAL_TO: {
+          filter_result = (0 == compare);
+        } break;
+        case LESS_EQUAL: {
+          filter_result = (compare <= 0);
+        } break;
+        case NOT_EQUAL: {
+          filter_result = (compare != 0);
+        } break;
+        case LESS_THAN: {
+          filter_result = (compare < 0);
+        } break;
+        case GREAT_EQUAL: {
+          filter_result = (compare >= 0);
+        } break;
+        case GREAT_THAN: {
+          filter_result = (compare > 0);
+        } break;
+        default: {
+          LOG_WARN("invalid compare type: %d", comp);
+        } break;
+      }
     }
     if (!filter_result) {
       return false;

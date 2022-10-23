@@ -105,7 +105,7 @@ private:
       RC (*record_reader)(Record *record, void *context));
   IndexScanner *find_index_for_scan(const ConditionFilter *filter);
   IndexScanner *find_index_for_scan(const DefaultConditionFilter &filter);
-  RC insert_record(Trx *trx, Record *record);
+  RC insert_record(Trx *trx, Record *record, bool has_null);
 
 
 public:
@@ -115,8 +115,9 @@ private:
   friend class RecordUpdater;
   friend class RecordDeleter;
 
-  RC insert_entry_of_indexes(const char *record, const RID &rid);
+  RC insert_entry_of_indexes(const char *record, const RID &rid, int *insert_cnt, bool has_null);
   RC delete_entry_of_indexes(const char *record, const RID &rid, bool error_on_not_exists);
+  RC delete_entry_of_indexes(const char *record, const RID &rid, int num, bool error_on_not_exists);
 
 private:
   RC init_record_handler(const char *base_dir);
