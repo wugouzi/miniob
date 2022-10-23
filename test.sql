@@ -3,7 +3,7 @@ INSERT INTO unique_table VALUES (1,1,1);
 
 CREATE UNIQUE INDEX index_id on unique_table(id);
 INSERT INTO unique_table VALUES (1,2,1);
-
+drop table unique_table;
 
 CREATE TABLE unique_table(id int, col1 int, col2 int);
 INSERT INTO unique_table VALUES (1,1,1);
@@ -13,6 +13,7 @@ INSERT INTO unique_table VALUES (2,1,1);
 CREATE UNIQUE INDEX index_id on unique_table(id);
 INSERT INTO unique_table VALUES (3,2,1);
 INSERT INTO unique_table VALUES (1,2,1);
+show index from unique_table;
 FAILURE
 
 2. SELECT
