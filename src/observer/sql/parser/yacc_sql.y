@@ -134,6 +134,7 @@ ParserContext *get_context(yyscan_t scanner)
         ORDER
         GROUP
         BY
+        TEXT_T
 
 %union {
   struct _Attr *attr;
@@ -255,11 +256,17 @@ CREATE INDEX ID ON ID LBRACE ID index_ids RBRACE SEMICOLON
   create_index_append(&CONTEXT->ssql->sstr.create_index, $7);
   create_index_init(&CONTEXT->ssql->sstr.create_index, $3, $5, 0);
 }
+| CREATE UNIQUE_T INDEX ID ON ID LBRACE ID index_ids RBRACE SEMICOLON
+{
+  CONTEXT->ssql->flag = SCF_CREATE_INDEX;//"create_index";
+  create_index_append(&CONTEXT->ssql->sstr.create_index, $8);
+  create_index_init(&CONTEXT->ssql->sstr.create_index, $4, $6, 1);
+}
 ;
 
 index_ids:
 /* empty */
-| COMMA ID index_ids {
+| COMMA ID index_ids  {
   create_index_append(&CONTEXT->ssql->sstr.create_index, $2);
 }
 ;
@@ -330,6 +337,7 @@ type:
        | STRING_T { $$=CHARS; }
        | FLOAT_T { $$=FLOATS; }
        | DATE_T { $$=DATES; }
+| TEXT_T { $$=TEXTS; }
        ;
 ID_get:
 	ID

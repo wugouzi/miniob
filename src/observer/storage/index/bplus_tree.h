@@ -93,7 +93,8 @@ private:
 class KeyComparator
 {
 public:
-  void init(std::vector<AttrType> types, std::vector<int> lens) {
+  void init(std::vector<AttrType> types, std::vector<int> lens, bool check_dup) {
+    check_dup_ = check_dup;
     attr_comparator_.init(types, lens);
   }
   // void init(AttrType type, int length)
@@ -107,7 +108,7 @@ public:
 
   int operator() (const char *v1, const char *v2) const {
     int result = attr_comparator_(v1, v2);
-    if (result != 0) {
+    if (check_dup_ || result != 0) {
       return result;
     }
 
@@ -118,6 +119,7 @@ public:
 
 private:
   AttrComparator attr_comparator_;
+  bool check_dup_;
 };
 
 class AttrPrinter
@@ -432,7 +434,7 @@ public:
    * attrType描述被索引属性的类型，attrLength描述被索引属性的长度
    */
   RC create(const char *file_name, std::vector<AttrType> attr_type, std::vector<int> attr_length,
-	    int internal_max_size = -1, int leaf_max_size = -1);
+            bool unique, int internal_max_size = -1, int leaf_max_size = -1);
 
   /**
    * 打开名为fileName的索引文件。
@@ -529,6 +531,7 @@ private:
   char *make_key(const char * &user_keys, const RID &rid);
   void  free_key(char *key);
 protected:
+  bool unique_ = false;
   DiskBufferPool *disk_buffer_pool_ = nullptr;
   bool header_dirty_ = false;
   IndexFileHeader file_header_;

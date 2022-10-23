@@ -115,8 +115,9 @@ private:
   friend class RecordUpdater;
   friend class RecordDeleter;
 
-  RC insert_entry_of_indexes(const char *record, const RID &rid);
+  RC insert_entry_of_indexes(const char *record, const RID &rid, int *insert_cnt);
   RC delete_entry_of_indexes(const char *record, const RID &rid, bool error_on_not_exists);
+  RC delete_entry_of_indexes(const char *record, const RID &rid, int num, bool error_on_not_exists);
 
 private:
   RC init_record_handler(const char *base_dir);

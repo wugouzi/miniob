@@ -309,9 +309,10 @@ RC Table::insert_record(Trx *trx, Record *record)
     }
   }
 
-  rc = insert_entry_of_indexes(record->data(), record->rid());
+  int num = 0;
+  rc = insert_entry_of_indexes(record->data(), record->rid(), &num);
   if (rc != RC::SUCCESS) {
-    RC rc2 = delete_entry_of_indexes(record->data(), record->rid(), true);
+    RC rc2 = delete_entry_of_indexes(record->data(), record->rid(), num, true);
     if (rc2 != RC::SUCCESS) {
       LOG_ERROR("Failed to rollback index data when insert index entries failed. table name=%s, rc=%d:%s",
           name(),
@@ -1007,7 +1008,7 @@ RC Table::rollback_delete(Trx *trx, const RID &rid)
   return trx->rollback_delete(this, record);  // update record in place
 }
 
-RC Table::insert_entry_of_indexes(const char *record, const RID &rid)
+RC Table::insert_entry_of_indexes(const char *record, const RID &rid, int *insert_cnt)
 {
   RC rc = RC::SUCCESS;
   for (Index *index : indexes_) {
@@ -1015,6 +1016,7 @@ RC Table::insert_entry_of_indexes(const char *record, const RID &rid)
     if (rc != RC::SUCCESS) {
       break;
     }
+    *insert_cnt++;
   }
   return rc;
 }
@@ -1023,6 +1025,21 @@ RC Table::delete_entry_of_indexes(const char *record, const RID &rid, bool error
 {
   RC rc = RC::SUCCESS;
   for (Index *index : indexes_) {
+    rc = index->delete_entry(record, &rid);
+    if (rc != RC::SUCCESS) {
+      if (rc != RC::RECORD_INVALID_KEY || !error_on_not_exists) {
+        break;
+      }
+    }
+  }
+  return rc;
+}
+
+RC Table::delete_entry_of_indexes(const char *record, const RID &rid, int num, bool error_on_not_exists)
+{
+  RC rc = RC::SUCCESS;
+  for (int i = 0; i < num; i++)  {
+    Index *index = indexes_[i];
     rc = index->delete_entry(record, &rid);
     if (rc != RC::SUCCESS) {
       if (rc != RC::RECORD_INVALID_KEY || !error_on_not_exists) {

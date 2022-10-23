@@ -1,3 +1,28 @@
+CREATE TABLE unique_table(id int, col1 int, col2 int);
+INSERT INTO unique_table VALUES (1,1,1);
+
+CREATE UNIQUE INDEX index_id on unique_table(id);
+INSERT INTO unique_table VALUES (1,2,1);
+
+
+CREATE TABLE unique_table(id int, col1 int, col2 int);
+INSERT INTO unique_table VALUES (1,1,1);
+
+CREATE UNIQUE INDEX index_id on unique_table(id);
+INSERT INTO unique_table VALUES (2,1,1);
+CREATE UNIQUE INDEX index_id on unique_table(id);
+INSERT INTO unique_table VALUES (3,2,1);
+INSERT INTO unique_table VALUES (1,2,1);
+FAILURE
+
+2. SELECT
+SELECT * FROM unique_table;
+1 | 1 | 1
+2 | 1 | 1
+3 | 2 | 1
+ID | COL1 | COL2
+
+
 UPDATE Update_table_3 SET t_name=(select Update_table_2.col1 from Update_table_2 where Update_table_2.id=1),col1=(select avg(Update_table_2.col1) from Update_table_2) where id=1;
 SUCCESS
 SELECT * FROM Update_table_3;
@@ -8,7 +33,13 @@ SELECT * FROM Update_table_3;
 ID | T_NAME | COL1 | COL2
 \ No newline at end of file
 
-SELECT * FROM like_table WHERE name NOT LIKE 'p%' AND name NOT LIKE '%e';
+create table t (id int, name char(20));
+insert into t values(1,'apple');
+insert into t values(2,'cherry');
+insert into t values(3,'orange');
+insert into t values(4,'grape');
+SELECT * FROM t WHERE name NOT LIKE 'p%' AND name NOT LIKE '%e';
+drop table t;
 +1 | APPLE
 10 | cherry
 12 | strawberry
@@ -167,9 +198,16 @@ create table t2(id int, name char(4), col float);
 insert into t1 values(1,1,1);
 insert into t1 values(2,2,2);
 insert into t1 values(3,3,3);
+insert into t1 values(4,4,4);
 insert into t2 values(4,4,4.44);
 insert into t2 values(5,5,5.55);
 insert into t2 values(6,6,6.66);
+select * from t1;
+select * from t2;
+update t2 set name=(select col from t1 where id = 1), col=(select avg(col) from t1);
+select * from t2;
+drop table t1;
+drop table t2;
 
 SUCCESS
 UPDATE Update_table_3 SET t_name=

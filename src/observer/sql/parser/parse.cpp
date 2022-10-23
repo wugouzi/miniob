@@ -128,14 +128,20 @@ void value_init_float(Value *value, float v)
   memset(value->data, 0, 5);
   memcpy(value->data, &v, sizeof(v));
 }
+
+// max length is 4096, therefore we need 4098 space
 void value_init_string(Value *value, const char *v)
 {
   printf("string: %s\n", v);
   value->type = CHARS;
   value->select = nullptr;
-  value->data = malloc(strlen(v)+2);
-  memset(value->data, 0, strlen(v)+2);
-  memcpy(value->data, v, strlen(v));
+  int len = strlen(v);
+  if (len >= 4096) {
+    len = 4096;
+  }
+  value->data = malloc(len+2);
+  memset(value->data, 0, len+2);
+  memcpy(value->data, v, len);
 }
 void value_init_select(Value *value, Selects *selects)
 {

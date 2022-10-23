@@ -47,7 +47,8 @@ QUOTE            [\'\"]
 [Dd][Aa][Tt][Ee]                                     RETURN_TOKEN(DATE_T);
 [Mm][Aa][Xx]                                         RETURN_TOKEN(MAX);
 [Cc][Oo][Uu][Nn][Tt]                                 RETURN_TOKEN(COUNT);
-[Nn][Uu][Ll][Ll][Aa][Bb][Ll][Ee]                         RETURN_TOKEN(NULLABLE);
+[Nn][Uu][Ll][Ll][Aa][Bb][Ll][Ee]                     RETURN_TOKEN(NULLABLE);
+[Tt][Ee][Xx][Tt]                                     RETURN_TOKEN(TEXT_T);
 [Nn][Uu][Ll][Ll]                                     RETURN_TOKEN(NULL_V);
 [Ii][Nn][Nn][Ee][Rr]                                 RETURN_TOKEN(INNER);
 [Jj][Oo][Ii][Nn]                                     RETURN_TOKEN(JOIN);
