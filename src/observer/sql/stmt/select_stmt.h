@@ -48,5 +48,9 @@ private:
   std::vector<Table *> tables_;
   FilterStmt *filter_stmt_ = nullptr;
   int aggregate_num_ = 0;
+  /**
+   * Order by these fields.
+   * No need to order if this vector has zero length
+   */
+  std::vector<OrderByField> order_by_fields_;
 };
-

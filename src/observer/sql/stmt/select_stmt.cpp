@@ -37,6 +37,16 @@ static void wildcard_fields(Table *table, std::vector<Field> &field_metas)
   }
 }
 
+static RC extract_from_order_by_clause(OrderByField* raw_order_by_fields, 
+                        int order_by_num,
+                        std::vector<OrderByField>& order_by_fields
+                        ){
+    for (int i = order_by_num - 1; i >= 0;i--){
+      order_by_fields.push_back(raw_order_by_fields[i]);
+    }
+    return RC::SUCCESS;
+}
+
 RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt)
 {
   if (nullptr == db) {
@@ -184,12 +194,20 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt)
     return rc;
   }
 
+  std::vector<OrderByField> order_by_fields;
+  rc = extract_from_order_by_clause(select_sql->order_fields, select_sql->order_by_num, order_by_fields);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("cannot handle order by clause");
+    return rc;
+  }
+
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
   select_stmt->tables_.swap(tables);
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->filter_stmt_ = filter_stmt;
   select_stmt->aggregate_num_ = select_sql->aggregate_num;
+  select_stmt->order_by_fields_ = order_by_fields;
   stmt = select_stmt;
   return RC::SUCCESS;
 }

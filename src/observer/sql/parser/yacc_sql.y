@@ -133,6 +133,7 @@ ParserContext *get_context(yyscan_t scanner)
         LIKE
         ORDER
         GROUP
+        ASC
         BY
         TEXT_T
 
@@ -634,13 +635,26 @@ order:
     }
 ;
 order_component:
-  | ID ASC {
-      selects_append_order_field(&CONTEXT->ssql->selects[CONTEXT->selects_num], $1, 0);
+  | ID order_direction {
+      RelAttr attr;
+      relation_attr_init(&attr, NULL, $1);
+      selects_append_order_field(&CONTEXT->ssql->selects[CONTEXT->selects_num], $1, CONTEXT->is_desc);
   }
-  | ID DESC {
-      selects_append_order_field(&CONTEXT->ssql->selects[CONTEXT->selects_num], $1, 1);
+  | ID DOT ID order_direction {
+      RelAttr attr;
+      relation_attr_init(&attr, $1, $3);
+      selects_append_order_field(&CONTEXT->ssql->selects[CONTEXT->selects_num], $1, CONTEXT->is_desc);
   }
 ;
+
+order_direction: 
+ | ASC  {
+  CONTEXT->is_desc = 0;
+ }
+ | DESC {
+  CONTEXT->is_desc = 1;
+};
+
 order_component_list:
     /* empty */
     | COMMA order_component order_component_list {

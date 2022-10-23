@@ -226,9 +226,9 @@ void selects_append_relation(Selects *selects, const char *relation_name)
   selects->relations[selects->relation_num++] = strdup(relation_name);
 }
 
-void selects_append_order_field(Selects *selects, const char *relation_name, size_t is_desc)
+void selects_append_order_field(Selects *selects, RelAttr& attr, size_t is_desc)
 {
-  selects->order_fields[selects->order_by_num].name = strdup(relation_name);
+  selects->order_fields[selects->order_by_num].attr = attr;
   selects->order_fields[selects->order_by_num].is_desc = is_desc;
   selects->order_by_num++;
 }

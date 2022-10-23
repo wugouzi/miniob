@@ -97,9 +97,9 @@ typedef struct _Condition {
 } Condition;
 
 typedef struct {
-  char* name;
+  RelAttr attr;
   size_t is_desc;
-} OrderField;
+} OrderByField;
 
 // struct of select
 typedef struct _Selects {
@@ -111,7 +111,7 @@ typedef struct _Selects {
   Condition conditions[MAX_NUM];  // conditions in Where clause
   size_t aggregate_num;              // -1 means error
   size_t order_by_num;
-  OrderField order_fields[MAX_NUM];
+  OrderByField order_fields[MAX_NUM];
 } Selects;
 
 // struct of insert
