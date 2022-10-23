@@ -37,14 +37,36 @@ static void wildcard_fields(Table *table, std::vector<Field> &field_metas)
   }
 }
 
-static RC extract_from_order_by_clause(OrderByField* raw_order_by_fields, 
-                        int order_by_num,
-                        std::vector<OrderByField>& order_by_fields
-                        ){
-    for (int i = order_by_num - 1; i >= 0;i--){
-      order_by_fields.push_back(raw_order_by_fields[i]);
+static RC extract_from_order_by_clause(
+    std::vector<Table*> &tables,
+    std::unordered_map<std::string, Table*>& table_map,
+    OrderByRelAttr* order_by_rel_attr,
+    int order_by_num,
+    std::vector<OrderByField>& order_by_fields) {
+  for (int i = order_by_num - 1; i >= 0; i--) {
+    auto& order_by_attr = order_by_rel_attr[i];
+    // use first table by default
+    Table* table = nullptr;
+    if(!common::is_blank(order_by_attr.attr.relation_name)){
+      table = table_map[order_by_attr.attr.attribute_name];
+    } else if(tables.size() > 0){
+      table = tables[0];
     }
-    return RC::SUCCESS;
+    if(table){
+      const FieldMeta* field_meta = table->table_meta().field(order_by_attr.attr.attribute_name);
+      if(field_meta){
+        return RC::SCHEMA_FIELD_MISSING;
+      }
+      OrderByField order_by_field;
+      order_by_field.is_desc = order_by_attr.is_desc;
+      order_by_field.table = table;
+      order_by_field.field_meta = field_meta;
+      order_by_fields.push_back(order_by_field);
+    } else {
+      return RC::SCHEMA_TABLE_NOT_EXIST;
+    }
+  }
+  return RC::SUCCESS;
 }
 
 RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt)
@@ -195,7 +217,8 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt)
   }
 
   std::vector<OrderByField> order_by_fields;
-  rc = extract_from_order_by_clause(select_sql->order_fields, select_sql->order_by_num, order_by_fields);
+  rc = extract_from_order_by_clause(tables, table_map, select_sql->order_fields, select_sql->order_by_num, order_by_fields);
+
   if (rc != RC::SUCCESS) {
     LOG_WARN("cannot handle order by clause");
     return rc;

@@ -467,7 +467,10 @@ Pretable *ExecuteStage::select_to_pretable(SelectStmt *select_stmt, RC *rc)
     *rc = res->aggregate(select_stmt->query_fields());
   } else {
     res->filter_fields(select_stmt->query_fields());
+    // order by fields, if necessary
+    res->order_by(select_stmt->order_by_fields());
   }
+
   if (*rc != RC::SUCCESS) {
     LOG_ERROR("aggregate error");
     return nullptr;
@@ -1090,6 +1093,16 @@ int TupleSet::index(const Field &field) const
   return -1;
 }
 
+int TupleSet::index(const Table* table, const FieldMeta& field_meta) const {
+  for (size_t i = 0; i < metas_.size(); i++) {
+    if (strcmp(metas_[i].first->name(), table->name()) == 0 &&
+        strcmp(metas_[i].second.name(), field_meta.name()) == 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 const TupleCell &TupleSet::get_cell(int idx)
 {
   return cells_[idx];
@@ -1617,6 +1630,35 @@ void Pretable::filter_fields(const std::vector<Field> &fields) {
   for (auto &tuple : tuples_) {
       tuple.filter_fields(fields);
   }
+}
+
+
+
+void Pretable::order_by(const std::vector<OrderByField> &order_by_fields){
+  if(order_by_fields.empty()){
+    return;
+  }
+  if(tuples_.empty()){
+    return;
+  }
+  std::vector<std::pair<int,int>> index_desc_pairs;
+  for(auto &order_by_field : order_by_fields){
+    int index = tuples_[0].index(order_by_field.table, *order_by_field.field_meta);
+    index_desc_pairs.push_back({index, order_by_field.is_desc});
+  }
+  sort(tuples_.begin(), tuples_.end(), [&](TupleSet& a, TupleSet& b) -> bool {
+    for(auto i_d: index_desc_pairs){
+      auto& index = i_d.first;
+      auto& is_desc = i_d.second;
+      TupleCell va = a.get_cell(index);
+      TupleCell vb = b.get_cell(index);
+      auto res = va.compare(vb);
+      if(res == 0){
+        continue;
+      }
+      return is_desc ? -res : res;
+    }
+  });
 }
 
 void Pretable::print(std::stringstream &ss)

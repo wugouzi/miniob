@@ -99,7 +99,7 @@ typedef struct _Condition {
 typedef struct {
   RelAttr attr;
   size_t is_desc;
-} OrderByField;
+} OrderByRelAttr;
 
 // struct of select
 typedef struct _Selects {
@@ -111,7 +111,7 @@ typedef struct _Selects {
   Condition conditions[MAX_NUM];  // conditions in Where clause
   size_t aggregate_num;              // -1 means error
   size_t order_by_num;
-  OrderByField order_fields[MAX_NUM];
+  OrderByRelAttr order_fields[MAX_NUM];
 } Selects;
 
 // struct of insert
@@ -261,9 +261,7 @@ void selects_init(Selects *s1, ...);
 void selects_reverse_relations(Selects *selects, int len);
 void selects_append_attribute(Selects *selects, RelAttr *rel_attr);
 void selects_append_relation(Selects *selects, const char *relation_name);
-void selects_append_order_field(Selects* selects,
-                                const char* relation_name,
-                                size_t is_desc);
+void selects_append_order_field(Selects* selects, RelAttr* attr, size_t is_desc);
 void selects_append_conditions(Selects* selects,
                                Condition conditions[],
                                size_t condition_num);

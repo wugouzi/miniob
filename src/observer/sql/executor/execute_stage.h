@@ -104,7 +104,8 @@ class TupleSet {
   const std::pair<Table *, FieldMeta> &get_meta(int idx);
 
   int index(const Field &field) const;
-  const std::string &data() const { return data_; }
+  int index(const Table* table, const FieldMeta& field_meta) const;
+  const std::string& data() const { return data_; }
   int get_offset(const char *table_name, const char *field_name) const ;
   int size() const { return data_.size(); }
 
@@ -136,6 +137,7 @@ class Pretable {
   RC aggregate_min(int idx, TupleCell *res);
   RC aggregate_avg(int idx, TupleCell *res);
   RC aggregate_count(int idx, TupleCell *res);
+  void order_by(const std::vector<OrderByField> &fields);
   const FieldMeta *field(const Field &field) const;
   CompositeConditionFilter *make_cond_filter(std::vector<FilterUnit*> &units, Pretable *t2);
   ConDesc make_cond_desc(Expression *expr, Pretable *t2);

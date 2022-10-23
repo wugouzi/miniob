@@ -25,6 +25,13 @@ class FilterStmt;
 class Db;
 class Table;
 
+class OrderByField {
+ public:
+  Table* table;
+  const FieldMeta* field_meta;
+  int is_desc;
+};
+
 class SelectStmt : public Stmt
 {
 public:
@@ -40,6 +47,8 @@ public:
   const std::vector<Table *> &tables() const { return tables_; }
   const std::vector<Field> &query_fields() const { return query_fields_; }
   std::vector<Field> &query_fields() { return query_fields_; }
+  const std::vector<OrderByField> &order_by_fields() const { return order_by_fields_; }
+  std::vector<OrderByField> &order_by_fields() { return order_by_fields_; }
   FilterStmt *filter_stmt() const { return filter_stmt_; }
   int aggregate_num() const { return aggregate_num_; }
 

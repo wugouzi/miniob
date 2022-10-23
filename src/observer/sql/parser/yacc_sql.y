@@ -27,6 +27,7 @@ typedef struct ParserContext {
   Condition conditions[MAX_NUM];
   CompOp comp;
   char id[MAX_NUM];
+  size_t is_desc;
 
   AggreType a_type;
 
@@ -638,12 +639,14 @@ order_component:
   | ID order_direction {
       RelAttr attr;
       relation_attr_init(&attr, NULL, $1);
-      selects_append_order_field(&CONTEXT->ssql->selects[CONTEXT->selects_num], $1, CONTEXT->is_desc);
+      selects_append_order_field(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr, CONTEXT->is_desc);
+      CONTEXT->is_desc = 0;
   }
   | ID DOT ID order_direction {
       RelAttr attr;
       relation_attr_init(&attr, $1, $3);
-      selects_append_order_field(&CONTEXT->ssql->selects[CONTEXT->selects_num], $1, CONTEXT->is_desc);
+      selects_append_order_field(&CONTEXT->ssql->selects[CONTEXT->selects_num], &attr, CONTEXT->is_desc);
+      CONTEXT->is_desc = 0;
   }
 ;
 
