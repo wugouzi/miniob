@@ -1,3 +1,21 @@
+create table t(id1 int, id2 int, id3 int);
+create unique index idx on t(id1, id3);
+insert into t values(1,1,1);
+insert into t values(1,1,2);
+insert into t values(1,2,1);
+select * from t;
+drop table t;
+
+INSERT INTO unique_table2 VALUES (1,2,1,1);
+FAILURE
+INSERT INTO unique_table2 VALUES (2,3,1,1);
+-SUCCESS
++FAILURE
+2. SELECT
+SELECT * FROM unique_table1;
+1 | 1 | 1
+...
+
 create table t(id int nullable, id2 int nullable);
 insert into t values(2,3);
 insert into t values(4,9);
@@ -6,7 +24,8 @@ insert into t values(null, 3);
 insert into t values(3, null);
 insert into t values(null, 23);
 insert into t values(null, null);
-select id from t order by id desc, id2 asc;
+select * from t order by id desc;
+select * from t order by id desc, id2 asc;
 drop table t;
 
 create table t(id int, id2 int);

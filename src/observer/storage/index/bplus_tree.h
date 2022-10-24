@@ -60,21 +60,23 @@ public:
       if (v2[offset + attr_lengths_[i] - 1] == 1) {
         return 1;
       }
+      offset += attr_lengths_[i];
     }
+    offset = 0;
     for (size_t i = 0; i < attr_types_.size(); i++) {
       int comp_res = 0;
       switch (attr_types_[i]) {
         case INTS: {
-          comp_res = compare_int((void *)v1, (void *)v2);
+          comp_res = compare_int((void *)(v1 + offset), (void *)(v2 + offset));
         } break;
         case FLOATS: {
-          comp_res = compare_float((void *)v1, (void *)v2);
+          comp_res = compare_float((void *)(v1 + offset), (void *)(v2 + offset));
         } break;
         case CHARS: {
-          comp_res = compare_string((void *)v1, attr_lengths_[i] - 1, (void *)v2, attr_lengths_[i] - 1);
+          comp_res = compare_string((void *)(v1 + offset), attr_lengths_[i] - 1, (void *)(v2 + offset), attr_lengths_[i] - 1);
         } break;
         case DATES: {
-          comp_res =  compare_date((void *)v1, (void *)v2);
+          comp_res =  compare_date((void *)(v1 + offset), (void *)(v2 + offset));
         } break;
         default:{
           LOG_ERROR("unknown attr type. %d", attr_types_[i]);
@@ -84,6 +86,7 @@ public:
       if (comp_res != 0) {
         return comp_res;
       }
+      offset += attr_lengths_[i];
     }
     return 0;
   }
