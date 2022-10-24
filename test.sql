@@ -1535,3 +1535,8 @@ ID | AGE | NAME | SCORE
 
 
 */
+
+create table t(a TEXT);
+insert into t values("wocao");
+select * from t;
+drop table t;

@@ -31,6 +31,7 @@ void TupleCell::to_string(std::ostream &os) const
     float v = *(float *)data_;
     os << double2string(v);
   } break;
+  case TEXTS: // 复用
   case CHARS: {
     for (int i = 0; i < length_; i++) {
       if (data_[i] == '\0') {

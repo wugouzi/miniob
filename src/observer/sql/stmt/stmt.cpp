@@ -101,7 +101,9 @@ float Stmt::char_to_float(const char *s)
   return ans;
 }
 
-// 1 extra byte for bull
+/**
+ * cast value to field type
+ **/
 bool Stmt::convert_type(const FieldMeta *field, Value *value)
 {
   if (value->type == field->type()) {
@@ -159,6 +161,14 @@ bool Stmt::convert_type(const FieldMeta *field, Value *value)
     memcpy(data, s.c_str(), s.size() + 1);
     value->type = AttrType::CHARS;
     // LOG_DEBUG("%f converts to %s", *(float *)value->data, str);
+  } else if (type == AttrType::CHARS && value->type == AttrType::TEXTS) {
+    int value_len = strlen((char *)value->data);
+    int truncated_len = std::min(value_len+1, field->len());
+    memcpy(data, value->data, truncated_len);
+    value->type = AttrType::CHARS;
+  } else if (type == AttrType::TEXTS && value->type == AttrType::CHARS) {
+    memcpy(data, value->data, strlen((char*) value->data)+1);
+    value->type = AttrType::TEXTS;
   } else {
     return false;
   }
