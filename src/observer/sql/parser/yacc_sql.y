@@ -137,6 +137,8 @@ ParserContext *get_context(yyscan_t scanner)
         ASC
         BY
         TEXT_T
+        IN
+        EXISTS
 
 %union {
   struct _Attr *attr;
@@ -411,7 +413,11 @@ value:
 | NULL_V {
       value_init_null(&CONTEXT->values[CONTEXT->value_length++]);
     }
-    ;
+| internal_select {
+  value_init_select(&CONTEXT->values[CONTEXT->value_length++],
+                    &CONTEXT->ssql->selects[CONTEXT->selects_num - 1]);
+}
+;
 
 delete:		/*  delete 语句的语法解析树*/
     DELETE FROM ID where SEMICOLON
@@ -437,11 +443,6 @@ UPDATE ID SET update_set updates_sets where SEMICOLON
 update_set:
 ID EQ value {
   updates_append(&CONTEXT->ssql->sstr.update, $1, &CONTEXT->values[CONTEXT->value_length - 1]);
-}
-| ID EQ internal_select {
-  value_init_select(&CONTEXT->values[CONTEXT->value_length],
-                    &CONTEXT->ssql->selects[CONTEXT->selects_num - 1]);
-  updates_append(&CONTEXT->ssql->sstr.update, $1, &CONTEXT->values[CONTEXT->value_length++]);
 }
 ;
 updates_sets:

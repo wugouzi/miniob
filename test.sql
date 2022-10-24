@@ -1,8 +1,21 @@
+select * from ssq_1 where id in (1,3,4,5);
+
+
+2 | 3 | 1 | 1
+ID1 | ID2 | COL1 | COL2
+UPDATE unique_table2 SET id1=1,id2=3 where id2=4;
+-FAILURE
++SUCCESS
+4. SHOW INDEX
+CREATE TABLE unique_table3(id1 int, id2 int, id3 int);
+SUCCESS
+
 create table t(id1 int, id2 int, id3 int);
 create unique index idx on t(id1, id3);
 insert into t values(1,1,1);
-insert into t values(1,1,2);
 insert into t values(1,2,1);
+insert into t values(1,1,2);
+update t set id3=1 where id3=2;
 select * from t;
 drop table t;
 

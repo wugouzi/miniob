@@ -66,7 +66,7 @@ public:
                    int condition_num, const Condition conditions[], int *updated_count);
   RC update_record(Trx *trx, const char *attribute_name, const Value *value, int condition_num,
                    const Condition conditions[], int *updated_count);
-  RC update_record(Trx *trx, Record *record);
+  RC update_record(Trx *trx, Record *record, bool has_null);
   RC delete_record(Trx *trx, ConditionFilter *filter, int *deleted_count);
   RC delete_record(Trx *trx, Record *record);
   RC recover_delete_record(Record *record);
@@ -115,7 +115,8 @@ private:
   friend class RecordUpdater;
   friend class RecordDeleter;
 
-  RC insert_entry_of_indexes(const char *record, const RID &rid, int *insert_cnt, bool has_null);
+  RC insert_entry_of_indexes(const char *record, const RID &rid, bool has_null);
+  RC update_entry_of_indexes(const char *old_record, const char *new_record, const RID &rid, int *update_cnt, bool has_null);
   RC delete_entry_of_indexes(const char *record, const RID &rid, bool error_on_not_exists);
   RC delete_entry_of_indexes(const char *record, const RID &rid, int num, bool error_on_not_exists);
 
