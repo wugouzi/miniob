@@ -60,7 +60,7 @@ int TupleCell::compare(const TupleCell &other) const
     case INTS: return compare_int(this->data_, other.data_);
     case FLOATS: return compare_float(this->data_, other.data_);
     case CHARS: return compare_string(this->data_, this->length_, other.data_, other.length_);
-    case NULLS: return false;
+    case NULLS: return 0;
     default: {
       LOG_WARN("unsupported type: %d", this->attr_type_);
     }
@@ -85,6 +85,10 @@ int TupleCell::compare(const TupleCell &other) const
   } else if (this->attr_type_ == CHARS && other.attr_type_ == FLOATS) {
     float ans = Stmt::char_to_float(data_);
     return compare_float(&ans, other.data_);
+  } else if (this->attr_type_ == NULLS) {
+    return -1;
+  } else if (other.attr_type() == NULLS) {
+    return 1;
   }
   LOG_ERROR("not supported");
   return -1; // TODO return rc?

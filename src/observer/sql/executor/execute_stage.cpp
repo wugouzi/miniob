@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #include "execute_stage.h"
@@ -466,9 +467,9 @@ Pretable *ExecuteStage::select_to_pretable(SelectStmt *select_stmt, RC *rc)
   if (select_stmt->aggregate_num() > 0) {
     *rc = res->aggregate(select_stmt->query_fields());
   } else {
-    res->filter_fields(select_stmt->query_fields());
     // order by fields, if necessary
     res->order_by(select_stmt->order_by_fields());
+    res->filter_fields(select_stmt->query_fields());
   }
 
   if (*rc != RC::SUCCESS) {
@@ -1642,10 +1643,10 @@ void Pretable::order_by(const std::vector<OrderByField> &order_by_fields){
   std::vector<std::pair<int,int>> index_desc_pairs;
   for(auto &order_by_field : order_by_fields){
     int index = tuples_[0].index(order_by_field.table, *order_by_field.field_meta);
-    index_desc_pairs.push_back({index, order_by_field.is_desc});
+    index_desc_pairs.push_back(std::make_pair(index, order_by_field.is_desc));
   }
   std::reverse(index_desc_pairs.begin(), index_desc_pairs.end());
-  sort(tuples_.begin(), tuples_.end(), [&](TupleSet& a, TupleSet& b) -> int {
+  sort(tuples_.begin(), tuples_.end(), [&](TupleSet& a, TupleSet& b) -> bool {
     for(auto i_d: index_desc_pairs){
       auto& index = i_d.first;
       auto& is_desc = i_d.second;
