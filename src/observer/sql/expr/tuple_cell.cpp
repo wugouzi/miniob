@@ -54,10 +54,10 @@ void TupleCell::to_string(std::ostream &os) const
 int TupleCell::compare(const TupleCell &other) const
 {
   if (other.attr_type() == NULLS) {
-    return true;
+    return 1;
   }
   if (this->attr_type_ == NULLS) {
-    return false;
+    return -1;
   }
   if (this->attr_type_ == other.attr_type_) {
     switch (this->attr_type_) {
@@ -65,7 +65,7 @@ int TupleCell::compare(const TupleCell &other) const
     case INTS: return compare_int(this->data_, other.data_);
     case FLOATS: return compare_float(this->data_, other.data_);
     case CHARS: return compare_string(this->data_, this->length_, other.data_, other.length_);
-    case NULLS: return false;
+    case NULLS: return 1;
     default: {
       LOG_WARN("unsupported type: %d", this->attr_type_);
     }

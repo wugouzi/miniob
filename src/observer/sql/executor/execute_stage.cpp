@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #include "execute_stage.h"
@@ -1642,7 +1643,7 @@ void Pretable::order_by(const std::vector<OrderByField> &order_by_fields){
   std::vector<std::pair<int,int>> index_desc_pairs;
   for(auto &order_by_field : order_by_fields){
     int index = tuples_[0].index(order_by_field.table, *order_by_field.field_meta);
-    index_desc_pairs.push_back({index, order_by_field.is_desc});
+    index_desc_pairs.push_back(std::make_pair(index, order_by_field.is_desc));
   }
   std::reverse(index_desc_pairs.begin(), index_desc_pairs.end());
   sort(tuples_.begin(), tuples_.end(), [&](TupleSet& a, TupleSet& b) -> int {

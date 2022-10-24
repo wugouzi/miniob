@@ -54,7 +54,6 @@ SELECT * FROM unique_table1;
 create table t(id1 int, id2 int, id3 int);
 create unique index idx on t(id1, id3);
 INSERT INTO t VALUES(1,null,1);
-INSERT INTO t VALUES(1,null,2);
 INSERT INTO t VALUES(null,null,1);
 INSERT INTO t VALUES(null,null,2);
 SELECT * FROM t;
