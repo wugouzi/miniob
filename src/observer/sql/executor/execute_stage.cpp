@@ -466,9 +466,9 @@ Pretable *ExecuteStage::select_to_pretable(SelectStmt *select_stmt, RC *rc)
   if (select_stmt->aggregate_num() > 0) {
     *rc = res->aggregate(select_stmt->query_fields());
   } else {
-    res->filter_fields(select_stmt->query_fields());
     // order by fields, if necessary
     res->order_by(select_stmt->order_by_fields());
+    res->filter_fields(select_stmt->query_fields());
   }
 
   if (*rc != RC::SUCCESS) {

@@ -1,5 +1,36 @@
+create table t(id int nullable, id2 int nullable);
+insert into t values(2,3);
+insert into t values(4,9);
+insert into t values(5,2);
+insert into t values(null, 3);
+insert into t values(3, null);
+insert into t values(null, 23);
+insert into t values(null, null);
+select id from t order by id desc, id2 asc;
+drop table t;
 
+create table t(id int, id2 int);
+insert into t values(2,3);
+insert into t values(4,9);
+insert into t values(5,2);
+insert into t values(null, 3);
+insert into t values(3, null);
+insert into t values(null, 23);
+insert into t values(null, null);
+select * from t order by id desc;
+select * from t order by id desc, id2 asc;
+drop table t;
 
+select id from t_order_by_3 order by id;
+ID
+NULL
++5
+NULL
+2
+4
+-5
+select id from t_order_by_3 order by id desc;
+ID
 
 create table t(id int);
 insert into t values(1);
