@@ -3,7 +3,7 @@ create table text_table(id int, info text);
 SUCCESS
 
 1. INSERT
-insert into text_table values (1,'this is a very very long string');
+insert into text_table values (1,''this is a very very long string');
 SUCCESS
 insert into text_table values (2,'this is a very very long string2');
 SUCCESS
