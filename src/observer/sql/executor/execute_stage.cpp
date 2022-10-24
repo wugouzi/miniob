@@ -1646,7 +1646,7 @@ void Pretable::order_by(const std::vector<OrderByField> &order_by_fields){
     index_desc_pairs.push_back(std::make_pair(index, order_by_field.is_desc));
   }
   std::reverse(index_desc_pairs.begin(), index_desc_pairs.end());
-  sort(tuples_.begin(), tuples_.end(), [&](TupleSet& a, TupleSet& b) -> int {
+  sort(tuples_.begin(), tuples_.end(), [&](TupleSet& a, TupleSet& b) -> bool {
     for(auto i_d: index_desc_pairs){
       auto& index = i_d.first;
       auto& is_desc = i_d.second;
