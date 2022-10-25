@@ -376,7 +376,7 @@ RC Table::insert_records(Trx *trx, int valuelist_num, const ValueList *valuelist
     if (rc != RC::SUCCESS) {
       for (Record &r : records) {
         // recover_insert_record(&r);
-        recover_insert_record(&r);
+        recover_delete_record(&r);
       }
       return rc;
     }

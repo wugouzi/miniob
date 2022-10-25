@@ -1,4 +1,23 @@
+NULL | NULL | 1
+NULL | NULL | 2
+create table t(id1 int nullable, id2 int nullable, num int);
+create unique index idx on t(id1,id2,num);
+insert into t values(1,null,1);
+insert into t values(1,null,2);
+update t set id1=null,id2=2 where id1=1 and num=2;
+select * from t;
+drop table t;
+drop table tt;
 
+UPDATE null_table6 set
+id1=(select null_table5.id from null_table5 where null_table5.num=2),id2=2
+where id1=1 and num=2;
+
+SELECT * FROM null_table6;
+1 | NULL | 1
++1 | NULL | 2
+ID1 | ID2 | NUM
+-NULL | 2 | 2
 
 
 2 | 3 | 1 | 1

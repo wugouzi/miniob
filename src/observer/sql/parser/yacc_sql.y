@@ -468,7 +468,7 @@ LBRACE SELECT select_attr FROM ID rel_list where RBRACE {
 }
 ;
 select:				/*  select 语句的语法解析树*/
-SELECT select_attr FROM rel_name rel_list where order SEMICOLON
+SELECT select_attr FROM rel_name rel_list where order groupby having SEMICOLON
 {
   // CONTEXT->ssql->sstr.selection.relations[CONTEXT->from_length++]=$4;
   // &CONTEXT->ssql->sstr.selects[CONTEXT->selects_num]
@@ -488,6 +488,31 @@ SELECT select_attr FROM rel_name rel_list where order SEMICOLON
   CONTEXT->value_length = 0;
   CONTEXT->selects_num++;
   CONTEXT->ssql->selects_num = CONTEXT->selects_num;
+}
+having:
+
+| HAVING condition condition_list {
+
+}
+;
+
+groupby:
+
+| GROUP BY ID groupby_ids {
+
+}
+| GROUP BY ID DOT ID groupby_ids {
+
+}
+;
+
+groupby_ids:
+
+| COMMA ID {
+
+}
+| COMMA ID DOT ID {
+
 }
 ;
 select_attr:

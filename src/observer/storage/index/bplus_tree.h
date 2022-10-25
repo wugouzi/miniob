@@ -50,20 +50,16 @@ public:
 
   int operator()(const char *v1, const char *v2) const {
     int offset = 0;
-    // check null first
     for (size_t i = 0; i < attr_types_.size(); i++) {
-      // v1 is null
-      if (v1[offset + attr_lengths_[i] - 1] == 1) {
+      bool left_is_null = v1[offset + attr_lengths_[i] - 1] == 1;
+      bool right_is_null = v2[offset + attr_lengths_[i] - 1] == 1;
+      if (left_is_null && right_is_null) {
+        continue;
+      } else if (left_is_null && !right_is_null) {
         return -1;
-      }
-      // v2 is null
-      if (v2[offset + attr_lengths_[i] - 1] == 1) {
+      } else if (!left_is_null && right_is_null) {
         return 1;
       }
-      offset += attr_lengths_[i];
-    }
-    offset = 0;
-    for (size_t i = 0; i < attr_types_.size(); i++) {
       int comp_res = 0;
       switch (attr_types_[i]) {
         case INTS: {
@@ -103,10 +99,6 @@ public:
     check_dup_ = check_dup;
     attr_comparator_.init(types, lens);
   }
-  // void init(AttrType type, int length)
-  // {
-
-  // }
 
   const AttrComparator &attr_comparator() const {
     return attr_comparator_;
