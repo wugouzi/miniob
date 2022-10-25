@@ -147,6 +147,7 @@ Operation *Trx::find_operation(Table *table, const RID &rid)
 
 void Trx::insert_operation(Table *table, Operation::Type type, const RID &rid)
 {
+  LOG_INFO("table %s operation: %d, %s", table->name(), type, rid.to_string().c_str());
   OperationSet &table_operations = operations_[table];
   table_operations.emplace(type, rid);
 }
