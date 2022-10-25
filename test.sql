@@ -1,4 +1,4 @@
-select * from ssq_1 where id in (1,3,4,5);
+
 
 
 2 | 3 | 1 | 1
