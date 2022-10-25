@@ -89,6 +89,6 @@ int TupleCell::compare(const TupleCell &other) const
   } else if (other.attr_type() == NULLS) {
     return 1;
   }
-  LOG_ERROR("not supported");
+  // LOG_ERROR("not supported");
   return -1; // TODO return rc?
 }

@@ -810,6 +810,17 @@ RC ExecuteStage::compute_value_from_select(Db *db, Value *value)
   return rc;
 }
 
+Pretable *ExecuteStage::Selects_to_pretable(Db *db, Value *value)
+{
+  Stmt *stmt = nullptr;
+  RC rc = SelectStmt::create(db, value->select, stmt);
+  if (rc != RC::SUCCESS) {
+    return nullptr;
+  }
+  SelectStmt *select_stmt = dynamic_cast<SelectStmt*>(stmt);
+  return select_to_pretable(select_stmt, &rc);
+}
+
 
 RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
 {
@@ -1078,6 +1089,11 @@ void TupleSet::push(const std::pair<Table*, FieldMeta> &p, const TupleCell &cell
   data_ += std::string(cell.data(), cell.length());
 }
 
+void TupleSet::push(const TupleCell &cell)
+{
+  cells_.push_back(cell);
+}
+
 int TupleSet::index(const Field &field) const
 {
   if (!field.has_table() || !field.has_field()) {
@@ -1125,6 +1141,17 @@ int TupleSet::get_offset(const char *table_name, const char *field_name) const
   return -1;
 }
 
+// TODO: trivial implementation currently
+bool TupleSet::in(TupleCell &cell) const
+{
+  for (auto &c : cells_) {
+    if (c.compare(cell) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 const FieldMeta &TupleSet::meta(int idx) const {
   return metas_[idx].second;
 }
@@ -1155,6 +1182,10 @@ FilterStmt *get_sub_filter(Table *table, FilterStmt *old_filter)
         table->table_meta().field(left_field_expr.field_name()) == nullptr) {
       continue;
     }
+    ValueExpr *right_value_expr = dynamic_cast<ValueExpr*>(right);
+    if (right_value_expr->get_type() == AttrType::SELECTS) {
+
+    }
     filter->push(unit);
   }
   return filter;
@@ -1166,6 +1197,38 @@ Pretable::Pretable(Pretable&& t)
 {
 
 }
+
+Pretable::Pretable(ValueList *valuelist)
+{
+  TupleSet tupleset;
+  for (int i = 0; i < valuelist->value_num; i++) {
+    TupleCell cell(valuelist->values[i].type, (char *)valuelist->values[i].data);
+    tupleset.push(cell);
+  }
+  tuples_.push_back(tupleset);
+}
+
+bool Pretable::in(Value *value) const
+{
+  TupleCell cell(value->type, (char *)value->data);
+  for (auto &tuple : tuples_) {
+    if (tuple.in(cell)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Pretable::in(TupleCell &cell) const
+{
+  for (auto &tuple : tuples_) {
+    if (tuple.in(cell)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 Pretable& Pretable::operator=(Pretable&& t)
 {
   tuples_ = std::move(t.tuples_);
@@ -1173,7 +1236,6 @@ Pretable& Pretable::operator=(Pretable&& t)
   return *this;
 }
 
-// TODO: delete filters
 RC Pretable::init(Table *table, FilterStmt *old_filter)
 {
   // TODO: check how to use index scan

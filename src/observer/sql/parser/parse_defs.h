@@ -54,6 +54,10 @@ typedef enum {
   IS_NOT_EQUAL,
   STR_LIKE,
   STR_NOT_LIKE,
+  VALUE_IN,
+  VALUE_NOT_IN,
+  VALUE_EXISTS,
+  VALUE_NOT_EXISTS,
   NO_OP
 } CompOp;
 
@@ -66,20 +70,23 @@ typedef enum
   DATES,
   NULLS,
   SELECTS,
+  VALUELIST,
   TEXTS,     // text don't have null bit
   FLOATS
 } AttrType;
 
 struct _Selects;
+struct _ValueList;
 
 //属性值
 typedef struct _Value {
   AttrType type;  // type of value
   void *data;     // value
   struct _Selects *select;
+  struct _ValueList *value_list;
 } Value;
 
-typedef struct {
+typedef struct _ValueList{
   int value_num;
   Value values[MAX_NUM];
 } ValueList;
@@ -112,6 +119,8 @@ typedef struct _Selects {
   size_t aggregate_num;              // -1 means error
   size_t order_by_num;
   OrderByRelAttr order_fields[MAX_NUM];
+  char *groupby_attrs[MAX_NUM];
+  size_t groupby_num;
 } Selects;
 
 // struct of insert
@@ -230,6 +239,8 @@ typedef struct Query {
   union Queries sstr;
   Selects selects[MAX_NUM];
   int selects_num;
+  ValueList valuelists[MAX_NUM];
+  int valuelist_num;
 } Query;
 
 #ifdef __cplusplus
@@ -247,6 +258,7 @@ void value_init_float(Value *value, float v);
 void value_init_string(Value *value, const char *v);
 void value_init_date(Value *value, const char* v);
 void value_init_select(Value *value, Selects *selects);
+void value_init_list(Value *value, ValueList *valuelist);
 void value_destroy(Value *value);
 
 void condition_init(Condition *condition, CompOp comp, int left_is_attr, RelAttr *left_attr, Value *left_value,
@@ -259,7 +271,9 @@ void attr_info_destroy(AttrInfo *attr_info);
 
 void selects_init(Selects *s1, ...);
 void selects_reverse_relations(Selects *selects, int len);
+void selects_append_in_value(ValueList *valuelist, Value *value);
 void selects_append_attribute(Selects *selects, RelAttr *rel_attr);
+void selects_append_groupby(Selects *selects, RelAttr *groupby_attr);
 void selects_append_relation(Selects *selects, const char *relation_name);
 void selects_append_order_field(Selects* selects, RelAttr* attr, size_t is_desc);
 void selects_append_conditions(Selects* selects,

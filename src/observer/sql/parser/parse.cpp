@@ -62,6 +62,7 @@ void value_init_null(Value *value)
   value->type = NULLS;
   value->data = malloc(sizeof(int)+1);
   value->select = nullptr;
+  value->value_list = nullptr;
   ((char *)value->data)[4] = 1;
 }
 
@@ -70,6 +71,7 @@ void value_init_integer(Value *value, int v)
   value->type = INTS;
   value->data = malloc(sizeof(v)+1);
   value->select = nullptr;
+  value->value_list = nullptr;
   memset(value->data, 0, 5);
   memcpy(value->data, &v, sizeof(v));
 }
@@ -108,6 +110,7 @@ void value_init_date(Value *value, const char* v)
 {
   value->type = DATES;
   value->select = nullptr;
+  value->value_list = nullptr;
   int y, m, d;
   std::sscanf(v, "'%d-%d-%d'", &y, &m, &d);
 
@@ -124,6 +127,7 @@ void value_init_float(Value *value, float v)
 {
   value->type = FLOATS;
   value->select = nullptr;
+  value->value_list = nullptr;
   value->data = malloc(sizeof(v)+1);
   memset(value->data, 0, 5);
   memcpy(value->data, &v, sizeof(v));
@@ -135,6 +139,7 @@ void value_init_string(Value *value, const char *v)
   printf("string: %s\n", v);
   value->type = CHARS;
   value->select = nullptr;
+  value->value_list = nullptr;
   int len = strlen(v);
   if (len >= 4096) {
     len = 4096;
@@ -147,6 +152,15 @@ void value_init_select(Value *value, Selects *selects)
 {
   value->type = SELECTS;
   value->select = selects;
+  value->value_list = nullptr;
+  value->data = nullptr;
+}
+
+void value_init_list(Value *value, ValueList *valuelist)
+{
+  value->type = VALUELIST;
+  value->value_list = valuelist;
+  value->select = nullptr;
   value->data = nullptr;
 }
 
@@ -221,6 +235,16 @@ void selects_append_attribute(Selects *selects, RelAttr *rel_attr)
     selects->aggregate_num++;
   }
 }
+
+void selects_append_in_value(ValueList *valuelist, Value *value)
+{
+  valuelist->values[valuelist->value_num++] = *value;
+}
+void selects_append_groupby(Selects *selects, RelAttr *groupby_attr)
+{
+  selects->attributes[selects->groupby_num++] = *groupby_attr;
+}
+
 void selects_append_relation(Selects *selects, const char *relation_name)
 {
   selects->relations[selects->relation_num++] = strdup(relation_name);
@@ -465,7 +489,9 @@ void query_init(Query *query)
   query->flag = SCF_ERROR;
   memset(&query->sstr, 0, sizeof(query->sstr));
   query->selects_num = 0;
+  query->valuelist_num = 0;
   for (int i = 0; i < MAX_NUM; i++) {
+    memset(&query->valuelists[i], 0, sizeof(query->valuelists[i]));
     memset(&query->selects[i], 0, sizeof(query->selects[i]));
   }
 }

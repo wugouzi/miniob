@@ -1,3 +1,111 @@
+INITIALIZATION
+CREATE TABLE ssq_1(id int, col1 int, feat1 float);
+CREATE TABLE ssq_2(id int, col2 int, feat2 float);
+CREATE TABLE ssq_3(id int, col3 int, feat3 float);
+
+INSERT INTO ssq_1 VALUES (1, 4, 11.2);
+INSERT INTO ssq_1 VALUES (2, 2, 12.0);
+INSERT INTO ssq_1 VALUES (3, 3, 13.5);
+INSERT INTO ssq_2 VALUES (1, 2, 13.0);
+INSERT INTO ssq_2 VALUES (2, 7, 10.5);
+INSERT INTO ssq_2 VALUES (5, 3, 12.6);
+
+1. SELECT
+select * from ssq_1 where id in (select ssq_2.id from ssq_2);
+1 | 4 | 11.2
+2 | 2 | 12
+ID | COL1 | FEAT1
+select * from ssq_1 where col1 not in (select ssq_2.col2 from ssq_2);
+1 | 4 | 11.2
+ID | COL1 | FEAT1
+
+select * from ssq_1 where col1 = (select avg(ssq_2.col2) from ssq_2);
+1 | 4 | 11.2
+ID | COL1 | FEAT1
+select * from ssq_1 where (select avg(ssq_2.col2) from ssq_2) = col1;
+1 | 4 | 11.2
+ID | COL1 | FEAT1
+
+select * from ssq_1 where feat1 >= (select min(ssq_2.feat2) from ssq_2);
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+select * from ssq_1 where (select min(ssq_2.feat2) from ssq_2) <= feat1;
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+
+select * from ssq_1 where feat1 <= (select max(ssq_2.feat2) from ssq_2);
+1 | 4 | 11.2
+2 | 2 | 12
+ID | COL1 | FEAT1
+select * from ssq_1 where (select max(ssq_2.feat2) from ssq_2) >= feat1;
+1 | 4 | 11.2
+2 | 2 | 12
+ID | COL1 | FEAT1
+
+select * from ssq_1 where feat1 > (select min(ssq_2.feat2) from ssq_2);
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+select * from ssq_1 where (select min(ssq_2.feat2) from ssq_2) < feat1;
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+
+select * from ssq_1 where feat1 < (select max(ssq_2.feat2) from ssq_2);
+1 | 4 | 11.2
+2 | 2 | 12
+ID | COL1 | FEAT1
+select * from ssq_1 where (select max(ssq_2.feat2) from ssq_2) > feat1;
+1 | 4 | 11.2
+2 | 2 | 12
+ID | COL1 | FEAT1
+
+select * from ssq_1 where feat1 <> (select avg(ssq_2.feat2) from ssq_2);
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+
+2. SELECT WITH EMPTY TABLE
+select * from ssq_1 where feat1 < (select max(ssq_2.feat2) from ssq_2 where 1=0);
+ID | COL1 | FEAT1
+select * from ssq_1 where id in (select ssq_2.id from ssq_2 where 1=0);
+ID | COL1 | FEAT1
+select * from ssq_1 where id not in (select ssq_2.id from ssq_2 where 1=0);
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+select * from ssq_3 where feat3 < (select max(ssq_2.feat2) from ssq_2);
+ID | COL3 | FEAT3
+select * from ssq_3 where id in (select ssq_2.id from ssq_2);
+ID | COL3 | FEAT3
+select * from ssq_3 where id not in (select ssq_2.id from ssq_2);
+ID | COL3 | FEAT3
+
+3. ERROR
+select * from ssq_1 where col1 = (select ssq_2.col2 from ssq_2);
+FAILURE
+select * from ssq_1 where col1 = (select * from ssq_2);
+FAILURE
+select * from ssq_1 where col1 in (select * from ssq_2);
+FAILURE
+select * from ssq_1 where col1 not in (select * from ssq_2);
+FAILURE
+
+
+
+create table t(id int nullable);
+insert into t values(null);
+select * from t where id in (null);
+drop table t;
+
 NULL | NULL | 1
 NULL | NULL | 2
 create table t(id1 int nullable, id2 int nullable, num int);
