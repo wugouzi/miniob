@@ -139,6 +139,7 @@ Operation *Trx::find_operation(Table *table, const RID &rid)
   OperationSet &table_operations = table_operations_iter->second;
   Operation tmp(Operation::Type::UNDEFINED, rid);
   OperationSet::iterator operation_iter = table_operations.find(tmp);
+  LOG_INFO("operation set size %d", table_operations.size());
   if (operation_iter == table_operations.end()) {
     return nullptr;
   }
