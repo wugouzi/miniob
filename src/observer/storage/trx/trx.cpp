@@ -79,6 +79,7 @@ RC Trx::insert_record(Table *table, Record *record)
   // 先校验是否以前是否存在过(应该不会存在)
   Operation *old_oper = find_operation(table, record->rid());
   if (old_oper != nullptr) {
+    LOG_ERROR("operation: %d page %d slot %d", old_oper->type(), old_oper->page_num(), old_oper->slot_num());
     if (old_oper->type() == Operation::Type::DELETE) {
       delete_operation(table, record->rid());
     } else {
@@ -139,6 +140,7 @@ Operation *Trx::find_operation(Table *table, const RID &rid)
   OperationSet &table_operations = table_operations_iter->second;
   Operation tmp(Operation::Type::UNDEFINED, rid);
   OperationSet::iterator operation_iter = table_operations.find(tmp);
+  LOG_INFO("operation set size %d", table_operations.size());
   if (operation_iter == table_operations.end()) {
     return nullptr;
   }
@@ -147,6 +149,7 @@ Operation *Trx::find_operation(Table *table, const RID &rid)
 
 void Trx::insert_operation(Table *table, Operation::Type type, const RID &rid)
 {
+  LOG_INFO("table %s operation: %d, %s", table->name(), type, rid.to_string().c_str());
   OperationSet &table_operations = operations_[table];
   table_operations.emplace(type, rid);
 }

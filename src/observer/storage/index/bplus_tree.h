@@ -50,31 +50,29 @@ public:
 
   int operator()(const char *v1, const char *v2) const {
     int offset = 0;
-    // check null first
     for (size_t i = 0; i < attr_types_.size(); i++) {
-      // v1 is null
-      if (v1[offset + attr_lengths_[i] - 1] == 1) {
+      bool left_is_null = v1[offset + attr_lengths_[i] - 1] == 1;
+      bool right_is_null = v2[offset + attr_lengths_[i] - 1] == 1;
+      if (left_is_null && right_is_null) {
+        continue;
+      } else if (left_is_null && !right_is_null) {
         return -1;
-      }
-      // v2 is null
-      if (v2[offset + attr_lengths_[i] - 1] == 1) {
+      } else if (!left_is_null && right_is_null) {
         return 1;
       }
-    }
-    for (size_t i = 0; i < attr_types_.size(); i++) {
       int comp_res = 0;
       switch (attr_types_[i]) {
         case INTS: {
-          comp_res = compare_int((void *)v1, (void *)v2);
+          comp_res = compare_int((void *)(v1 + offset), (void *)(v2 + offset));
         } break;
         case FLOATS: {
-          comp_res = compare_float((void *)v1, (void *)v2);
+          comp_res = compare_float((void *)(v1 + offset), (void *)(v2 + offset));
         } break;
         case CHARS: {
-          comp_res = compare_string((void *)v1, attr_lengths_[i] - 1, (void *)v2, attr_lengths_[i] - 1);
+          comp_res = compare_string((void *)(v1 + offset), attr_lengths_[i] - 1, (void *)(v2 + offset), attr_lengths_[i] - 1);
         } break;
         case DATES: {
-          comp_res =  compare_date((void *)v1, (void *)v2);
+          comp_res =  compare_date((void *)(v1 + offset), (void *)(v2 + offset));
         } break;
         default:{
           LOG_ERROR("unknown attr type. %d", attr_types_[i]);
@@ -84,6 +82,7 @@ public:
       if (comp_res != 0) {
         return comp_res;
       }
+      offset += attr_lengths_[i];
     }
     return 0;
   }
@@ -100,10 +99,6 @@ public:
     check_dup_ = check_dup;
     attr_comparator_.init(types, lens);
   }
-  // void init(AttrType type, int length)
-  // {
-
-  // }
 
   const AttrComparator &attr_comparator() const {
     return attr_comparator_;
