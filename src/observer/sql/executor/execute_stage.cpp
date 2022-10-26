@@ -1159,13 +1159,13 @@ bool TupleSet::not_in(TupleCell &cell) const
 {
   for (auto &c : cells_) {
     if (c.attr_type() == NULLS) {
-      continue;
+      return false;
     }
-    if (c.compare(cell) != 0) {
-      return true;
+    if (c.compare(cell) == 0) {
+      return false;
     }
   }
-  return false;
+  return true;
 }
 
 const FieldMeta &TupleSet::meta(int idx) const {
@@ -1254,11 +1254,11 @@ bool Pretable::not_in(TupleCell &cell) const
     return false;
   }
   for (auto &tuple : tuples_) {
-    if (tuple.not_in(cell)) {
-      return true;
+    if (!tuple.not_in(cell)) {
+      return false;
     }
   }
-  return false;
+  return true;
 }
 
 Pretable& Pretable::operator=(Pretable&& t)
