@@ -1,6 +1,129 @@
+INITIALIZATION
+CREATE TABLE csq_1(id int, col1 int, feat1 float);
+CREATE TABLE csq_2(id int, col2 int, feat2 float);
+CREATE TABLE csq_3(id int, col3 int, feat3 float);
+CREATE TABLE csq_4(id int, col4 int, feat4 float);
+
+INSERT INTO csq_1 VALUES (1, 4, 11.2);
+INSERT INTO csq_1 VALUES (2, 2, 12.0);
+INSERT INTO csq_1 VALUES (3, 3, 13.5);
+INSERT INTO csq_2 VALUES (1, 2, 13.0);
+INSERT INTO csq_2 VALUES (2, 7, 10.5);
+INSERT INTO csq_2 VALUES (5, 3, 12.6);
+INSERT INTO csq_3 VALUES (1, 2, 11.0);
+INSERT INTO csq_3 VALUES (3, 6, 16.5);
+INSERT INTO csq_3 VALUES (5, 5, 14.6);
+
+1. SELECT
+select * from csq_1 where id in (select csq_2.id from csq_2 where csq_2.id in (select csq_3.id from csq_3));
+1 | 4 | 11.2
+ID | COL1 | FEAT1
+
+select * from csq_1 where id in (select csq_2.id from csq_2 where csq_2.id not in (select csq_3.id from csq_3));
+2 | 2 | 12
+ID | COL1 | FEAT1
+
+select * from csq_1 where col1 not in (select csq_2.col2 from csq_2 where csq_2.id not in (select csq_3.id from csq_3));
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+
+select * from csq_1 where col1 not in (select csq_2.col2 from csq_2 where csq_2.id in (select csq_3.id from csq_3));
+1 | 4 | 11.2
+ID | COL1 | FEAT1
+
+select * from csq_1 where col1 > (select avg(csq_2.col2) from csq_2 where csq_2.feat2 >= (select min(csq_3.feat3) from csq_3));
+1 | 4 | 11.2
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+
+select * from csq_1 where (select avg(csq_2.col2) from csq_2 where csq_2.feat2 > (select min(csq_3.feat3) from csq_3)) = col1;
+ID | COL1 | FEAT1
+
+select * from csq_1 where (select avg(csq_2.col2) from csq_2) <> (select avg(csq_3.col3) from csq_3);
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+
+select * from csq_1 where feat1 > (select min(csq_2.feat2) from csq_2) and col1 <= (select min(csq_3.col3) from csq_3);
+2 | 2 | 12
+ID | COL1 | FEAT1
+
+select * from csq_1 where (select max(csq_2.feat2) from csq_2) > feat1 and col1 > (select min(csq_3.col3) from csq_3);
+1 | 4 | 11.2
+ID | COL1 | FEAT1
+
+select * from csq_1 where (select max(csq_2.feat2) from csq_2) > feat1 and (select min(csq_3.col3) from csq_3) < col1;
+1 | 4 | 11.2
+ID | COL1 | FEAT1
+
+select * from csq_1 where feat1 <> (select avg(csq_2.feat2) from csq_2 where csq_2.feat2 > csq_1.feat1);
+1 | 4 | 11.2
+2 | 2 | 12
+ID | COL1 | FEAT1
+
+select * from csq_1 where col1 not in (select csq_2.col2 from csq_2 where csq_2.id in (select csq_3.id from csq_3 where csq_1.id = csq_3.id));
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+
+2. SELECT WITH EMPTY TABLE
+select * from csq_1 where id in (select csq_2.id from csq_2 where csq_2.id in (select csq_3.id from csq_3 where 1=0));
+ID | COL1 | FEAT1
+select * from csq_1 where id in (select csq_2.id from csq_2 where csq_2.id in (select csq_3.id from csq_3 where 1=0) and 1=0);
+ID | COL1 | FEAT1
+select * from csq_1 where col1 not in (select csq_2.col2 from csq_2 where csq_2.id not in (select csq_3.id from csq_3 where 1=0));
+1 | 4 | 11.2
+ID | COL1 | FEAT1
+select * from csq_1 where col1 not in (select csq_2.col2 from csq_2 where csq_2.id not in (select csq_3.id from csq_3) and 1=0);
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+select * from csq_3 where feat3 < (select max(csq_2.feat2) from csq_2 where csq_2.id not in (select csq_3.id from csq_3 where 1=0));
+1 | 2 | 11
+ID | COL3 | FEAT3
+select * from csq_3 where feat3 < (select max(csq_2.feat2) from csq_2 where csq_2.id not in (select csq_3.id from csq_3 ) and 1=0);
+ID | COL3 | FEAT3
+
+3. ERROR
+select * from csq_1 where col1 = (select csq_2.col2 from csq_2);
+FAILURE
+select * from csq_1 where col1 = (select * from csq_2);
+FAILURE
+select * from csq_1 where col1 in (select * from csq_2);
+FAILURE
+select * from csq_1 where col1 not in (select * from csq_2);
+FAILURE
+
+
+--- simple
+
+create table t(id int, col int);
+insert into t values(3,3);
+insert into t values(1,1);
+select * from t where id in (1,3,4,5) and col in (2,3);
+drop table t;
+
+select * from ssq_1 where col1 not in (2,null);
+ID | COL1 | FEAT1
+select * from ssq_1 where id in (1,3,4,5) and col1 in (2,3);
++1 | 4 | 11.2
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+select * from ssq_1 where id in (1,3,4,5) and col1 not in (2,3);
+1 | 4 | 11.2
++3 | 3 | 13.5
+ID | COL1 | FEAT1
+
+
 CREATE TABLE t(id int, t_name char);
 INSERT INTO t VALUES (1,'OB');
 SELECT * FROM t;
+drop table t;
 
 create table t(id int nullable, id2 int);
 insert into t values(1,2);

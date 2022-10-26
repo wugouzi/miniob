@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
+#include <unordered_set>
 #include <vector>
 
 #include "rc.h"
@@ -42,6 +43,7 @@ public:
   StmtType type() const override { return StmtType::SELECT; }
 public:
   static RC create(Db *db, Selects *select_sql, Stmt *&stmt);
+  static RC create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_set<Table *> &parent_tables);
 
 public:
   const std::vector<Table *> &tables() const { return tables_; }
@@ -51,10 +53,13 @@ public:
   std::vector<OrderByField> &order_by_fields() { return order_by_fields_; }
   FilterStmt *filter_stmt() const { return filter_stmt_; }
   int aggregate_num() const { return aggregate_num_; }
+  // void add_parent_tables(std::unordered_set<Table *> tables) { parent_tables_ = tables; }
+  // std::unordered_set<Table *> parent_tables() { return parent_tables_; }
 
 private:
   std::vector<Field> query_fields_;
   std::vector<Table *> tables_;
+  // std::unordered_set<Table *> parent_tables_;
   FilterStmt *filter_stmt_ = nullptr;
   int aggregate_num_ = 0;
   /**

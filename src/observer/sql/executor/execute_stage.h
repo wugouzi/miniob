@@ -30,6 +30,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/common/field.h"
 #include "storage/common/condition_filter.h"
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 #include <algorithm>
@@ -45,7 +46,7 @@ public:
   ~ExecuteStage();
   static Stage *make_stage(const std::string &tag);
   static Pretable *select_to_pretable(SelectStmt *select_stmt, RC *rc);
-  static Pretable *Selects_to_pretable(Db *db, Value *value);
+  static Pretable *Selects_to_pretable(Db *db, Value *value, std::unordered_set<Table *> &parent_tables);
 
 protected:
   // common function

@@ -229,7 +229,7 @@ class MiniObServer:
     self.__process.terminate()
     return_code = -1
     try:
-      return_code = self.__process.wait(10)
+      return_code = self.__process.wait(5)
       if return_code is None:
         self.__process.kill()
         logging.warning("Failed to stop server: %s", self.__base_dir)
