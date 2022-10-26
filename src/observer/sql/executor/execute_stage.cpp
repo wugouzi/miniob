@@ -1762,10 +1762,13 @@ RC Pretable::assign_row_to_value(Value *value)
 }
 
 bool Pretable::valid_operation(CompOp op) const {
-  if (!only_one_cell() && tuples_.size() > 0) {
-    return op == VALUE_IN || op == VALUE_NOT_IN || op == VALUE_EXISTS || op == VALUE_NOT_EXISTS;
+  if (tuples_.size() == 0 || op == VALUE_EXISTS || op == VALUE_NOT_EXISTS) {
+    return true;
   }
-  return true;
+  if (op == VALUE_IN || op == VALUE_NOT_IN) {
+    return tuples_[0].cells().size() == 1;
+  }
+  return only_one_cell();
 }
 
 

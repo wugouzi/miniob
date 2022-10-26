@@ -79,9 +79,7 @@ bool PredicateOperator::do_predicate(RowTuple &tuple)
     TupleCell right_cell;
     left_expr->get_value(tuple, left_cell);
     right_expr->get_value(tuple, right_cell);
-    if (left_cell.attr_type() == UNDEFINED || right_cell.attr_type() == UNDEFINED) {
-      return false;
-    }
+
     // NULL COMPARE
     // TODO: type check
     if (comp == VALUE_IN) {
@@ -96,6 +94,9 @@ bool PredicateOperator::do_predicate(RowTuple &tuple)
     } else if (comp == VALUE_NOT_EXISTS) {
       ValueExpr *right_value_expr = dynamic_cast<ValueExpr*>(right_expr);
       return right_value_expr->pretable()->tuple_num() == 0;
+    }
+    if (left_cell.attr_type() == UNDEFINED || right_cell.attr_type() == UNDEFINED) {
+      return false;
     }
     bool filter_result = false;
     if (left_cell.attr_type() == AttrType::NULLS && right_cell.attr_type() == AttrType::NULLS &&
