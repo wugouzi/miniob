@@ -15,11 +15,13 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include <string.h>
+// #include "sql/executor/execute_stage.h"
 #include "sql/parser/parse_defs.h"
 #include "storage/common/field.h"
 #include "sql/expr/tuple_cell.h"
 
 class Tuple;
+class Pretable;
 
 enum class ExprType {
   NONE,
@@ -86,6 +88,7 @@ public:
       tuple_cell_.set_length(strlen((const char *)value.data));
     }
   }
+  ValueExpr(Pretable *table) : pretable_(table) {}
 
   virtual ~ValueExpr() = default;
 
@@ -107,6 +110,13 @@ public:
     return tuple_cell_.get_data();
   }
 
+  bool is_pretable() {
+    return pretable_ != nullptr;
+  }
+
+  Pretable *pretable() { return pretable_; }
+
 private:
   TupleCell tuple_cell_;
+  Pretable *pretable_ = nullptr;
 };

@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #ifndef __OBSERVER_SQL_EXECUTE_STAGE_H__
 #define __OBSERVER_SQL_EXECUTE_STAGE_H__
 
+#include "sql/expr/tuple_cell.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/stmt.h"
 #include "sql/stmt/select_stmt.h"
@@ -43,6 +44,8 @@ class ExecuteStage : public common::Stage {
 public:
   ~ExecuteStage();
   static Stage *make_stage(const std::string &tag);
+  static Pretable *select_to_pretable(SelectStmt *select_stmt, RC *rc);
+  static Pretable *Selects_to_pretable(Db *db, Value *value);
 
 protected:
   // common function
@@ -73,7 +76,6 @@ protected:
   RC do_update_table(SQLStageEvent *sql_event);
   RC value_check(const int &value_num, const Value *values) const;
   void print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi);
-  Pretable *select_to_pretable(SelectStmt *select_stmt, RC *rc);
   RC compute_value_from_select(Db *db, Value *value);
   RC check_updates(Db *db, Updates &updates);
 
@@ -99,6 +101,7 @@ class TupleSet {
   const std::vector<std::pair<Table*, FieldMeta>> &metas() const { return metas_; }
 
   void push(const std::pair<Table*, FieldMeta> &p, const TupleCell &cell);
+  void push(const TupleCell &cell); // only for in values
 
   const TupleCell &get_cell(int idx);
   const std::pair<Table *, FieldMeta> &get_meta(int idx);
@@ -108,6 +111,8 @@ class TupleSet {
   const std::string& data() const { return data_; }
   int get_offset(const char *table_name, const char *field_name) const ;
   int size() const { return data_.size(); }
+  bool in(TupleCell &cell) const;
+  bool not_in(TupleCell &cell) const;
 
  private:
   int table_num_ = 0;
@@ -124,6 +129,7 @@ class Pretable {
   Pretable() = default;
   Pretable(Pretable&& t);
   Pretable& operator=(Pretable&& t);
+  Pretable(ValueList* valuelist);     // only for id in (1,2,3);
   // ~Pretable() = default;
 
 
@@ -146,6 +152,14 @@ class Pretable {
   std::vector<TupleSet>::iterator end() { return tuples_.end(); }
 
   RC assign_row_to_value(Value *value);
+
+  bool in(Value *value) const;
+  bool in(TupleCell &cell) const;
+  bool not_in(TupleCell &cell) const;
+  int tuple_num() const { return tuples_.size(); }
+  bool only_one_cell() const { return tuples_.size() == 1 && tuples_[0].cells().size() == 1; }
+  bool valid_operation(CompOp op) const;
+  TupleCell get_first_cell() { return tuples_[0].get_cell(0); }
 
   std::vector<TupleSet> tuples_;
   std::vector<Table*> tables_;

@@ -16,8 +16,10 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include "common/lang/string.h"
 #include "sql/expr/expression.h"
+#include "sql/executor/execute_stage.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/filter_stmt.h"
+#include "sql/stmt/select_stmt.h"
 #include "sql/stmt/stmt.h"
 #include "storage/common/db.h"
 #include "storage/common/field_meta.h"
@@ -93,6 +95,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     return RC::INVALID_ARGUMENT;
   }
 
+  // str check
   if (comp == STR_LIKE || comp == STR_NOT_LIKE) {
     if (!condition.left_is_attr || condition.right_is_attr) {
       LOG_INFO("left is not an attribute");
@@ -111,6 +114,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     }
   }
 
+  // type checks
   if (condition.left_is_attr && !condition.right_is_attr) {
     Table *table = nullptr;
     const FieldMeta *field = nullptr;
@@ -151,7 +155,22 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     if (condition.left_value.type == DATES && *(int *)condition.left_value.data == -1) {
       return RC::INVALID_ARGUMENT;
     }
-    left = new ValueExpr(condition.left_value);
+    if (condition.left_value.type == SELECTS) {
+      Pretable *res = ExecuteStage::Selects_to_pretable(db, &condition.left_value);
+      if (res == nullptr) {
+        return RC::INTERNAL;
+      }
+      if (!res->valid_operation(comp)) {
+        LOG_INFO("select have 0 or more than 1 values");
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+      left = new ValueExpr(res);
+    } else if (condition.left_value.type == VALUELIST) {
+      Pretable *res = new Pretable(condition.left_value.value_list);
+      left = new ValueExpr(res);
+    } else {
+      left = new ValueExpr(condition.left_value);
+    }
   }
 
   if (condition.right_is_attr) {
@@ -168,7 +187,22 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     if (condition.right_value.type == DATES && *(int *)condition.right_value.data == -1) {
       return RC::INVALID_ARGUMENT;
     }
-    right = new ValueExpr(condition.right_value);
+    if (condition.right_value.type == SELECTS) {
+      Pretable *res = ExecuteStage::Selects_to_pretable(db, &condition.right_value);
+      if (res == nullptr) {
+        return RC::INTERNAL;
+      }
+      if (!res->valid_operation(comp)) {
+        LOG_INFO("select have 0 or more than 1 values");
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+      right = new ValueExpr(res);
+    } else if (condition.right_value.type == VALUELIST) {
+      Pretable *res = new Pretable(condition.right_value.value_list);
+      right = new ValueExpr(res);
+    } else {
+      right = new ValueExpr(condition.right_value);
+    }
   }
 
   filter_unit = new FilterUnit;
