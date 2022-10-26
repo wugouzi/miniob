@@ -15,9 +15,9 @@
 
 typedef struct ParserContext {
   Query * ssql;
-  size_t select_length;
+  // size_t select_length;
 
-  size_t from_length;
+  // size_t from_length;
 
   size_t valuelist_length;
   size_t update_length;
@@ -39,6 +39,7 @@ typedef struct ParserContext {
 
   size_t in_valuelist_num;
 
+  // select start from 1;
   size_t selects_num;
   // int selects_stack[MAX_NUM];
   // int selects_ptr;
@@ -65,8 +66,8 @@ void yyerror(yyscan_t scanner, const char *str)
   query_reset(context->ssql);
   context->ssql->flag = SCF_ERROR;
   // context->condition_length = 0;
-  context->from_length = 0;
-  context->select_length = 0;
+  // context->from_length = 0;
+  // context->select_length = 0;
   context->update_length = 0;
   memset(context->value_lengths, 0, sizeof(context->value_lengths));
   memset(context->condition_lengths, 0, sizeof(context->condition_lengths));
@@ -427,9 +428,9 @@ value:
 | NULL_V {
       value_init_null(&CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP]++]);
     }
-| internal_select {
+| LBRACE select_ RBRACE {
   value_init_select(&CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP]++],
-                    &CONTEXT->ssql->selects[CONTEXT->selects_num - 1]);
+                    &CONTEXT->ssql->selects[CONTEXT->selects_num]);
 }
 ;
 
@@ -443,6 +444,7 @@ delete:		/*  delete 语句的语法解析树*/
 			CONTEXT->condition_lengths[S_TOP] = 0;
     }
     ;
+
 update:			/*  update 语句的语法解析树*/
 UPDATE ID SET update_set updates_sets where SEMICOLON
 {
@@ -466,36 +468,19 @@ updates_sets:
 }
 ;
 
-
-
-internal_select:
-LBRACE select_stmt select_attr FROM rel_name rel_list where order groupby having RBRACE
-{
-  // int num = CONTEXT->selects_num;
-  selects_append_conditions(&CONTEXT->ssql->selects[S_TOP], CONTEXT->conditions[S_TOP], CONTEXT->condition_lengths[S_TOP]);
-
-  //临时变量清零
-  // CONTEXT->condition_length=0;
-  // CONTEXT->from_length=0;
-  // CONTEXT->select_length=0;
-  // CONTEXT->value_length = 0;
-  CONTEXT->ptr--;
-}
-;
-
 select_stmt:
 SELECT {
-  printf("push select\n");
-  CONTEXT->stack[++CONTEXT->ptr] = CONTEXT->selects_num;
-  CONTEXT->selects_num++;
+  printf("push select %zu, ptr: %d\n", CONTEXT->selects_num + 1, CONTEXT->ptr);
+  CONTEXT->stack[++CONTEXT->ptr] = ++CONTEXT->selects_num;
+  // CONTEXT->selects_num++;
   CONTEXT->ssql->selects_num = CONTEXT->selects_num;
 }
 
 select_:
 select_stmt select_attr FROM rel_name rel_list where order groupby having {
   selects_append_conditions(&CONTEXT->ssql->selects[S_TOP], CONTEXT->conditions[S_TOP], CONTEXT->condition_lengths[S_TOP]);
+  printf("pop select %zu:%s, ptr: %d\n", S_TOP, CONTEXT->ssql->selects[S_TOP].relations[0], CONTEXT->ptr);
   CONTEXT->ptr--;
-  printf("pop select %s\n", CONTEXT->ssql->selects[S_TOP].relations[0]);
 }
 
 select:				/*  select 语句的语法解析树*/
@@ -503,13 +488,13 @@ select_ SEMICOLON
 {
   // int num = CONTEXT->selects_num;
 
-  CONTEXT->ssql->sstr.selection = &CONTEXT->ssql->selects[0];
+  CONTEXT->ssql->sstr.selection = &CONTEXT->ssql->selects[1];
   CONTEXT->ssql->flag=SCF_SELECT;//"select";
 
   //临时变量清零
   CONTEXT->condition_lengths[S_TOP]=0;
-  CONTEXT->from_length=0;
-  CONTEXT->select_length=0;
+  // CONTEXT->from_length=0;
+  // CONTEXT->select_length=0;
   CONTEXT->value_lengths[S_TOP] = 0;
 
 }
@@ -854,7 +839,7 @@ condition:
       CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
       CONTEXT->in_valuelist_num++;
     }
-| EXISTS LBRACE select_ RBRACE {
+| EXISTS value {
       Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
       value_init_null(&CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP]++]);
       Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
@@ -862,7 +847,7 @@ condition:
       condition_init(&condition, VALUE_EXISTS, 0, NULL, left_value, 0, NULL, right_value);
       CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
     }
-| NOT EXISTS LBRACE select_ RBRACE {
+| NOT EXISTS value {
       Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
       value_init_null(&CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP]++]);
       Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];

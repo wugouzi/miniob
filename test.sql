@@ -1,3 +1,73 @@
+create table t1(id int, num int);
+create table t2(id int, num int);
+insert into t1 values(1,1);
+insert into t1 values(2,2);
+insert into t1 values(3,3);
+insert into t2 values(4,4);
+update t1 set id=(SELECT id from t2 where num=4) where id=2;
+select * from t1;
+drop table t1;
+drop table t2;
+
+
+UPDATE null_table4
+SET num=(SELECT null_table3.num from null_table3 where null_table3.id=1) where id=2;
+SUCCESS
+SELECT * FROM null_table4;
+-1 | NULL | NULL
+-2 | NULL | N2
+-3 | 3 | N3
+-ID | NUM | NAME
+-UPDATE null_table4 SET id=(SELECT null_table3.num from null_table3 where null_table3.id=1) where id=2;
+-FAILURE
+-8. UNIQUE INDEX
+
+create table t1(id int, )
+
+
+ID | T_NAME | COL1 | COL2
+3. UPDATE WITHOUT CONDITIONS
+UPDATE Update_table_3 SET t_name=(select Update_table_2.t_name from Update_table_2 where Update_table_2.id=2);
+-SUCCESS
+-SELECT * FROM Update_table_3;
+-1 | N2 | 1 | 1
+-2 | N2 | 2 | 1
+-3 | N2 | 2 | 1
+-ID | T_NAME | COL1 | COL2
+-UPDATE Update_table_3 SET col1=1,col2=2;
+
+create table t1(id int nullable);
+create table t2(id int nullable);
+insert into t1 values(null);
+insert into t1 values(1);
+select * from t1 where id = 1 or id is null and 1=1;
+insert into t2 values(null);
+select * from t1 where id = (select * from t2);
+drop table t1;
+drop table t2;
+
+create table t1(id int);
+create table t2(id int);
+insert into t1 values(null);
+insert into t1 values(1);
+select * from t1 where id = 1 or id is null and 1=1;
+insert into t2 values(null);
+select * from t1 where id = (select * from t2);
+drop table t1;
+drop table t2;
+
+
+ID | COL1 | FEAT1
+select * from ssq_1 where col1 in (1,3,4,null);
+1 | 4 | 11.2
++2 | NULL | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+select * from ssq_1 where col1 not in (2,3);
+1 | 4 | 11.2
++2 | NULL | 12
+ID | COL1 | FEAT1
+
 INITIALIZATION
 CREATE TABLE ssq_1(id int, col1 int, feat1 float);
 CREATE TABLE ssq_2(id int, col2 int, feat2 float);
@@ -99,7 +169,15 @@ FAILURE
 select * from ssq_1 where col1 not in (select * from ssq_2);
 FAILURE
 
+select * from ssq_1 where col1 in (select id from ssq_2);
 
+create table t1(id int, col int);
+create table t2(id int, col int);
+insert into t1 values(1,1);
+insert into t1 values(2,2);
+insert into t2 values(3,3);
+insert into t2 values(2,2);
+select * from t1 where t1 > (select )
 
 create table t(id int nullable);
 insert into t values(null);

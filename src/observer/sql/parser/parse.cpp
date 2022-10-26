@@ -517,7 +517,7 @@ Query *query_create()
 
 void query_reset(Query *query)
 {
-  for (int i = 0; i < query->selects_num; i++) {
+  for (int i = 1; i <= query->selects_num; i++) {
     selects_destroy(&query->selects[i]);
   }
   switch (query->flag) {
