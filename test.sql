@@ -1,3 +1,7 @@
+CREATE TABLE t(id int, t_name char);
+INSERT INTO t VALUES (1,'OB');
+SELECT * FROM t;
+
 create table t(id int nullable, id2 int);
 insert into t values(1,2);
 insert into t values(null, 1);
@@ -9,6 +13,8 @@ insert into t values(1,2);
 insert into t values(null, 1);
 select * from t where id in (null);
 select * from t where id not in (null);
+select * from t where null in (null);
+select * from t where null not in (null);
 drop table t;
 
 

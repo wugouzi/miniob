@@ -58,6 +58,7 @@ private:
   std::string name_;
   std::string path_;
   std::unordered_map<std::string, Table *> opened_tables_;
+  std::unordered_map<Table *, bool> table_addr_mp_;
   CLogManager *clog_manager_ = nullptr;
 };
 

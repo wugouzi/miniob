@@ -72,6 +72,12 @@ RC Db::create_table(const char *table_name, int attribute_count, const AttrInfo 
   // 文件路径可以移到Table模块
   std::string table_file_path = table_meta_file(path_.c_str(), table_name);
   Table *table = new Table();
+  while (table_addr_mp_.count(table)) {
+    LOG_INFO("same table address!");
+    table = new Table();
+  }
+  table_addr_mp_[table] = true;
+
   rc = table->create(table_file_path.c_str(), table_name, path_.c_str(), attribute_count, attributes, get_clog_manager());
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Failed to create table %s.", table_name);
