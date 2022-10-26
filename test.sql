@@ -1,3 +1,28 @@
+create table t(id int nullable, id2 int);
+insert into t values(1,2);
+insert into t values(null, 1);
+select * from t where id in (1,null);
+drop table t;
+
+create table t(id int, id2 int);
+insert into t values(1,2);
+insert into t values(null, 1);
+select * from t where id in (null);
+select * from t where id not in (null);
+drop table t;
+
+
+ID | COL1 | FEAT1
+select * from ssq_1 where col1 in (1,3,4,null);
+1 | 4 | 11.2
++2 | NULL | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+select * from ssq_1 where col1 not in (2,3);
+1 | 4 | 11.2
++2 | NULL | 12
+ID | COL1 | FEAT1
+
 create table t1(id int, num int);
 create table t2(id int, num int);
 insert into t1 values(1,1);

@@ -1145,7 +1145,23 @@ int TupleSet::get_offset(const char *table_name, const char *field_name) const
 bool TupleSet::in(TupleCell &cell) const
 {
   for (auto &c : cells_) {
+    if (c.attr_type() == NULLS) {
+      continue;
+    }
     if (c.compare(cell) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool TupleSet::not_in(TupleCell &cell) const
+{
+  for (auto &c : cells_) {
+    if (c.attr_type() == NULLS) {
+      continue;
+    }
+    if (c.compare(cell) != 0) {
       return true;
     }
   }
@@ -1221,8 +1237,24 @@ bool Pretable::in(Value *value) const
 
 bool Pretable::in(TupleCell &cell) const
 {
+  if (cell.attr_type() == NULLS) {
+    return false;
+  }
   for (auto &tuple : tuples_) {
     if (tuple.in(cell)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Pretable::not_in(TupleCell &cell) const
+{
+  if (cell.attr_type() == NULLS) {
+    return false;
+  }
+  for (auto &tuple : tuples_) {
+    if (tuple.not_in(cell)) {
       return true;
     }
   }

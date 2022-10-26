@@ -112,6 +112,7 @@ class TupleSet {
   int get_offset(const char *table_name, const char *field_name) const ;
   int size() const { return data_.size(); }
   bool in(TupleCell &cell) const;
+  bool not_in(TupleCell &cell) const;
 
  private:
   int table_num_ = 0;
@@ -154,6 +155,7 @@ class Pretable {
 
   bool in(Value *value) const;
   bool in(TupleCell &cell) const;
+  bool not_in(TupleCell &cell) const;
   int tuple_num() const { return tuples_.size(); }
   bool only_one_cell() const { return tuples_.size() == 1 && tuples_[0].cells().size() == 1; }
   bool valid_operation(CompOp op) const;

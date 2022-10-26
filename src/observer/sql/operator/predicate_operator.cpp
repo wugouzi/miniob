@@ -87,7 +87,7 @@ bool PredicateOperator::do_predicate(RowTuple &tuple)
       return right_value_expr->pretable()->in(left_cell);
     } else if (comp == VALUE_NOT_IN) {
       ValueExpr *right_value_expr = dynamic_cast<ValueExpr*>(right_expr);
-      return !right_value_expr->pretable()->in(left_cell);
+      return right_value_expr->pretable()->not_in(left_cell);
     } else if (comp == VALUE_EXISTS) {
       ValueExpr *right_value_expr = dynamic_cast<ValueExpr*>(right_expr);
       return right_value_expr->pretable()->tuple_num() > 0;
