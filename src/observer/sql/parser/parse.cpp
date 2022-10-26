@@ -12,7 +12,6 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi 
 //
 
-#include <cstddef>
 #include <mutex>
 #include "sql/parser/parse.h"
 // #include "rc.h"
@@ -166,10 +165,13 @@ void value_init_list(Value *value, ValueList *valuelist)
 
 void value_destroy(Value *value)
 {
-  value->type = UNDEFINED;
-  free(value->data);
+
   value->data = nullptr;
   value->select = nullptr;
+  if (value->type != SELECTS) {
+    free(value->data);
+  }
+  value->type = UNDEFINED;
 }
 
 void condition_init(Condition *condition, CompOp comp, int left_is_attr, RelAttr *left_attr, Value *left_value,
@@ -230,6 +232,7 @@ void selects_reverse_relations(Selects *selects, int len)
 }
 void selects_append_attribute(Selects *selects, RelAttr *rel_attr)
 {
+  printf("append attribute to %s\n", selects->relations[0]);
   selects->attributes[selects->attr_num++] = *rel_attr;
   if (rel_attr->type != AggreType::A_NO) {
     selects->aggregate_num++;
@@ -247,6 +250,7 @@ void selects_append_groupby(Selects *selects, RelAttr *groupby_attr)
 
 void selects_append_relation(Selects *selects, const char *relation_name)
 {
+  printf("append relation %s\n", relation_name);
   selects->relations[selects->relation_num++] = strdup(relation_name);
 }
 
@@ -260,9 +264,12 @@ void selects_append_order_field(Selects *selects, RelAttr* attr, size_t is_desc)
 void selects_append_conditions(Selects *selects, Condition conditions[], size_t condition_num)
 {
   assert(condition_num <= sizeof(selects->conditions) / sizeof(selects->conditions[0]));
+  printf("append conditions to %s, ", selects->relations[0]);
   for (size_t i = 0; i < condition_num; i++) {
+    printf("op: %d", conditions[i].comp);
     selects->conditions[i] = conditions[i];
   }
+  printf("\n");
   selects->condition_num = condition_num;
 }
 

@@ -155,6 +155,9 @@ class Pretable {
   bool in(Value *value) const;
   bool in(TupleCell &cell) const;
   int tuple_num() const { return tuples_.size(); }
+  bool only_one_cell() const { return tuples_.size() == 1 && tuples_[0].cells().size() == 1; }
+  bool valid_operation(CompOp op) const;
+  TupleCell get_first_cell() { return tuples_[0].get_cell(0); }
 
   std::vector<TupleSet> tuples_;
   std::vector<Table*> tables_;

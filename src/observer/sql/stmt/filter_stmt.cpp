@@ -160,6 +160,10 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       if (res == nullptr) {
         return RC::INTERNAL;
       }
+      if (!res->valid_operation(comp)) {
+        LOG_INFO("select have 0 or more than 1 values");
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
       left = new ValueExpr(res);
     } else if (condition.left_value.type == VALUELIST) {
       Pretable *res = new Pretable(condition.left_value.value_list);
@@ -187,6 +191,10 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       Pretable *res = ExecuteStage::Selects_to_pretable(db, &condition.right_value);
       if (res == nullptr) {
         return RC::INTERNAL;
+      }
+      if (!res->valid_operation(comp)) {
+        LOG_INFO("select have 0 or more than 1 values");
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
       }
       right = new ValueExpr(res);
     } else if (condition.right_value.type == VALUELIST) {
