@@ -73,6 +73,7 @@ RC Db::create_table(const char *table_name, int attribute_count, const AttrInfo 
   std::string table_file_path = table_meta_file(path_.c_str(), table_name);
   Table *table = new Table();
   while (table_addr_mp_.count(table)) {
+    LOG_INFO("same table address!");
     table = new Table();
   }
   table_addr_mp_[table] = true;
