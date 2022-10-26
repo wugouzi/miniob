@@ -19,7 +19,7 @@ typedef struct ParserContext {
 
   // size_t from_length;
 
-  size_t valuelist_length;
+
   size_t update_length;
 
 
@@ -37,6 +37,7 @@ typedef struct ParserContext {
 
   size_t joins;
 
+  size_t valuelist_length;
   size_t in_valuelist_num;
 
   // select start from 1;
@@ -430,7 +431,7 @@ value:
     }
 | LBRACE select_ RBRACE {
   value_init_select(&CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP]++],
-                    &CONTEXT->ssql->selects[CONTEXT->selects_num]);
+                    &CONTEXT->ssql->selects[CONTEXT->stack[CONTEXT->ptr+1]]);
 }
 ;
 
@@ -470,16 +471,16 @@ updates_sets:
 
 select_stmt:
 SELECT {
-  printf("push select %zu, ptr: %d\n", CONTEXT->selects_num + 1, CONTEXT->ptr);
   CONTEXT->stack[++CONTEXT->ptr] = ++CONTEXT->selects_num;
+  // printf("push select %zu, ptr: %d\n", CONTEXT->selects_num, CONTEXT->ptr);
   // CONTEXT->selects_num++;
   CONTEXT->ssql->selects_num = CONTEXT->selects_num;
 }
 
 select_:
 select_stmt select_attr FROM rel_name rel_list where order groupby having {
+  // printf("SELECT: num: %d, ptr: %d pop, table: %s, cond num: %d\n", S_TOP, CONTEXT->ptr, CONTEXT->ssql->selects[S_TOP].relations[0], CONTEXT->condition_lengths[S_TOP]);
   selects_append_conditions(&CONTEXT->ssql->selects[S_TOP], CONTEXT->conditions[S_TOP], CONTEXT->condition_lengths[S_TOP]);
-  printf("pop select %zu:%s, ptr: %d\n", S_TOP, CONTEXT->ssql->selects[S_TOP].relations[0], CONTEXT->ptr);
   CONTEXT->ptr--;
 }
 
@@ -487,7 +488,7 @@ select:				/*  select 语句的语法解析树*/
 select_ SEMICOLON
 {
   // int num = CONTEXT->selects_num;
-
+  // printf("SELECT: num: %d, ptr: %d pop, table: %s, cond num: %d", S_TOP, CONTEXT->ptr, CONTEXT->ssql->selects[S_TOP].relations[0], CONTEXT->condition_lengths[S_TOP]);
   CONTEXT->ssql->sstr.selection = &CONTEXT->ssql->selects[1];
   CONTEXT->ssql->flag=SCF_SELECT;//"select";
 
@@ -496,7 +497,6 @@ select_ SEMICOLON
   // CONTEXT->from_length=0;
   // CONTEXT->select_length=0;
   CONTEXT->value_lengths[S_TOP] = 0;
-
 }
 ;
 having:
@@ -726,7 +726,7 @@ rel_list:
 where:
     /* empty */ 
     | WHERE condition condition_list {	
-				// CONTEXT->conditions[CONTEXT->condition_length++]=*$2;
+      // CONTEXT->conditions[CONTEXT->condition_length++]=*$2;
 			}
     ;
 condition_list:
@@ -741,10 +741,11 @@ condition:
 			RelAttr left_attr;
 			relation_attr_init(&left_attr, NULL, $1);
 
+      // printf("current ptr %d\n", CONTEXT->ptr);
 			Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
 
 			Condition condition;
-			condition_init(&condition, CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]], 1, &left_attr, NULL, 0, NULL, right_value);
+			condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, right_value);
 			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 
 		}
@@ -754,7 +755,7 @@ condition:
 			Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
 
 			Condition condition;
-			condition_init(&condition, CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]], 0, NULL, left_value, 0, NULL, right_value);
+			condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 0, NULL, right_value);
 			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 		}
 		|ID comOp ID 
@@ -765,7 +766,7 @@ condition:
 			relation_attr_init(&right_attr, NULL, $3);
 
 			Condition condition;
-			condition_init(&condition, CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]], 1, &left_attr, NULL, 1, &right_attr, NULL);
+			condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 1, &right_attr, NULL);
 			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 		}
     |value comOp ID
@@ -775,7 +776,7 @@ condition:
 			relation_attr_init(&right_attr, NULL, $3);
 
 			Condition condition;
-			condition_init(&condition, CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]], 0, NULL, left_value, 1, &right_attr, NULL);
+			condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, &right_attr, NULL);
 			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 
 		}
@@ -786,7 +787,8 @@ condition:
 			Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
 
 			Condition condition;
-			condition_init(&condition, CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]], 1, &left_attr, NULL, 0, NULL, right_value);
+			condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, right_value);
+      // printf("append condition in %d\n", S_TOP);
 			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 
     }
@@ -798,7 +800,7 @@ condition:
 			relation_attr_init(&right_attr, $3, $5);
 
 			Condition condition;
-			condition_init(&condition, CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]], 0, NULL, left_value, 1, &right_attr, NULL);
+			condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, &right_attr, NULL);
 			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
     }
     |ID DOT ID comOp ID DOT ID
@@ -809,7 +811,7 @@ condition:
 			relation_attr_init(&right_attr, $5, $7);
 
 			Condition condition;
-			condition_init(&condition, CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]], 1, &left_attr, NULL, 1, &right_attr, NULL);
+			condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 1, &right_attr, NULL);
 			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
     }
 | ID comOp LBRACE in_value in_value_list RBRACE {
@@ -821,7 +823,7 @@ condition:
       Value *value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
 
       Condition condition;
-      condition_init(&condition, CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]], 1, &left_attr, NULL, 0, NULL, value);
+      condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, value);
       CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
       CONTEXT->in_valuelist_num++;
 
@@ -835,7 +837,7 @@ condition:
       Value *value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
 
       Condition condition;
-      condition_init(&condition, CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]], 1, &left_attr, NULL, 0, NULL, value);
+      condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, value);
       CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
       CONTEXT->in_valuelist_num++;
     }
@@ -873,19 +875,19 @@ in_value_list:
 
 comOp:
 EQ {
-  CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]] = EQUAL_TO;
+  CONTEXT->comps[S_TOP] = EQUAL_TO;
 }
-    | LT { CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]] = LESS_THAN; }
-    | GT { CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]] = GREAT_THAN; }
-    | LE { CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]] = LESS_EQUAL; }
-    | GE { CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]] = GREAT_EQUAL; }
-    | NE { CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]] = NOT_EQUAL; }
-| IS { CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]] = IS_EQUAL; }
-| IS NOT { CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]] = IS_NOT_EQUAL; }
-| NOT LIKE { CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]] = STR_NOT_LIKE; }
-| LIKE { CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]] = STR_LIKE; }
-| IN { CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]] = VALUE_IN; }
-| NOT IN { CONTEXT->comps[CONTEXT->stack[CONTEXT->ptr]] = VALUE_NOT_IN; }
+    | LT { CONTEXT->comps[S_TOP] = LESS_THAN; }
+    | GT { CONTEXT->comps[S_TOP] = GREAT_THAN; }
+    | LE { CONTEXT->comps[S_TOP] = LESS_EQUAL; }
+    | GE { CONTEXT->comps[S_TOP] = GREAT_EQUAL; }
+    | NE { CONTEXT->comps[S_TOP] = NOT_EQUAL; }
+| IS { CONTEXT->comps[S_TOP] = IS_EQUAL; }
+| IS NOT { CONTEXT->comps[S_TOP] = IS_NOT_EQUAL; }
+| NOT LIKE { CONTEXT->comps[S_TOP] = STR_NOT_LIKE; }
+| LIKE { CONTEXT->comps[S_TOP] = STR_LIKE; }
+| IN { CONTEXT->comps[S_TOP] = VALUE_IN; }
+| NOT IN { CONTEXT->comps[S_TOP] = VALUE_NOT_IN; }
     ;
 
 load_data:

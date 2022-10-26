@@ -268,7 +268,7 @@ void selects_append_order_field(Selects *selects, RelAttr* attr, size_t is_desc)
 void selects_append_conditions(Selects *selects, Condition conditions[], size_t condition_num)
 {
   assert(condition_num <= sizeof(selects->conditions) / sizeof(selects->conditions[0]));
-  printf("append conditions to %s, ", selects->relations[0]);
+  printf("append conditions to %s, num %d, ", selects->relations[0], condition_num);
   for (size_t i = 0; i < condition_num; i++) {
     printf("op: %d", conditions[i].comp);
     selects->conditions[i] = conditions[i];

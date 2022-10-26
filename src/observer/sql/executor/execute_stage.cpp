@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -47,6 +48,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/stmt.h"
 #include "sql/stmt/update_stmt.h"
 #include "storage/common/field_meta.h"
+#include "storage/common/table.h"
 #include "storage/common/table_meta.h"
 #include "storage/index/index.h"
 #include "storage/default/default_handler.h"
@@ -822,17 +824,17 @@ RC ExecuteStage::compute_value_from_select(Db *db, Value *value)
   return rc;
 }
 
-Pretable *ExecuteStage::Selects_to_pretable(Db *db, Value *value)
+Pretable *ExecuteStage::Selects_to_pretable(Db *db, Value *value, std::unordered_set<Table *> &tables)
 {
   Stmt *stmt = nullptr;
-  RC rc = SelectStmt::create(db, value->select, stmt);
+  RC rc = SelectStmt::create(db, value->select, stmt, tables);
   if (rc != RC::SUCCESS) {
     return nullptr;
   }
   SelectStmt *select_stmt = dynamic_cast<SelectStmt*>(stmt);
+  // select_stmt->add_parent_tables(tables);
   return select_to_pretable(select_stmt, &rc);
 }
-
 
 RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
 {

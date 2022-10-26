@@ -24,6 +24,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/common/db.h"
 #include "storage/common/field_meta.h"
 #include "storage/common/table.h"
+#include <unordered_set>
 
 FilterStmt::~FilterStmt()
 {
@@ -156,7 +157,11 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       return RC::INVALID_ARGUMENT;
     }
     if (condition.left_value.type == SELECTS) {
-      Pretable *res = ExecuteStage::Selects_to_pretable(db, &condition.left_value);
+      std::unordered_set<Table *> parent_tables;
+      for (auto &kv : *tables) {
+        parent_tables.insert(kv.second);
+      }
+      Pretable *res = ExecuteStage::Selects_to_pretable(db, &condition.left_value, parent_tables);
       if (res == nullptr) {
         return RC::INTERNAL;
       }
@@ -188,7 +193,11 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       return RC::INVALID_ARGUMENT;
     }
     if (condition.right_value.type == SELECTS) {
-      Pretable *res = ExecuteStage::Selects_to_pretable(db, &condition.right_value);
+      std::unordered_set<Table *> parent_tables;
+      for (auto &kv : *tables) {
+        parent_tables.insert(kv.second);
+      }
+      Pretable *res = ExecuteStage::Selects_to_pretable(db, &condition.right_value, parent_tables);
       if (res == nullptr) {
         return RC::INTERNAL;
       }

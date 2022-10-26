@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/lang/string.h"
 #include "storage/common/db.h"
 #include "storage/common/table.h"
+#include <unordered_set>
 
 SelectStmt::~SelectStmt()
 {
@@ -68,8 +69,13 @@ static RC extract_from_order_by_clause(
   }
   return RC::SUCCESS;
 }
-
 RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt)
+{
+  std::unordered_set<Table *> tp;
+  return create(db, select_sql, stmt, tp);
+}
+
+RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_set<Table *> &parent_tables)
 {
   if (nullptr == db) {
     LOG_WARN("invalid argument. db is null");
@@ -207,10 +213,16 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt)
     default_table = tables[0];
   }
 
+  for (Table *table : parent_tables) {
+    tables.push_back(table);
+    table_map.insert(std::pair<std::string, Table*>(table->name(), table));
+  }
+
   // create filter statement in `where` statement
   FilterStmt *filter_stmt = nullptr;
   RC rc = FilterStmt::create(db, default_table, &table_map,
            select_sql->conditions, select_sql->condition_num, filter_stmt);
+
   if (rc != RC::SUCCESS) {
     LOG_WARN("cannot construct filter stmt");
     return rc;
