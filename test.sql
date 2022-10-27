@@ -1,3 +1,5 @@
+
+
 INITIALIZATION
 CREATE TABLE csq_1(id int, col1 int, feat1 float);
 CREATE TABLE csq_2(id int, col2 int, feat2 float);
@@ -101,6 +103,17 @@ FAILURE
 
 
 --- simple
+
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+select * from ssq_1 where id = (select ssq_2.id from ssq_2 where col2 = 2);
+-1 | 4 | 11.2
+-ID | COL1 | FEAT1
++FAILURE
+select * from ssq_1 where (select ssq_2.id from ssq_2 where col2 = 2) = id;
+-1 | 4 | 11.2
+-ID | COL1 | FEAT1
++FAILURE
 
 create table t(id int, col int);
 insert into t values(3,3);
@@ -1956,3 +1969,36 @@ ID | AGE | NAME | SCORE
 
 
 */
+
+
+create table t_basic(id int, age int, name char, score float);
+insert into t_basic values(7,7, 'g', 7.7);
+delete from t basic where id=3;
+select * from t_basic where id=1;
+select * from t_basic where id>=5;
+select t_basic.id, t_basic.age, t_basic.name, t_basic.score from t_basic;
+create index L_id on t_basic (id);
+-- restart
+delete from t basic where id=1;
+insert into t_basic values(1,1, 'a', 1.0);
+delete from _basic where id < 3;
+select * from t_basic;
+
+-- connect client1
+-- connect client2
+-- connection client2
+create table _basic2(id int, age int, name char);
+begin;
+insert into _basic2 values(1,1, 'a');
+- connection client1
+begin;
+insert into _basic2 values(2,2, 'b');
+- connection client2
+insert into _basic2 values(3,3, 'd');
+connection clientl
+delete from t basic where id=8;
+connection client2
+delete from t_ basic where id=6;
+commit;
+- restart
+select * from t basic:

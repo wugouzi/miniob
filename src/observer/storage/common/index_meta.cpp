@@ -88,6 +88,9 @@ RC IndexMeta::from_json(const TableMeta &table, const Json::Value &json_value, I
   std::vector<FieldMeta> fields;
 
   for (auto &field : field_names) {
+    if (field.empty()) {
+      continue;
+    }
     const FieldMeta *meta = table.field(field.c_str());
     if (nullptr == meta) {
       LOG_ERROR("Deserialize index [%s]: no such field: %s", name_value.asCString(), field.c_str());
