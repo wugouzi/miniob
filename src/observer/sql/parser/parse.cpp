@@ -209,6 +209,10 @@ void condition_destroy(Condition *condition)
 void attr_info_init(AttrInfo *attr_info, const char *name, AttrType type, size_t length, int nullable)
 {
   attr_info->name = strdup(name);
+  // 使用chars类型作为texts的底层实现
+  if(type == AttrType::TEXTS){
+    type = AttrType::CHARS;
+  }
   attr_info->type = type;
   // For NULLS
   attr_info->length = length + 1;

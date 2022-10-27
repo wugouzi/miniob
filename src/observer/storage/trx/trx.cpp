@@ -77,38 +77,38 @@ RC Trx::insert_record(Table *table, Record *record)
 {
   RC rc = RC::SUCCESS;
   // 先校验是否以前是否存在过(应该不会存在)
-  Operation *old_oper = find_operation(table, record->rid());
-  if (old_oper != nullptr) {
-    LOG_ERROR("operation: %d page %d slot %d", old_oper->type(), old_oper->page_num(), old_oper->slot_num());
-    if (old_oper->type() == Operation::Type::DELETE) {
-      delete_operation(table, record->rid());
-    } else {
-      return RC::GENERIC_ERROR;
-    }
-  }
+  // Operation *old_oper = find_operation(table, record->rid());
+  // if (old_oper != nullptr) {
+  //   LOG_ERROR("operation: %d page %d slot %d", old_oper->type(), old_oper->page_num(), old_oper->slot_num());
+  //   if (old_oper->type() == Operation::Type::DELETE) {
+  //     delete_operation(table, record->rid());
+  //   } else {
+  //     return RC::GENERIC_ERROR;
+  //   }
+  // }
 
-  // start_if_not_started();
+  // // start_if_not_started();
   
-  // 记录到operations中
-  insert_operation(table, Operation::Type::INSERT, record->rid());
+  // // 记录到operations中
+  // insert_operation(table, Operation::Type::INSERT, record->rid());
   return rc;
 }
 
 RC Trx::delete_record(Table *table, Record *record)
 {
   RC rc = RC::SUCCESS;
-  start_if_not_started();
-  Operation *old_oper = find_operation(table, record->rid());
-  if (old_oper != nullptr) {
-    if (old_oper->type() == Operation::Type::INSERT) {
-      delete_operation(table, record->rid());
-      return RC::SUCCESS;
-    } else {
-      return RC::GENERIC_ERROR;
-    }
-  }
-  set_record_trx_id(table, *record, trx_id_, true);
-  insert_operation(table, Operation::Type::DELETE, record->rid());
+  // start_if_not_started();
+  // Operation *old_oper = find_operation(table, record->rid());
+  // if (old_oper != nullptr) {
+  //   if (old_oper->type() == Operation::Type::INSERT) {
+  //     delete_operation(table, record->rid());
+  //     return RC::SUCCESS;
+  //   } else {
+  //     return RC::GENERIC_ERROR;
+  //   }
+  // }
+  // set_record_trx_id(table, *record, trx_id_, true);
+  // insert_operation(table, Operation::Type::DELETE, record->rid());
   return rc;
 }
 

@@ -335,7 +335,7 @@ attr_def:
 			AttrInfo attribute;
       if ($2 == TEXTS) {
         // TODO
-        attr_info_init(&attribute, CONTEXT->id, $2, 4095,  0);
+        attr_info_init(&attribute, CONTEXT->id, $2, 4096,  0);
       } else {
         attr_info_init(&attribute, CONTEXT->id, $2, 4,  0);
       }

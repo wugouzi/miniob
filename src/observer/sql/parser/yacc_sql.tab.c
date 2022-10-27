@@ -1654,7 +1654,7 @@ yyreduce:
 			AttrInfo attribute;
       if ((yyvsp[0].number) == TEXTS) {
         // TODO
-        attr_info_init(&attribute, CONTEXT->id, (yyvsp[0].number), 4095,  0);
+        attr_info_init(&attribute, CONTEXT->id, (yyvsp[0].number), 4096,  0);
       } else {
         attr_info_init(&attribute, CONTEXT->id, (yyvsp[0].number), 4,  0);
       }

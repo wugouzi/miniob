@@ -101,7 +101,10 @@ float Stmt::char_to_float(const char *s)
   return ans;
 }
 
-// 1 extra byte for bull
+/**
+ * cast value to field type
+ * 无需处理TEXTS和CHARS类型的转换，因为本质上不存在TEXTS类型
+ **/
 bool Stmt::convert_type(const FieldMeta *field, Value *value)
 {
   if (value->type == field->type()) {
@@ -158,7 +161,6 @@ bool Stmt::convert_type(const FieldMeta *field, Value *value)
     std::string s = double2string(*(float*)value->data);
     memcpy(data, s.c_str(), s.size() + 1);
     value->type = AttrType::CHARS;
-    // LOG_DEBUG("%f converts to %s", *(float *)value->data, str);
   } else {
     return false;
   }
