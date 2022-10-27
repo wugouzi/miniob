@@ -569,6 +569,17 @@ SELECT * FROM Update_table_3;
 ID | T_NAME | COL1 | COL2
 \ No newline at end of file
 
+9 | fig
+ID | NAME
+SELECT * FROM like_table WHERE name NOT LIKE 'p%' AND name NOT LIKE '%e';
++1 | APPLE
+10 | cherry
++11 | PINEAPPLE
+12 | strawberry
++2 | ORANGE
++3 | PEACH
+4 | lemon
+
 create table t (id int, name char(20));
 insert into t values(1,'apple');
 insert into t values(2,'cherry');
@@ -1970,6 +1981,13 @@ ID | AGE | NAME | SCORE
 
 */
 
+ID | AGE | NAME | SCORE
+SELECT * FROM T_BASIC2;
+1 | 1 | A
++2 | 2 | B
+3 | 3 | D
++4 | 4 | E
+ID | AGE | NAME
 
 create table t_basic(id int, age int, name char, score float);
 insert into t_basic values(7,7, 'g', 7.7);
@@ -1987,21 +2005,27 @@ select * from t_basic;
 -- connect client1
 -- connect client2
 -- connection client2
-create table _basic2(id int, age int, name char);
+create table t_basic2(id int, age int, name char);
 begin;
-insert into _basic2 values(1,1, 'a');
-- connection client1
+insert into t_basic2 values(1,1, 'a');
+insert into t_basic2 values(3,3, 'd');
+commit;
+-- connection client1
 begin;
-insert into _basic2 values(2,2, 'b');
-- connection client2
-insert into _basic2 values(3,3, 'd');
-connection clientl
-delete from t basic where id=8;
-connection client2
-delete from t_ basic where id=6;
+insert into t_basic2 values(2,2, 'b');
+insert into t_basic2 values(4,4, 'b');
+
+-- restart
+select * from t_basic2;
+-- connection client2
+
+-- connection clientl
+delete from t_basic where id=8;
+-- connection client2
+delete from t_basic where id=6;
 commit;
 - restart
-select * from t basic:
+select * from t_basic2;
 
 create table t(a TEXT);
 insert into t values("wocao");
