@@ -1979,9 +1979,9 @@ select * from t_basic where id>=5;
 select t_basic.id, t_basic.age, t_basic.name, t_basic.score from t_basic;
 create index L_id on t_basic (id);
 -- restart
-delete from t basic where id=1;
+delete from t_basic where id=1;
 insert into t_basic values(1,1, 'a', 1.0);
-delete from _basic where id < 3;
+delete from t_basic where id < 3;
 select * from t_basic;
 
 -- connect client1

@@ -340,6 +340,7 @@ RC DiskBufferPool::allocate_page(Frame **frame)
   allocated_frame->acc_time_ = current_time();
   allocated_frame->clear_page();
   allocated_frame->page_.page_num = file_header_->page_count - 1;
+  memset(allocated_frame->page_.data, 0, 10);
 
   // Use flush operation to extension file
   if ((rc = flush_page(*allocated_frame)) != RC::SUCCESS) {

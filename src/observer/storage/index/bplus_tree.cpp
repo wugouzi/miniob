@@ -795,19 +795,23 @@ RC BplusTreeHandler::create(const char *file_name, std::vector<AttrType> attr_ty
 
   char *pdata = header_frame->data();
   IndexFileHeader *file_header = (IndexFileHeader *)pdata;
-  file_header->attr_lengths = attr_lengths;
   file_header->sum_of_attr_lengths = attr_length_sum;
   file_header->key_length = attr_length_sum + sizeof(RID);
-  file_header->attr_types = attr_types;
+  file_header->attr_num = attr_types.size();
+  for (int i = 0; i < file_header->attr_num; i++) {
+    file_header->attr_types[i] = attr_types[i];
+    file_header->attr_lengths[i] = attr_lengths[i];
+  }
   file_header->internal_max_size = internal_max_size;
   file_header->leaf_max_size = leaf_max_size;
   file_header->root_page = BP_INVALID_PAGE_NUM;
 
   header_frame->mark_dirty();
+  bp->flush_page(*header_frame);
 
   disk_buffer_pool_ = bp;
 
-  memcpy(&file_header_, pdata, sizeof(file_header_));
+  memcpy(&file_header_, pdata, sizeof(IndexFileHeader));
   header_dirty_ = false;
   bp->unpin_page(header_frame);
 
@@ -818,7 +822,7 @@ RC BplusTreeHandler::create(const char *file_name, std::vector<AttrType> attr_ty
     return RC::NOMEM;
   }
 
-  key_comparator_.init(file_header->attr_types, file_header->attr_lengths, unique_);
+  key_comparator_.init(file_header->attr_types, file_header->attr_lengths, file_header->attr_num, unique_);
   // TODO
   key_printer_.init(file_header->attr_types[0], file_header->attr_lengths[0]);
   LOG_INFO("Successfully create index %s", file_name);
@@ -863,7 +867,7 @@ RC BplusTreeHandler::open(const char *file_name)
   // close old page_handle
   disk_buffer_pool->unpin_page(frame);
 
-  key_comparator_.init(file_header_.attr_types, file_header_.attr_lengths, unique_);
+  key_comparator_.init(file_header_.attr_types, file_header_.attr_lengths, file_header_.attr_num, unique_);
   // TODO:
   key_printer_.init(file_header_.attr_types[0], file_header_.attr_lengths[0]);
   LOG_INFO("Successfully open index %s", file_name);
@@ -1417,7 +1421,7 @@ void BplusTreeHandler::free_key(char *key)
 
 RC BplusTreeHandler::insert_entry(const std::vector<const char *> &user_keys, const RID *rid)
 {
-  if (user_keys.size() == 0 || rid == nullptr || user_keys.size() != file_header_.attr_lengths.size()) {
+  if (user_keys.size() == 0 || rid == nullptr || user_keys.size() != file_header_.attr_num) {
     LOG_WARN("Invalid arguments, key is empty or rid is empty");
     return RC::INVALID_ARGUMENT;
   }

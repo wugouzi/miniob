@@ -38,10 +38,13 @@ See the Mulan PSL v2 for more details. */
 class AttrComparator
 {
 public:
-  void init(std::vector<AttrType> &types, std::vector<int> &lens) {
+  void init(AttrType types[], int32_t lens[], int num) {
     attr_types_ = types;
     attr_lengths_ = lens;
-    sum_of_attr_lengths_ = std::accumulate(lens.begin(), lens.end(), 0);
+    num_ = num;
+    for (int i = 0; i < num; i++) {
+      sum_of_attr_lengths_ += lens[i];
+    }
   }
 
   int attr_length() const {
@@ -50,7 +53,7 @@ public:
 
   int operator()(const char *v1, const char *v2) const {
     int offset = 0;
-    for (size_t i = 0; i < attr_types_.size(); i++) {
+    for (size_t i = 0; i < num_; i++) {
       bool left_is_null = v1[offset + attr_lengths_[i] - 1] == 1;
       bool right_is_null = v2[offset + attr_lengths_[i] - 1] == 1;
       if (left_is_null && right_is_null) {
@@ -87,17 +90,18 @@ public:
     return 0;
   }
 private:
-  std::vector<AttrType> attr_types_;
-  std::vector<int> attr_lengths_;
+  AttrType *attr_types_;
+  int *attr_lengths_;
+  int num_;
   int sum_of_attr_lengths_;
 };
 
 class KeyComparator
 {
 public:
-  void init(std::vector<AttrType> types, std::vector<int> lens, bool check_dup) {
+  void init(AttrType types[], int32_t lens[], int num, bool check_dup) {
     check_dup_ = check_dup;
-    attr_comparator_.init(types, lens);
+    attr_comparator_.init(types, lens, num);
   }
 
   const AttrComparator &attr_comparator() const {
@@ -215,8 +219,9 @@ struct IndexFileHeader {
   PageNum  root_page;
   int32_t  internal_max_size;
   int32_t  leaf_max_size;
-  std::vector<int32_t> attr_lengths;
-  std::vector<AttrType> attr_types;
+  int32_t  attr_num;
+  int32_t  attr_lengths[20];
+  AttrType attr_types[20];
   int32_t sum_of_attr_lengths;
   // int32_t  attr_length;
   int32_t  key_length; // attr length + sizeof(RID)
@@ -226,7 +231,7 @@ struct IndexFileHeader {
   {
     std::stringstream ss;
     ss << "[type, length]: ";
-    for (size_t i = 0; i < attr_types.size(); i++) {
+    for (size_t i = 0; i < attr_num; i++) {
       ss << "[" << attr_types[i] << ", " << attr_lengths[i] << "] ";
     }
     ss << ", ";
