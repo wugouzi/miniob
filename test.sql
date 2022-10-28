@@ -8,17 +8,6 @@ select id, avg(score) from t_group_by group by id having count(*)>2;
 insert into t_group_by values(1, 3.0, null);
 SUCCESS
 
-3 | 15 | ABC | 3
-11. SELECT SINGLE AND AGGREGATION
-SELECT id,avg(num),addr FROM aggregation_func;
--FAILURE
-+ID | AVG(NUM) | ADDR
-+1 | 15 | ABC
-SELECT max(id),min(num),birthday FROM aggregation_func;
--FAILURE
-+MAX(ID) | MIN(NUM) | BIRTHDAY
-+4 | 12 | 2020-01-01
-
 create table t(id int);
 insert into t values(1);
 select * from t where id in (1,2);
@@ -120,6 +109,7 @@ create table t1(id int, col1 int);
 create table t2(id int, col2 int);
 insert into t1 values(1,4);
 insert into t2 values(1,2);
+insert into t1 values(2,1);
 select * from t1 where id=(select id from t2 where col2=2);
 drop table t1;
 drop table t2;
@@ -2115,6 +2105,8 @@ create table t_basic2(id int, age int, name char);
 begin;
 insert into t_basic2 values(1,1, 'a');
 insert into t_basic2 values(3,3, 'd');
+insert into t_basic2 values(2,2, 'b');
+delete from t_basic2 where id=2;
 commit;
 -- connection client1
 begin;
@@ -2132,3 +2124,8 @@ delete from t_basic where id=6;
 commit;
 - restart
 select * from t_basic2;
+
+
+create table t(id int, age int, name char);
+select * from t;
+drop table t;
