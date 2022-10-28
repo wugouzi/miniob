@@ -1,3 +1,40 @@
+4 | 3
+ID | AVG(SCORE)
+select id, avg(score) from t_group_by group by id having count(*)>2;
+-3 | 2.4
+-ID | AVG(SCORE)
++FAILURE
+7. GROUP BY WITH NULL
+insert into t_group_by values(1, 3.0, null);
+SUCCESS
+
+3 | 15 | ABC | 3
+11. SELECT SINGLE AND AGGREGATION
+SELECT id,avg(num),addr FROM aggregation_func;
+-FAILURE
++ID | AVG(NUM) | ADDR
++1 | 15 | ABC
+SELECT max(id),min(num),birthday FROM aggregation_func;
+-FAILURE
++MAX(ID) | MIN(NUM) | BIRTHDAY
++4 | 12 | 2020-01-01
+
+create table t(id int);
+insert into t values(1);
+select * from t where id in (1,2);
+drop table t;
+
+SUCCESS
+1. SELECT
+select * from ssq_1 where id in (1,3,4,5);
+-1 | 4 | 11.2
+-3 | 3 | 13.5
+-ID | COL1 | FEAT1
+-select * from ssq_1 where col1 in (1,3,4,null);
+-1 | 4 | 11.2
+-3 | 3 | 13.5
+-ID | COL1 | FEAT1
+
 -- group by
 1. CREATE TABLE
 create table t_group_by (id int, score float, name char);
@@ -75,6 +112,14 @@ T_GROUP_BY.ID | T_GROUP_BY.NAME | AVG(T_GROUP_BY.SCORE) | AVG(T_GROUP_BY_2.AGE)
 
 
 --- simple
+
+create table t1(id int, col1 int);
+create table t2(id int, col2 int);
+insert into t1 values(1,4);
+insert into t2 values(1,2);
+select * from t1 where id=(select id from t2 where col2=2);
+drop table t1;
+drop table t2;
 
 3 | 3 | 13.5
 ID | COL1 | FEAT1
@@ -1413,6 +1458,8 @@ SELECT max(price) FROM aggregation_func;
 SELECT max(addr) FROM aggregation_func;
 SELECT avg(num) FROM aggregation_func;
 SELECT avg(price) FROM aggregation_func;
+
+select avg(price), price from aggregation_func;
 
 SELECT min(*) FROM aggregation_func;
 SELECT max(*) FROM aggregation_func;

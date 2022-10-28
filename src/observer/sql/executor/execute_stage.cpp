@@ -1286,7 +1286,15 @@ Pretable::Pretable(ValueList *valuelist)
 {
   TupleSet tupleset;
   for (int i = 0; i < valuelist->value_num; i++) {
-    TupleCell cell(valuelist->values[i].type, (char *)valuelist->values[i].data);
+    Value &value = valuelist->values[i];
+    TupleCell cell(value.type, (char *)value.data);
+    switch (value.type) {
+      case CHARS:
+        cell.set_length(strlen((char *)value.data) + 2);
+        break;
+      default:
+        cell.set_length(5);
+    }
     tupleset.push(cell);
   }
   groups_.resize(1);

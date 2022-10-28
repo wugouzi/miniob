@@ -246,6 +246,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
 
   // check group by attrs
   std::vector<Field> groupby_fields;
+  std::unordered_map<std::string, std::unordered_map<std::string, bool>> mp;
   for (int i = select_sql->groupby_num - 1; i >= 0; i--) {
     RelAttr &attr = select_sql->groupby_attrs[i];
     Table *table = nullptr;
@@ -255,6 +256,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
         return RC::SCHEMA_TABLE_NOT_EXIST;
       }
       table = tables[0];
+      attr.relation_name = const_cast<char *>(table->name());
     } else {
       auto iter = table_map.find(attr.relation_name);
       if (iter == table_map.end()) {
@@ -267,7 +269,16 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
     if (field_meta == nullptr) {
       return RC::SCHEMA_FIELD_NOT_EXIST;
     }
+    mp[attr.relation_name][attr.attribute_name] = true;
     groupby_fields.push_back(Field(table, field_meta->copy()));
+  }
+
+  if (select_sql->attr_num > 0) {
+    for (auto &field : query_fields) {
+      if (field.aggr_type() == A_NO && !mp[field.table_name()][field.metac()->name()]) {
+        return RC::SCHEMA_FIELD_NOT_EXIST;
+      }
+    }
   }
 
   // check having conditions
