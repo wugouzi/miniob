@@ -273,7 +273,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
     groupby_fields.push_back(Field(table, field_meta->copy()));
   }
 
-  if (select_sql->attr_num > 0) {
+  if (select_sql->aggregate_num > 0) {
     for (auto &field : query_fields) {
       if (field.aggr_type() == A_NO && !mp[field.table_name()][field.metac()->name()]) {
         return RC::SCHEMA_FIELD_NOT_EXIST;
