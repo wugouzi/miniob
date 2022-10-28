@@ -18,8 +18,15 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include "common/lang/string.h"
 #include "storage/common/db.h"
+#include "storage/common/field.h"
+#include "storage/common/field_meta.h"
 #include "storage/common/table.h"
+#include "storage/common/table_meta.h"
+#include <cstddef>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 SelectStmt::~SelectStmt()
 {
@@ -75,6 +82,27 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt)
   return create(db, select_sql, stmt, tp);
 }
 
+RC check_field_and_name(std::unordered_map<std::string, Table *>table_map, Table *default_table,
+                          const char *relation_name, const char *attribute_name)
+{
+  Table *table = nullptr;
+  if (relation_name == nullptr) {
+    table = default_table;
+  } else {
+    if (table_map.count(relation_name) == 0) {
+      LOG_ERROR("having: no table %s", relation_name);
+      return RC::SCHEMA_TABLE_NOT_EXIST;
+    }
+    table = table_map[relation_name];
+  }
+  const FieldMeta *meta = table->table_meta().field(attribute_name);
+  if (meta == nullptr) {
+    LOG_ERROR("having: no attr %s", attribute_name);
+    return RC::SCHEMA_FIELD_NOT_EXIST;
+  }
+  return RC::SUCCESS;
+}
+
 RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_set<Table *> &parent_tables)
 {
   if (nullptr == db) {
@@ -82,10 +110,11 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
     return RC::INVALID_ARGUMENT;
   }
 
-  if (select_sql->aggregate_num > 0 && select_sql->attr_num != select_sql->aggregate_num) {
-    LOG_WARN("different number of aggregates");
-    return RC::INVALID_ARGUMENT;
-  }
+  // // TODO: check
+  // if (select_sql->aggregate_num > 0 && select_sql->attr_num != select_sql->aggregate_num) {
+  //   LOG_WARN("different number of aggregates");
+  //   return RC::INVALID_ARGUMENT;
+  // }
 
   // collect tables in `from` statement
   std::vector<Table *> tables;
@@ -123,8 +152,11 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
         }
       }
       else {
-        Field field;
-        field.set_aggr_str(relation_attr.attribute_name);
+        FieldMeta *field_meta = new FieldMeta;
+        field_meta->init(relation_attr.attribute_name, CHARS, 0, 5, true, false);
+
+        // field.set_aggr_str(relation_attr.attribute_name);
+        Field field(tables[0], field_meta);
         field.set_aggr(relation_attr.type);
         query_fields.push_back(field);
       }
@@ -161,6 +193,8 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
           }
 
           if (relation_attr.print_attr) {
+            FieldMeta *meta = new FieldMeta;
+            meta->init(relation_attr.attribute_name, CHARS, 0, strlen(relation_attr.attribute_name) + 2, true, false);
             Field field;
             field.set_print_table();
             field.set_table(table);
@@ -191,10 +225,11 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
       }
 
       if (relation_attr.print_attr) {
-        Field field;
-        field.set_table(tables[0]);
+        FieldMeta *meta = new FieldMeta;
+        meta->init(relation_attr.attribute_name, CHARS, 0, strlen(relation_attr.attribute_name) + 2, true, false);
+        Field field(table, meta);
         field.set_aggr(relation_attr.type);
-        field.set_aggr_str(relation_attr.attribute_name);
+        // field.set_aggr_str(relation_attr.attribute_name);
         query_fields.push_back(field);
       } else {
         Field field(table, field_meta);
@@ -219,10 +254,72 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
   }
 
   // create filter statement in `where` statement
+  // and check conditions
   FilterStmt *filter_stmt = nullptr;
   RC rc = FilterStmt::create(db, default_table, &table_map,
            select_sql->conditions, select_sql->condition_num, filter_stmt);
 
+
+  // check groupby fields and cache fields
+  std::vector<Field> groupby_fields;
+  std::unordered_map<std::string, std::unordered_map<std::string, bool>> groupby_map;
+  for (int i = select_sql->groupby_num - 1; i >= 0; i--) {
+    RelAttr &attr = select_sql->groupby_attrs[i];
+    Table *table = nullptr;
+    if (attr.relation_name == nullptr) {
+      table = default_table;
+    } else {
+      if (table_map.count(attr.relation_name) == 0) {
+        LOG_ERROR("having: no table %s", attr.relation_name);
+        return RC::SCHEMA_TABLE_NOT_EXIST;
+      }
+      table = table_map[attr.relation_name];
+    }
+    const FieldMeta *meta = table->table_meta().field(attr.attribute_name);
+    if (meta == nullptr) {
+      LOG_ERROR("having: no attr %s", attr.attribute_name);
+      return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+    Field field(table, meta);
+    field.set_aggr(attr.type);
+    groupby_fields.push_back(field);
+    groupby_map[table->name()][meta->name()] = true;
+  }
+
+  // check aggregate attrs, normal attr should be in group by
+  if (select_sql->aggregate_num > 0) {
+    for (size_t i = 0; i < select_sql->attr_num; i++) {
+      RelAttr &attr = select_sql->attributes[i];
+      if (attr.type == A_NO && !groupby_map[attr.relation_name][attr.attribute_name]) {
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+    }
+  }
+
+  // check having conditions
+  for (int i = 0; i < select_sql->having_num; i++) {
+    Condition &condition = select_sql->having_conditions[i];
+    if (condition.left_is_attr) {
+      RelAttr &attr = condition.left_attr;
+      if (attr.type == A_FAILURE) {
+        return RC::GENERIC_ERROR;
+      }
+      rc = check_field_and_name(table_map, default_table, attr.relation_name, attr.attribute_name);
+      if (rc != RC::SUCCESS) {
+        return rc;
+      }
+    }
+    if (condition.right_is_attr) {
+      RelAttr &attr = condition.right_attr;
+      if (attr.type == A_FAILURE) {
+        return RC::GENERIC_ERROR;
+      }
+      rc = check_field_and_name(table_map, default_table, attr.relation_name, attr.attribute_name);
+      if (rc != RC::SUCCESS) {
+        return rc;
+      }
+    }
+  }
   if (rc != RC::SUCCESS) {
     LOG_WARN("cannot construct filter stmt");
     return rc;
@@ -239,6 +336,9 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
   select_stmt->tables_.swap(tables);
+  select_stmt->groupby_fields_.swap(groupby_fields);
+  select_stmt->having_conditions_ = select_sql->having_conditions;
+  select_stmt->having_condition_num_ = select_sql->having_num;
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->filter_stmt_ = filter_stmt;
   select_stmt->aggregate_num_ = select_sql->aggregate_num;

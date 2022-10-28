@@ -1409,6 +1409,17 @@ select min(id) from t;
 select max(id) from t;
 select avg(id) from t;
 select sum(id) from t;
+select avg(1.22) from t;
+select sum(4.2) from t;
+select min(22.4) from t;
+select max(11.3) from t;
+drop table t;
+
+create table t(id int nullable);
+insert into t values(null);
+select * from t;
+select min(id) from t;
+select min(id) from t;
 drop table t;
 
 CREATE TABLE aggregation_func(id int, num int, price float, addr char, birthday date);
@@ -1417,15 +1428,25 @@ INSERT INTO aggregation_func VALUES (2, 15, 20.0, 'abc', '2010-01-11');
 INSERT INTO aggregation_func VALUES (3, 12, 30.0, 'def', '2021-01-21');
 INSERT INTO aggregation_func VALUES (4, 15, 30.0, 'dei', '2021-01-31');
 SELECT count(*) FROM aggregation_func;
+select * from aggregation_func;
 SELECT count(num) FROM aggregation_func;
+select * from aggregation_func;
 SELECT min(num) FROM aggregation_func;
+select * from aggregation_func;
 SELECT min(price) FROM aggregation_func;
+select * from aggregation_func;
 SELECT min(addr) FROM aggregation_func;
+select * from aggregation_func;
 SELECT max(num) FROM aggregation_func;
+select * from aggregation_func;
 SELECT max(price) FROM aggregation_func;
+select * from aggregation_func;
 SELECT max(addr) FROM aggregation_func;
+select * from aggregation_func;
 SELECT avg(num) FROM aggregation_func;
+select * from aggregation_func;
 SELECT avg(price) FROM aggregation_func;
+select * from aggregation_func;
 
 SELECT min(*) FROM aggregation_func;
 SELECT max(*) FROM aggregation_func;
@@ -1886,6 +1907,9 @@ select *,age from t1;
 select *,age,id,age,id,* from t1;
 
 -- basic
+create table t_basic(id int, age int, name char, score float);
+insert into t_basic values(1,1, 'a', 1.0);
+select * from t_basic;
 
 create table t_basic(id int, age int, name char, score float);
 insert into t_basic values(1,1, 'a', 1.0);
