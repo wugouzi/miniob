@@ -31,6 +31,11 @@ public:
   ~FieldMeta() = default;
 
   RC init(const char *name, AttrType attr_type, int attr_offset, int attr_len, bool visible, bool nullable);
+  FieldMeta *copy() const {
+    FieldMeta *new_meta = new FieldMeta;
+    new_meta->init(name_.c_str(), attr_type_, attr_offset_, attr_len_, visible_, nullable_);
+    return new_meta;
+  }
 
 public:
   const char *name() const;

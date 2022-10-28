@@ -967,6 +967,9 @@ SELECT avg(num) FROM null_table3;
 AVG(NUM)
 NULL
 
+drop table null_table1;
+drop table null_table2;
+drop table null_table3;
 /*
 
 1 | 18 | 10 | 2020-01-01
@@ -1088,6 +1091,9 @@ update t1 set
 
 create table t2(id int, col float, name char);
 
+
+create table t1(id int, col int);
+create table t2(id int, col int);
 insert into t1 values(1,1);
 insert into t2 values(1,2);
 select * from t1,t2;
@@ -1103,11 +1109,12 @@ update t1 set col=(select col from t2 where t2.id=1) where t1.id=2;
 select * from t1,t2;
 update t2 set id=1,col=1 where id=1;
 select * from t1,t2;
-update t1 set col=(select id from t2 where id=1), id=(select id from t2 where id=1) where id=2;
+update t1 set col=(select id from t2 where id=1), id=(select id from t2 where id=1) where id=1;
 select * from t1;
 drop table t1;
 drop table t2;
-
+--
+-- 1 | 1
 
 FAILURE
 7. UPDATE WITH INVALID CONDITION
@@ -1422,31 +1429,22 @@ select min(id) from t;
 select min(id) from t;
 drop table t;
 
+drop table aggregation_func;
 CREATE TABLE aggregation_func(id int, num int, price float, addr char, birthday date);
 INSERT INTO aggregation_func VALUES (1, 18, 10.0, 'abc', '2020-01-01');
 INSERT INTO aggregation_func VALUES (2, 15, 20.0, 'abc', '2010-01-11');
 INSERT INTO aggregation_func VALUES (3, 12, 30.0, 'def', '2021-01-21');
 INSERT INTO aggregation_func VALUES (4, 15, 30.0, 'dei', '2021-01-31');
 SELECT count(*) FROM aggregation_func;
-select * from aggregation_func;
 SELECT count(num) FROM aggregation_func;
-select * from aggregation_func;
 SELECT min(num) FROM aggregation_func;
-select * from aggregation_func;
 SELECT min(price) FROM aggregation_func;
-select * from aggregation_func;
 SELECT min(addr) FROM aggregation_func;
-select * from aggregation_func;
 SELECT max(num) FROM aggregation_func;
-select * from aggregation_func;
 SELECT max(price) FROM aggregation_func;
-select * from aggregation_func;
 SELECT max(addr) FROM aggregation_func;
-select * from aggregation_func;
 SELECT avg(num) FROM aggregation_func;
-select * from aggregation_func;
 SELECT avg(price) FROM aggregation_func;
-select * from aggregation_func;
 
 SELECT min(*) FROM aggregation_func;
 SELECT max(*) FROM aggregation_func;
