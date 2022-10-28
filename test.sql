@@ -2027,10 +2027,6 @@ commit;
 - restart
 select * from t_basic2;
 
-create table t(a TEXT);
-insert into t values("wocao");
-select * from t;
-drop table t;
 
 
 -- text
