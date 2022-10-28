@@ -500,7 +500,7 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
   // FilterStmt *filter_stmt = select_stmt->filter_stmt();
 
   RC rc;
-  reorder_fields(select_stmt->query_fields());
+  // reorder_fields(select_stmt->query_fields());
   Pretable *res = select_to_pretable(select_stmt, &rc);
   if (res == nullptr) {
     session_event->set_response("FAILURE\n");
@@ -1678,6 +1678,7 @@ void Pretable::having(Condition *having_conditions, int having_condition_num)
       groups.push_back(group);
     }
   }
+  groups_.swap(groups);
 }
 
 int Pretable::tuple_num() const {
@@ -1743,8 +1744,15 @@ RC Pretable::aggregate(const std::vector<Field> fields)
     group.clear();
     group.push_back(res);
   }
+  int offset = 0;
+  fields_.clear();
   for (const auto &f : fields) {
-    fields_.push_back(f);
+    FieldMeta *field_meta = f.metac()->copy();
+    field_meta->set_offset(offset);
+    offset += field_meta->len();
+    Field field(f.table(), field_meta);
+    field.set_aggr(f.aggr_type());
+    fields_.push_back(field);
   }
   return RC::SUCCESS;
 }
@@ -1797,7 +1805,8 @@ CompositeConditionFilter *Pretable::make_having_filter(Condition *conditions, in
     Condition &cond = conditions[i];
     ConDesc left, right;
     AttrType left_type, right_type;
-
+    memset(&left, 0, sizeof(ConDesc));
+    memset(&right, 0, sizeof(ConDesc));
     left.is_attr = cond.left_is_attr;
     right.is_attr = cond.right_is_attr;
 
@@ -1979,6 +1988,7 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
 }
 
 // only for non-aggregations
+// haven't changed field offset
 void Pretable::filter_fields(const std::vector<Field> &fields) {
   std::unordered_map<std::string, std::unordered_map<std::string, int>> mp;
   std::vector<Field> new_fields(fields.size());
