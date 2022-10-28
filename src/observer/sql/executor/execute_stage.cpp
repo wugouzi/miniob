@@ -1645,13 +1645,15 @@ void Pretable::groupby(const std::vector<Field> groupby_fields)
     std::vector<std::vector<TupleSet>> groups;
     int idx = index(field);
     for (auto &group : groups_) {
+      std::vector<std::vector<TupleSet>> sub_groups;
       for (auto &tuple : group) {
         int group_idx = hash.get_value(tuple.get_cell(idx));
-        if (group_idx >= groups.size()) {
-          groups.resize(group_idx + 1);
+        if (group_idx >= sub_groups.size()) {
+          sub_groups.resize(group_idx + 1);
         }
-        groups[group_idx].push_back(tuple);
+        sub_groups[group_idx].push_back(tuple);
       }
+      groups.insert(groups.end(), sub_groups.begin(), sub_groups.end());
     }
     groups_.swap(groups);
   }
@@ -2112,7 +2114,7 @@ int PretableHash::get_value(const TupleCell &cell) {
     case INTS: case DATES: {
       auto map = static_cast<std::unordered_map<int, int> *>(map_);
       int val = *(int*)cell.data();
-      if (map->count(val)) {
+      if (!map->count(val)) {
         (*map)[val] = index_++;
       }
       return (*map)[val];
@@ -2120,7 +2122,7 @@ int PretableHash::get_value(const TupleCell &cell) {
     case CHARS: {
       auto map = static_cast<std::unordered_map<std::string, int> *>(map_);
       std::string val = cell.data();
-      if (map->count(val)) {
+      if (!map->count(val)) {
         (*map)[val] = index_++;
       }
       return (*map)[val];
@@ -2128,7 +2130,7 @@ int PretableHash::get_value(const TupleCell &cell) {
     case FLOATS: {
       auto map = static_cast<std::unordered_map<float, int> *>(map_);
       int val = *(float*)cell.data();
-      if (map->count(val)) {
+      if (!map->count(val)) {
         (*map)[val] = index_++;
       }
       return (*map)[val];

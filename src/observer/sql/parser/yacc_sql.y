@@ -562,37 +562,35 @@ STAR attr_list {
   selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
 }
 | aggregation_attr attr_list {
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--aggr_attr_lens[S_TOP]]);
+  printf("append aggr\n");
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]]);
 }
 ;
 
-aggregation_id:
-
-
 aggregation_attr:
 aggregation_func LBRACE ID aggregation_extra_id RBRACE {
-  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][aggr_attr_lens[S_TOP]++], NULL, $3, CONTEXT->a_types[S_TOP], 0);
+  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, $3, CONTEXT->a_types[S_TOP], 0);
   CONTEXT->a_types[S_TOP] = A_NO;
 }
 | aggregation_func LBRACE ID DOT ID aggregation_extra_id RBRACE {
-  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][aggr_attr_lens[S_TOP]++], $3, $5, CONTEXT->a_types[S_TOP], 0);
+  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], $3, $5, CONTEXT->a_types[S_TOP], 0);
   // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
   CONTEXT->a_types[S_TOP] = A_NO;
 }
 | aggregation_func LBRACE RBRACE {
-  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][aggr_attr_lens[S_TOP]++], NULL, "fail", A_FAILURE, 0);
+  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, "fail", A_FAILURE, 0);
   // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
   CONTEXT->a_types[S_TOP] = A_NO;
 }
 | aggregation_func LBRACE STAR aggregation_extra_id RBRACE {
-  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][aggr_attr_lens[S_TOP]++], NULL, "*", CONTEXT->a_types[S_TOP] != A_COUNT ? A_FAILURE : CONTEXT->a_types[S_TOP], 0);
+  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, "*", CONTEXT->a_types[S_TOP] != A_COUNT ? A_FAILURE : CONTEXT->a_types[S_TOP], 0);
   // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
   CONTEXT->a_types[S_TOP] = A_NO;
 }
 | aggregation_func LBRACE NUMBER aggregation_extra_id RBRACE {
   char *str = malloc(10 * sizeof(char));
   snprintf(str, 10, "%d", $3);
-  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][aggr_attr_lens[S_TOP]++], NULL, str, CONTEXT->a_types[S_TOP], 1);
+  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, str, CONTEXT->a_types[S_TOP], 1);
   // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
   CONTEXT->a_types[S_TOP] = A_NO;
 }
@@ -607,7 +605,7 @@ aggregation_func LBRACE ID aggregation_extra_id RBRACE {
     len--;
   }
   buf[len] = '\0';
-  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][aggr_attr_lens[S_TOP]++], NULL, buf, CONTEXT->a_types[S_TOP], 1);
+  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, buf, CONTEXT->a_types[S_TOP], 1);
   // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
   CONTEXT->a_types[S_TOP] = A_NO;
 }
@@ -668,7 +666,8 @@ attr_list:
 			selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
     }
 | COMMA aggregation_attr attr_list {
-
+  printf("append aggr\n");
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]]);
 }
 ;
 rel_name:
@@ -867,15 +866,15 @@ condition:
 | aggregation_attr comOp value {
       Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
       Condition condition;
-      condition_init(&condition, 1, &CONTEXT->aggr_attrs[S_TOP][--aggr_attr_lens[S_TOP]], NULL,
+      condition_init(&condition, CONTEXT->comps[S_TOP], 1, &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], NULL,
                      0, NULL, right_value);
       CONTEXT->having_conditions[S_TOP][CONTEXT->having_condition_lengths[S_TOP]++] = condition;
     }
 | value comOp aggregation_attr {
       Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
       Condition condition;
-      condition_init(&condition, 0, NULL, left_value, 1,
-                     &CONTEXT->aggr_attrs[S_TOP][--aggr_attr_lens[S_TOP]], NULL);
+      condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1,
+                     &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], NULL);
       CONTEXT->having_conditions[S_TOP][CONTEXT->having_condition_lengths[S_TOP]++] = condition;
     }
 ;

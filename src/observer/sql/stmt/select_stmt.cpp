@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/stmt/select_stmt.h"
+#include "rc.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/filter_stmt.h"
 #include "common/log/log.h"
@@ -21,6 +22,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/common/field_meta.h"
 #include "storage/common/table.h"
 #include <unordered_set>
+#include <vector>
 
 SelectStmt::~SelectStmt()
 {
@@ -84,10 +86,12 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
     return RC::INVALID_ARGUMENT;
   }
 
+  /*
   if (select_sql->aggregate_num > 0 && select_sql->attr_num != select_sql->aggregate_num) {
     LOG_WARN("different number of aggregates");
     return RC::INVALID_ARGUMENT;
   }
+  */
 
   // collect tables in `from` statement
   std::vector<Table *> tables;
@@ -216,6 +220,32 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
     }
   }
 
+  // check group by attrs
+  std::vector<Field> groupby_fields;
+  for (int i = select_sql->groupby_num - 1; i >= 0; i--) {
+    RelAttr &attr = select_sql->groupby_attrs[i];
+    Table *table = nullptr;
+    if (attr.relation_name == nullptr) {
+      if (tables.size() > 1) {
+        LOG_ERROR("no table id in multi tables");
+        return RC::SCHEMA_TABLE_NOT_EXIST;
+      }
+      table = tables[0];
+    } else {
+      auto iter = table_map.find(attr.relation_name);
+      if (iter == table_map.end()) {
+        LOG_ERROR("no such table %s", attr.relation_name);
+        return RC::SCHEMA_TABLE_NOT_EXIST;
+      }
+      table = iter->second;
+    }
+    const FieldMeta *field_meta = table->table_meta().field(attr.attribute_name);
+    if (field_meta == nullptr) {
+      return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+    groupby_fields.push_back(Field(table, field_meta->copy()));
+  }
+
   LOG_INFO("got %d tables in from stmt and %d fields in query stmt", tables.size(), query_fields.size());
 
   Table *default_table = nullptr;
@@ -249,6 +279,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
   select_stmt->tables_.swap(tables);
+  select_stmt->groupby_fields_.swap(groupby_fields);
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->filter_stmt_ = filter_stmt;
   select_stmt->aggregate_num_ = select_sql->aggregate_num;

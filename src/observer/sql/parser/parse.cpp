@@ -249,7 +249,7 @@ void selects_append_in_value(ValueList *valuelist, Value *value)
 }
 void selects_append_groupby(Selects *selects, RelAttr *groupby_attr)
 {
-  selects->attributes[selects->groupby_num++] = *groupby_attr;
+  selects->groupby_attrs[selects->groupby_num++] = *groupby_attr;
 }
 
 void selects_append_relation(Selects *selects, const char *relation_name)
