@@ -145,16 +145,17 @@ bool DefaultConditionFilter::filter(const Record &rec) const
 
   if (left_.is_attr) {  // value
     left_value = (char *)(rec.data() + left_.attr_offset);
-    left_is_null |= left_value[left_.attr_length - 1];
   } else {
     left_value = (char *)left_.value;
+    left_is_null |= left_value[left_.attr_length - 1];
   }
 
   if (right_.is_attr) {
     right_value = (char *)(rec.data() + right_.attr_offset);
-    right_is_null |= right_value[right_.attr_length - 1];
+
   } else {
     right_value = (char *)right_.value;
+    right_is_null |= right_value[right_.attr_length - 1];
   }
 
   int cmp_result = 0;

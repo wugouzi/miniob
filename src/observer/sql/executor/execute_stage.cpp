@@ -1042,7 +1042,10 @@ TupleSet::TupleSet(const Tuple *t, Table *table) {
 
 TupleSet::TupleSet(const TupleSet *t) {
   cells_ = t->cells_;
-  metas_ = t->metas_;
+  for (auto &field : t->metas_) {
+    metas_.push_back(Field(field.table(), field.metac()->copy()));
+  }
+  // metas_ = t->metas_;
   table_num_ = t->table_num_;
   data_ = t->data_;
 }
@@ -1068,8 +1071,10 @@ TupleSet *TupleSet::generate_combine(const TupleSet *t2) {
     off += meta.meta()->len();
   }
   for (auto meta : t2->metas_) {
-    meta.meta()->set_offset(off + meta.meta()->offset());
-    res->metas_.push_back(meta);
+    // meta.meta()->set_offset(off + meta.meta()->offset());
+    Field field(meta.table(), meta.metac()->copy());
+    field.meta()->set_offset(off + field.meta()->offset());
+    res->metas_.push_back(field);
   }
   for (auto cell : t2->cells_) {
     res->cells_.push_back(cell);
@@ -1689,6 +1694,7 @@ ConDesc Pretable::make_cond_desc(Expression *expr, Pretable *t2)
     desc.is_attr = true;
     FieldExpr *field_expr = dynamic_cast<FieldExpr*>(expr);
     desc.attr_length = field_expr->field().meta()->len();
+    std::cout << "tuple size: " << groups_[0][0].size() << std::endl;
     if (field(field_expr->field()) != nullptr) {
       desc.attr_offset = groups_[0][0].get_offset(field_expr->table_name(), field_expr->field_name());
     } else {
