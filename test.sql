@@ -74,6 +74,9 @@ a | 3 | 1
 c | 3 | 4
 d | 3 | 3
 f | 3 | 2
+select name, min(id), max(score) from t_group_by group by name having min(id) > 2 and count(*) > 1;
+name | min(id) | max(score)
+c | 3 | 4
 select name, min(id), max(score) from t_group_by group by name having min(id) > 2 and max(score)>2;
 
 select id, name, avg(score) from t_group_by group by id, name;

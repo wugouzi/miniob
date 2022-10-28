@@ -21,6 +21,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/common/db.h"
 #include "storage/common/field_meta.h"
 #include "storage/common/table.h"
+#include <cstddef>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -59,7 +60,7 @@ RC check_attr(RelAttr &attr, std::unordered_map<std::string, Table *> &table_map
     attr.relation_name = const_cast<char *>(table->name());
   }
   const FieldMeta *meta = table->table_meta().field(attr.attribute_name);
-  if (meta == nullptr) {
+  if (meta == nullptr && !attr.print_attr) {
     return RC::SCHEMA_FIELD_NOT_EXIST;
   }
   return RC::SUCCESS;
@@ -117,9 +118,11 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
   }
   */
 
+  // treat having condition attr as extra attr
   // collect tables in `from` statement
   std::vector<Table *> tables;
   std::unordered_map<std::string, Table *> table_map;
+
   for (size_t i = 0; i < select_sql->relation_num; i++) {
     const char *table_name = select_sql->relations[i];
     if (table_map.count(table_name) > 0) {
@@ -142,9 +145,23 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
   
   // collect query fields in `select` statement
   std::vector<Field> query_fields;
+  std::vector<RelAttr> attrs;
   for (int i = select_sql->attr_num - 1; i >= 0; i--) {
-    const RelAttr &relation_attr = select_sql->attributes[i];
-
+    attrs.push_back(select_sql->attributes[i]);
+  }
+  for (size_t i = 0; i < select_sql->having_num; i++) {
+    Condition &cond = select_sql->having_conditions[i];
+    if (cond.left_is_attr) {
+      attrs.push_back(cond.left_attr);
+    }
+    if (cond.right_is_attr) {
+      attrs.push_back(cond.right_attr);
+    }
+  }
+  int query_num = 0;
+  for (int i = 0; i < attrs.size(); i++) {
+    // const RelAttr &relation_attr = select_sql->attributes[i];
+    const RelAttr &relation_attr = attrs[i];
     if (relation_attr.type == AggreType::A_FAILURE) {
       return RC::SCHEMA_FIELD_NAME_ILLEGAL;
     }
@@ -156,8 +173,11 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
         }
       }
       else {
+        if (relation_attr.type != AggreType::A_COUNT) {
+          return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+        }
         FieldMeta *meta = new FieldMeta;
-        meta->init(relation_attr.attribute_name, CHARS, 0, sizeof(relation_attr.attribute_name) + 2, true, false);
+        meta->init(relation_attr.attribute_name, INTS, 0, 5, true, false);
         Field field(tables[0], meta);
         // field.set_aggr_str(relation_attr.attribute_name);
         field.set_aggr(relation_attr.type);
@@ -208,6 +228,9 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
             if (relation_attr.type != A_NO) {
               field.set_aggr(relation_attr.type);
               field.set_print_table();
+              if (relation_attr.type == A_AVG) {
+                field.meta()->set_type(FLOATS);
+              }
             }
             query_fields.push_back(field);
           }
@@ -238,9 +261,15 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
         Field field(table, field_meta->copy());
         if (relation_attr.type != A_NO) {
           field.set_aggr(relation_attr.type);
+          if (relation_attr.type == A_AVG) {
+            field.meta()->set_type(FLOATS);
+          }
         }
         query_fields.push_back(field);
       }
+    }
+    if (i < select_sql->attr_num) {
+      query_num = query_fields.size();
     }
   }
 
@@ -273,6 +302,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
     groupby_fields.push_back(Field(table, field_meta->copy()));
   }
 
+  // check non-permit attr
   if (select_sql->aggregate_num > 0) {
     for (auto &field : query_fields) {
       if (field.aggr_type() == A_NO && !mp[field.table_name()][field.metac()->name()]) {
@@ -282,6 +312,8 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
   }
 
   // check having conditions
+  // and extra aggregation need to be computed also
+  // std::vector<Field> having_fields;
   for (size_t i = 0; i < select_sql->having_num; i++) {
     Condition &cond = select_sql->having_conditions[i];
     RC rc = RC::SUCCESS;
@@ -335,6 +367,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
   select_stmt->groupby_fields_.swap(groupby_fields);
   select_stmt->having_conditions_ = select_sql->having_conditions;
   select_stmt->having_condition_num_ = select_sql->having_num;
+  select_stmt->query_num_ = query_num;
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->filter_stmt_ = filter_stmt;
   select_stmt->aggregate_num_ = select_sql->aggregate_num;

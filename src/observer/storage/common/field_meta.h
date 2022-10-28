@@ -45,6 +45,7 @@ public:
   int len() const;
   bool visible() const;
   bool nullable() const;
+  void set_type(AttrType type);
 
 public:
   void desc(std::ostream &os) const;

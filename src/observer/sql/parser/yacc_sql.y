@@ -583,7 +583,7 @@ aggregation_func LBRACE ID aggregation_extra_id RBRACE {
   CONTEXT->a_types[S_TOP] = A_NO;
 }
 | aggregation_func LBRACE STAR aggregation_extra_id RBRACE {
-  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, "*", CONTEXT->a_types[S_TOP] != A_COUNT ? A_FAILURE : CONTEXT->a_types[S_TOP], 0);
+  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, "*", CONTEXT->a_types[S_TOP] != A_COUNT ? A_FAILURE : CONTEXT->a_types[S_TOP], 1);
   // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
   CONTEXT->a_types[S_TOP] = A_NO;
 }

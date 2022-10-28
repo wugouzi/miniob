@@ -80,7 +80,7 @@ protected:
   RC do_drop_table(SQLStageEvent *sql_event);
   RC do_update_table(SQLStageEvent *sql_event);
   RC value_check(const int &value_num, const Value *values) const;
-  void print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi);
+  void print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi, int num);
   RC compute_value_from_select(Db *db, Value *value);
   RC check_updates(Db *db, Updates &updates);
 
@@ -144,7 +144,7 @@ class Pretable {
 
   RC init(Table *table, FilterStmt *filter);
   RC join(Pretable *pre2, FilterStmt *filter);
-  void print(std::stringstream &os);
+  void print(std::stringstream &os, int num);
   void filter_fields(const std::vector<Field> &fields);
   RC aggregate(const std::vector<Field> fields);
   RC aggregate_max(int idx, TupleCell *res, int group_id);
@@ -169,6 +169,8 @@ class Pretable {
   const Field *field(const char *table_name, const char *field_name) const;
   const Field *field(const Field &field) const;
   const Field *field(int idx) const { return &fields_[idx]; }
+
+  const Field *field_with_aggr(const char *table_name, const char *field_name, AggreType type) const;
 
   // std::vector<TupleSet>::iterator begin() { return tuples_.begin(); }
   // std::vector<TupleSet>::iterator end() { return tuples_.end(); }

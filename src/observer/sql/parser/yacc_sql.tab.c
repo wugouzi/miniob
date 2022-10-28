@@ -2045,7 +2045,7 @@ CONTEXT->value_lengths[S_TOP] = 0;
   case 86: /* aggregation_attr: aggregation_func LBRACE STAR aggregation_extra_id RBRACE  */
 #line 585 "yacc_sql.y"
                                                            {
-  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, "*", CONTEXT->a_types[S_TOP] != A_COUNT ? A_FAILURE : CONTEXT->a_types[S_TOP], 0);
+  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, "*", CONTEXT->a_types[S_TOP] != A_COUNT ? A_FAILURE : CONTEXT->a_types[S_TOP], 1);
   // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
   CONTEXT->a_types[S_TOP] = A_NO;
 }
