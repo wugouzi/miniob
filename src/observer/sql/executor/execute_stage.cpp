@@ -1089,6 +1089,7 @@ void TupleSet::filter_fields(const std::vector<int> &orders) {
     cells[i] = cells_[orders[i]];
     data_ += std::string(cells[i].data(), cells[i].length());
   }
+  cells_.swap(cells);
   // std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<AggreType, int>>> mp;
   // std::vector<Field> metas(fields.size());
   // std::vector<TupleCell> cells(fields.size());
