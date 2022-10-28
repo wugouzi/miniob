@@ -967,6 +967,9 @@ SELECT avg(num) FROM null_table3;
 AVG(NUM)
 NULL
 
+drop table null_table1;
+drop table null_table2;
+drop table null_table3;
 /*
 
 1 | 18 | 10 | 2020-01-01
@@ -1088,6 +1091,9 @@ update t1 set
 
 create table t2(id int, col float, name char);
 
+
+create table t1(id int, col int);
+create table t2(id int, col int);
 insert into t1 values(1,1);
 insert into t2 values(1,2);
 select * from t1,t2;
@@ -1103,11 +1109,12 @@ update t1 set col=(select col from t2 where t2.id=1) where t1.id=2;
 select * from t1,t2;
 update t2 set id=1,col=1 where id=1;
 select * from t1,t2;
-update t1 set col=(select id from t2 where id=1), id=(select id from t2 where id=1) where id=2;
+update t1 set col=(select id from t2 where id=1), id=(select id from t2 where id=1) where id=1;
 select * from t1;
 drop table t1;
 drop table t2;
-
+--
+-- 1 | 1
 
 FAILURE
 7. UPDATE WITH INVALID CONDITION
@@ -1409,8 +1416,20 @@ select min(id) from t;
 select max(id) from t;
 select avg(id) from t;
 select sum(id) from t;
+select avg(1.22) from t;
+select sum(4.2) from t;
+select min(22.4) from t;
+select max(11.3) from t;
 drop table t;
 
+create table t(id int nullable);
+insert into t values(null);
+select * from t;
+select min(id) from t;
+select min(id) from t;
+drop table t;
+
+drop table aggregation_func;
 CREATE TABLE aggregation_func(id int, num int, price float, addr char, birthday date);
 INSERT INTO aggregation_func VALUES (1, 18, 10.0, 'abc', '2020-01-01');
 INSERT INTO aggregation_func VALUES (2, 15, 20.0, 'abc', '2010-01-11');
@@ -1886,6 +1905,9 @@ select *,age from t1;
 select *,age,id,age,id,* from t1;
 
 -- basic
+create table t_basic(id int, age int, name char, score float);
+insert into t_basic values(1,1, 'a', 1.0);
+select * from t_basic;
 
 create table t_basic(id int, age int, name char, score float);
 insert into t_basic values(1,1, 'a', 1.0);

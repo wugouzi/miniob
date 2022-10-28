@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include "common/lang/string.h"
 #include "storage/common/db.h"
+#include "storage/common/field_meta.h"
 #include "storage/common/table.h"
 #include <unordered_set>
 
@@ -34,7 +35,7 @@ static void wildcard_fields(Table *table, std::vector<Field> &field_metas)
   const TableMeta &table_meta = table->table_meta();
   const int field_num = table_meta.field_num();
   for (int i = table_meta.sys_field_num(); i < field_num; i++) {
-    field_metas.push_back(Field(table, table_meta.field(i)));
+    field_metas.push_back(Field(table, table_meta.field(i)->copy()));
   }
 }
 
@@ -61,7 +62,7 @@ static RC extract_from_order_by_clause(
       OrderByField order_by_field;
       order_by_field.is_desc = order_by_attr.is_desc;
       order_by_field.table = table;
-      order_by_field.field_meta = field_meta;
+      order_by_field.field_meta = field_meta->copy();
       order_by_fields.push_back(order_by_field);
     } else {
       return RC::SCHEMA_TABLE_NOT_EXIST;
@@ -75,6 +76,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt)
   return create(db, select_sql, stmt, tp);
 }
 
+// every field's fieldmeta is a copy since we will change offset later
 RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_set<Table *> &parent_tables)
 {
   if (nullptr == db) {
@@ -92,6 +94,9 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
   std::unordered_map<std::string, Table *> table_map;
   for (size_t i = 0; i < select_sql->relation_num; i++) {
     const char *table_name = select_sql->relations[i];
+    if (table_map.count(table_name) > 0) {
+      continue;
+    }
     if (nullptr == table_name) {
       LOG_WARN("invalid argument. relation name is null. index=%d", i);
       return RC::INVALID_ARGUMENT;
@@ -123,8 +128,10 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
         }
       }
       else {
-        Field field;
-        field.set_aggr_str(relation_attr.attribute_name);
+        FieldMeta *meta = new FieldMeta;
+        meta->init(relation_attr.attribute_name, CHARS, 0, sizeof(relation_attr.attribute_name) + 2, true, false);
+        Field field(tables[0], meta);
+        // field.set_aggr_str(relation_attr.attribute_name);
         field.set_aggr(relation_attr.type);
         query_fields.push_back(field);
       }
@@ -161,14 +168,15 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
           }
 
           if (relation_attr.print_attr) {
-            Field field;
+            FieldMeta *meta = new FieldMeta;
+            meta->init(relation_attr.attribute_name, CHARS, 0, sizeof(relation_attr.attribute_name) + 2, true, false);
+            Field field(table, meta);
             field.set_print_table();
-            field.set_table(table);
             field.set_aggr(relation_attr.type);
-            field.set_aggr_str(relation_attr.attribute_name);
+            // field.set_aggr_str(relation_attr.attribute_name);
             query_fields.push_back(field);
           } else {
-            Field field(table, field_meta);
+            Field field(table, field_meta->copy());
             if (relation_attr.type != A_NO) {
               field.set_aggr(relation_attr.type);
               field.set_print_table();
@@ -191,13 +199,15 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
       }
 
       if (relation_attr.print_attr) {
-        Field field;
-        field.set_table(tables[0]);
+        FieldMeta *meta = new FieldMeta;
+        meta->init(relation_attr.attribute_name, CHARS, 0, sizeof(relation_attr.attribute_name) + 2, true, false);
+        Field field(table, meta);
+        // field.set_table(tables[0]);
         field.set_aggr(relation_attr.type);
-        field.set_aggr_str(relation_attr.attribute_name);
+        // field.set_aggr_str(relation_attr.attribute_name);
         query_fields.push_back(field);
       } else {
-        Field field(table, field_meta);
+        Field field(table, field_meta->copy());
         if (relation_attr.type != A_NO) {
           field.set_aggr(relation_attr.type);
         }
