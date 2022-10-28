@@ -151,7 +151,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       LOG_WARN("cannot find attr");
       return rc;
     }
-    left = new FieldExpr(table, field);
+    left = new FieldExpr(table, field->copy());
   } else {
     if (condition.left_value.type == DATES && *(int *)condition.left_value.data == -1) {
       return RC::INVALID_ARGUMENT;
@@ -187,7 +187,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       delete left;
       return rc;
     }
-    right = new FieldExpr(table, field);
+    right = new FieldExpr(table, field->copy());
   } else {
     if (condition.right_value.type == DATES && *(int *)condition.right_value.data == -1) {
       return RC::INVALID_ARGUMENT;

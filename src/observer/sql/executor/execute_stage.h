@@ -28,6 +28,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/seda/stage.h"
 #include "sql/parser/parse.h"
 #include "sql/expr/tuple.h"
+#include "storage/common/field_meta.h"
 #include "storage/common/table.h"
 #include "storage/common/field.h"
 #include "storage/common/condition_filter.h"
@@ -97,36 +98,34 @@ class TupleSet {
   TupleSet(const Tuple *t, Table *table);
   TupleSet(const TupleSet *t);
   TupleSet *copy() const;
-  // void combine(const TupleSet *t2);
+
   TupleSet *generate_combine(const TupleSet *t2);
-  void filter_fields(const std::vector<Field> &fields);
+  void filter_fields(const std::vector<int> &orders);
   const std::vector<TupleCell> &cells() const;
-  const FieldMeta &meta(int idx) const;
-  const std::vector<Field> &metas() const { return metas_; }
 
-  void push(const Field &p, const TupleCell &cell);
   void push(const TupleCell &cell); // only for in values
-
   TupleCell &get_cell(int idx);
-  const Field &get_field(int idx);
-  const Field *get_field(const char *table_name, const char *field_name) const;
 
-  int index(const Field &field) const;
-  int index(const Table* table, const FieldMeta& field_meta) const;
-  int index_with_aggr(const Field &field) const;
   const std::string& data() const { return data_; }
-  int get_offset(const char *table_name, const char *field_name) const;
 
   int size() const { return data_.size(); }
   bool in(TupleCell &cell) const;
   bool not_in(TupleCell &cell) const;
 
+  // void combine(const TupleSet *t2);
+  // void push(const Field &p, const TupleCell &cell);
+  // const Field &get_field(int idx);
+  // const Field *get_field(const char *table_name, const char *field_name) const;
+  // int index(const Field &field) const;
+  // int index(const Table* table, const FieldMeta& field_meta) const;
+  // int index_with_aggr(const Field &field) const;
+  // int get_offset(const char *table_name, const char *field_name) const;
+
  private:
-  int table_num_ = 0;
+  // int table_num_ = 0;
   // std::vector<std::pair<Table*, FieldMeta>> metas_;
   // std::vector<std::pair<Table*, Field>> metas_;
   // each meta has new fieldmeta
-  std::vector<Field> metas_;
   std::vector<TupleCell> cells_;
   std::string data_;
 };
@@ -154,10 +153,22 @@ class Pretable {
   RC aggregate_avg(int idx, TupleCell *res, int group_id);
   RC aggregate_count(int idx, TupleCell *res, int group_id);
   void order_by(const std::vector<OrderByField> &fields);
-  const FieldMeta *field(const Field &field) const;
-  CompositeConditionFilter *make_cond_filter(std::vector<FilterUnit*> &units, Pretable *t2);
+
+  CompositeConditionFilter *make_cond_filter(std::vector<FilterUnit*> &units);
   CompositeConditionFilter *make_having_filter(Condition *conditions, int num);
-  ConDesc make_cond_desc(Expression *expr, Pretable *t2);
+  ConDesc make_cond_desc(Expression *expr);
+  int get_offset(const char *table_name, const char *field_name) const;
+
+  int index(const Field &field) const;
+  int index(const char *table_name, const char *field_name) const;
+
+  const FieldMeta *field_meta(int idx) const { return fields_[idx].metac(); }
+  const FieldMeta *field_meta(const Field &field) const;
+  const FieldMeta *field_meta(const char *table_name, const char *field_name) const;
+
+  const Field *field(const char *table_name, const char *field_name) const;
+  const Field *field(const Field &field) const;
+  const Field *field(int idx) const { return &fields_[idx]; }
 
   // std::vector<TupleSet>::iterator begin() { return tuples_.begin(); }
   // std::vector<TupleSet>::iterator end() { return tuples_.end(); }
@@ -182,6 +193,7 @@ class Pretable {
 
   // first coordinate is group
   std::vector<std::vector<TupleSet>> groups_;
+  std::vector<Field> fields_;
 
   std::vector<Table*> tables_;
 };

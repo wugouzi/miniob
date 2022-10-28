@@ -249,7 +249,7 @@ void selects_append_in_value(ValueList *valuelist, Value *value)
 }
 void selects_append_groupby(Selects *selects, RelAttr *groupby_attr)
 {
-  selects->attributes[selects->groupby_num++] = *groupby_attr;
+  selects->groupby_attrs[selects->groupby_num++] = *groupby_attr;
 }
 
 void selects_append_relation(Selects *selects, const char *relation_name)
@@ -281,7 +281,7 @@ void selects_append_having_conditions(Selects* selects, Condition having_conditi
                                       size_t having_condition_num)
 {
   for (size_t i = 0; i < having_condition_num; i++) {
-    selects->conditions[i] = having_conditions[i];
+    selects->having_conditions[i] = having_conditions[i];
   }
   selects->having_num = having_condition_num;
 }

@@ -1,108 +1,125 @@
+4 | 3
+ID | AVG(SCORE)
+select id, avg(score) from t_group_by group by id having count(*)>2;
+-3 | 2.4
+-ID | AVG(SCORE)
++FAILURE
+7. GROUP BY WITH NULL
+insert into t_group_by values(1, 3.0, null);
+SUCCESS
 
+3 | 15 | ABC | 3
+11. SELECT SINGLE AND AGGREGATION
+SELECT id,avg(num),addr FROM aggregation_func;
+-FAILURE
++ID | AVG(NUM) | ADDR
++1 | 15 | ABC
+SELECT max(id),min(num),birthday FROM aggregation_func;
+-FAILURE
++MAX(ID) | MIN(NUM) | BIRTHDAY
++4 | 12 | 2020-01-01
 
-INITIALIZATION
-CREATE TABLE csq_1(id int, col1 int, feat1 float);
-CREATE TABLE csq_2(id int, col2 int, feat2 float);
-CREATE TABLE csq_3(id int, col3 int, feat3 float);
-CREATE TABLE csq_4(id int, col4 int, feat4 float);
+create table t(id int);
+insert into t values(1);
+select * from t where id in (1,2);
+drop table t;
 
-INSERT INTO csq_1 VALUES (1, 4, 11.2);
-INSERT INTO csq_1 VALUES (2, 2, 12.0);
-INSERT INTO csq_1 VALUES (3, 3, 13.5);
-INSERT INTO csq_2 VALUES (1, 2, 13.0);
-INSERT INTO csq_2 VALUES (2, 7, 10.5);
-INSERT INTO csq_2 VALUES (5, 3, 12.6);
-INSERT INTO csq_3 VALUES (1, 2, 11.0);
-INSERT INTO csq_3 VALUES (3, 6, 16.5);
-INSERT INTO csq_3 VALUES (5, 5, 14.6);
-
+SUCCESS
 1. SELECT
-select * from csq_1 where id in (select csq_2.id from csq_2 where csq_2.id in (select csq_3.id from csq_3));
-1 | 4 | 11.2
-ID | COL1 | FEAT1
+select * from ssq_1 where id in (1,3,4,5);
+-1 | 4 | 11.2
+-3 | 3 | 13.5
+-ID | COL1 | FEAT1
+-select * from ssq_1 where col1 in (1,3,4,null);
+-1 | 4 | 11.2
+-3 | 3 | 13.5
+-ID | COL1 | FEAT1
 
-select * from csq_1 where id in (select csq_2.id from csq_2 where csq_2.id not in (select csq_3.id from csq_3));
-2 | 2 | 12
-ID | COL1 | FEAT1
+-- group by
+1. CREATE TABLE
+create table t_group_by (id int, score float, name char);
+create table t_group_by_2 (id int, age int);
+insert into t_group_by values(3, 1.0, 'a');
+insert into t_group_by values(1, 2.0, 'b');
+insert into t_group_by values(4, 3.0, 'c');
+insert into t_group_by values(3, 2.0, 'c');
+insert into t_group_by values(3, 4.0, 'c');
+insert into t_group_by values(3, 3.0, 'd');
+insert into t_group_by values(3, 2.0, 'f');
+insert into t_group_by_2 values(1, 10);
+insert into t_group_by_2 values(2, 20);
+insert into t_group_by_2 values(3, 10);
+insert into t_group_by_2 values(3, 20);
+insert into t_group_by_2 values(3, 40);
+insert into t_group_by_2 values(4, 20);
 
-select * from csq_1 where col1 not in (select csq_2.col2 from csq_2 where csq_2.id not in (select csq_3.id from csq_3));
-1 | 4 | 11.2
-2 | 2 | 12
-3 | 3 | 13.5
-ID | COL1 | FEAT1
+3. PRIMARY GROUP BY
+select id, avg(score) from t_group_by group by id;
+1 | 2
+3 | 2.4
+4 | 3
+ID | AVG(SCORE)
 
-select * from csq_1 where col1 not in (select csq_2.col2 from csq_2 where csq_2.id in (select csq_3.id from csq_3));
-1 | 4 | 11.2
-ID | COL1 | FEAT1
+select name, min(id), max(score) from t_group_by group by name;
+A | 3 | 1
+B | 1 | 2
+C | 3 | 4
+D | 3 | 3
+F | 3 | 2
+NAME | MIN(ID) | MAX(SCORE)
 
-select * from csq_1 where col1 > (select avg(csq_2.col2) from csq_2 where csq_2.feat2 >= (select min(csq_3.feat3) from csq_3));
-1 | 4 | 11.2
-3 | 3 | 13.5
-ID | COL1 | FEAT1
+select name, min(id), max(score) from t_group_by group by name having min(id) > 2;
+name | min(id) | max(score)
+a | 3 | 1
+c | 3 | 4
+d | 3 | 3
+f | 3 | 2
+select name, min(id), max(score) from t_group_by group by name having min(id) > 2 and max(score)>2;
 
-select * from csq_1 where (select avg(csq_2.col2) from csq_2 where csq_2.feat2 > (select min(csq_3.feat3) from csq_3)) = col1;
-ID | COL1 | FEAT1
+select id, name, avg(score) from t_group_by group by id, name;
+1 | B | 2
+3 | A | 1
+3 | C | 3
+3 | D | 3
+3 | F | 2
+4 | C | 3
+ID | NAME | AVG(SCORE)
 
-select * from csq_1 where (select avg(csq_2.col2) from csq_2) <> (select avg(csq_3.col3) from csq_3);
-1 | 4 | 11.2
-2 | 2 | 12
-3 | 3 | 13.5
-ID | COL1 | FEAT1
+4. WITH WHERE CONDITION
+select id, avg(score) from t_group_by where id>2 group by id;
+3 | 2.4
+4 | 3
+ID | AVG(SCORE)
 
-select * from csq_1 where feat1 > (select min(csq_2.feat2) from csq_2) and col1 <= (select min(csq_3.col3) from csq_3);
-2 | 2 | 12
-ID | COL1 | FEAT1
+select name, count(id), max(score) from t_group_by where name > 'a' and id>=0 group by name;
+B | 1 | 2
+C | 3 | 4
+D | 1 | 3
+F | 1 | 2
+NAME | COUNT(ID) | MAX(SCORE)
 
-select * from csq_1 where (select max(csq_2.feat2) from csq_2) > feat1 and col1 > (select min(csq_3.col3) from csq_3);
-1 | 4 | 11.2
-ID | COL1 | FEAT1
+5. MULTI TABLE
+select t_group_by.id, t_group_by.name, avg(t_group_by.score), avg(t_group_by_2.age) from t_group_by, t_group_by_2 where t_group_by.id=t_group_by_2.id group by t_group_by.id, t_group_by.name;
+1 | B | 2 | 10
+3 | A | 1 | 23.33
+3 | C | 3 | 23.33
+3 | D | 3 | 23.33
+3 | F | 2 | 23.33
+4 | C | 3 | 20
+T_GROUP_BY.ID | T_GROUP_BY.NAME | AVG(T_GROUP_BY.SCORE) | AVG(T_GROUP_BY_2.AGE)
 
-select * from csq_1 where (select max(csq_2.feat2) from csq_2) > feat1 and (select min(csq_3.col3) from csq_3) < col1;
-1 | 4 | 11.2
-ID | COL1 | FEAT1
 
-select * from csq_1 where feat1 <> (select avg(csq_2.feat2) from csq_2 where csq_2.feat2 > csq_1.feat1);
-1 | 4 | 11.2
-2 | 2 | 12
-ID | COL1 | FEAT1
-
-select * from csq_1 where col1 not in (select csq_2.col2 from csq_2 where csq_2.id in (select csq_3.id from csq_3 where csq_1.id = csq_3.id));
-1 | 4 | 11.2
-2 | 2 | 12
-3 | 3 | 13.5
-ID | COL1 | FEAT1
-
-2. SELECT WITH EMPTY TABLE
-select * from csq_1 where id in (select csq_2.id from csq_2 where csq_2.id in (select csq_3.id from csq_3 where 1=0));
-ID | COL1 | FEAT1
-select * from csq_1 where id in (select csq_2.id from csq_2 where csq_2.id in (select csq_3.id from csq_3 where 1=0) and 1=0);
-ID | COL1 | FEAT1
-select * from csq_1 where col1 not in (select csq_2.col2 from csq_2 where csq_2.id not in (select csq_3.id from csq_3 where 1=0));
-1 | 4 | 11.2
-ID | COL1 | FEAT1
-select * from csq_1 where col1 not in (select csq_2.col2 from csq_2 where csq_2.id not in (select csq_3.id from csq_3) and 1=0);
-1 | 4 | 11.2
-2 | 2 | 12
-3 | 3 | 13.5
-ID | COL1 | FEAT1
-select * from csq_3 where feat3 < (select max(csq_2.feat2) from csq_2 where csq_2.id not in (select csq_3.id from csq_3 where 1=0));
-1 | 2 | 11
-ID | COL3 | FEAT3
-select * from csq_3 where feat3 < (select max(csq_2.feat2) from csq_2 where csq_2.id not in (select csq_3.id from csq_3 ) and 1=0);
-ID | COL3 | FEAT3
-
-3. ERROR
-select * from csq_1 where col1 = (select csq_2.col2 from csq_2);
-FAILURE
-select * from csq_1 where col1 = (select * from csq_2);
-FAILURE
-select * from csq_1 where col1 in (select * from csq_2);
-FAILURE
-select * from csq_1 where col1 not in (select * from csq_2);
-FAILURE
 
 
 --- simple
+
+create table t1(id int, col1 int);
+create table t2(id int, col2 int);
+insert into t1 values(1,4);
+insert into t2 values(1,2);
+select * from t1 where id=(select id from t2 where col2=2);
+drop table t1;
+drop table t2;
 
 3 | 3 | 13.5
 ID | COL1 | FEAT1
@@ -852,11 +869,7 @@ drop table t;
 
 CREATE TABLE null_table(id int, num int nullable, price float not null, birthday date nullable);
 CREATE TABLE null_table2(id int, num int nullable, price float not null, birthday date nullable);
-INSERT INTO null_table VALUES (1, 18, 10.0, '2020-01-01');
 INSERT INTO null_table VALUES (2, null, 20.0, '2010-01-11');
-INSERT INTO null_table VALUES (3, 12, 30.0, null);
-INSERT INTO null_table VALUES (4, 15, 30.0, '2021-01-31');
-INSERT INTO null_table2 VALUES (1, 18, 30.0, '2021-01-31');
 INSERT INTO null_table2 VALUES (2, null, 40.0, null);
 SELECT null_table.num,null_table2.num,null_table.birthday FROM null_table,null_table2 where null_table.num=null_table2.num;
 drop table null_table;
@@ -1445,6 +1458,8 @@ SELECT max(price) FROM aggregation_func;
 SELECT max(addr) FROM aggregation_func;
 SELECT avg(num) FROM aggregation_func;
 SELECT avg(price) FROM aggregation_func;
+
+select avg(price), price from aggregation_func;
 
 SELECT min(*) FROM aggregation_func;
 SELECT max(*) FROM aggregation_func;
@@ -2071,3 +2086,42 @@ select * from text_table;
 insert into text_table values (5,'this is a very very long string pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad pad1 pad pad pad pad');
 
 select * from text_table;
+
+
+create table t_basic(id int, age int, name char, score float);
+insert into t_basic values(7,7, 'g', 7.7);
+delete from t basic where id=3;
+select * from t_basic where id=1;
+select * from t_basic where id>=5;
+select t_basic.id, t_basic.age, t_basic.name, t_basic.score from t_basic;
+create index L_id on t_basic (id);
+-- restart
+delete from t_basic where id=1;
+insert into t_basic values(1,1, 'a', 1.0);
+delete from t_basic where id < 3;
+select * from t_basic;
+
+-- connect client1
+-- connect client2
+-- connection client2
+create table t_basic2(id int, age int, name char);
+begin;
+insert into t_basic2 values(1,1, 'a');
+insert into t_basic2 values(3,3, 'd');
+commit;
+-- connection client1
+begin;
+insert into t_basic2 values(2,2, 'b');
+insert into t_basic2 values(4,4, 'b');
+
+-- restart
+select * from t_basic2;
+-- connection client2
+
+-- connection clientl
+delete from t_basic where id=8;
+-- connection client2
+delete from t_basic where id=6;
+commit;
+- restart
+select * from t_basic2;
