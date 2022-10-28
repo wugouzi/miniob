@@ -1014,24 +1014,24 @@ RC ExecuteStage::do_clog_sync(SQLStageEvent *sql_event)
   return rc;
 }
 
-bool is_null(const TupleCell &cell, const FieldMeta *field)
+bool is_null(const TupleCell &cell)
 {
-  return static_cast<const char*>(cell.data())[field->len()-1] == 1;
+  return static_cast<const char*>(cell.data())[cell.length()-1] == 1;
 }
 
 TupleSet::TupleSet(const Tuple *t, Table *table) {
-  table_num_ = 1;
+  // table_num_ = 1;
   data_ = std::string(t->get_record().data(), table->table_meta().record_size());
-  for (const FieldMeta &meta : *table->table_meta().field_metas()) {
-    FieldMeta *new_meta = new FieldMeta;
-    new_meta->init(meta.name(), meta.type(), meta.offset(), meta.len(), meta.visible(), meta.nullable());
-    metas_.push_back(Field(table, new_meta));
-  }
+  // for (const FieldMeta &meta : *table->table_meta().field_metas()) {
+  //   FieldMeta *new_meta = new FieldMeta;
+  //   new_meta->init(meta.name(), meta.type(), meta.offset(), meta.len(), meta.visible(), meta.nullable());
+  //   metas_.push_back(Field(table, new_meta));
+  // }
   for (int i = 0; i < t->cell_num(); i++) {
     TupleCell cell;
     t->cell_at(i, cell);
     cells_.push_back(cell);
-    if (is_null(cell, metas_[i].meta())) {
+    if (is_null(cell)) {
       LOG_DEBUG("cell %d is null", i);
       cell.set_type(NULLS);
     } else {
@@ -1042,11 +1042,11 @@ TupleSet::TupleSet(const Tuple *t, Table *table) {
 
 TupleSet::TupleSet(const TupleSet *t) {
   cells_ = t->cells_;
-  for (auto &field : t->metas_) {
-    metas_.push_back(Field(field.table(), field.metac()->copy()));
-  }
+  // for (auto &field : t->metas_) {
+  //   metas_.push_back(Field(field.table(), field.metac()->copy()));
+  // }
   // metas_ = t->metas_;
-  table_num_ = t->table_num_;
+  // table_num_ = t->table_num_;
   data_ = t->data_;
 }
 
@@ -1064,142 +1064,152 @@ TupleSet *TupleSet::copy() const {
 
 TupleSet *TupleSet::generate_combine(const TupleSet *t2) {
   TupleSet *res = this->copy();
-  res->table_num_ += t2->table_num_;
+  // res->table_num_ += t2->table_num_;
   res->data_ += t2->data();
-  int off = 0;
-  for (auto &meta : res->metas_) {
-    off += meta.meta()->len();
-  }
-  for (auto meta : t2->metas_) {
-    // meta.meta()->set_offset(off + meta.meta()->offset());
-    Field field(meta.table(), meta.metac()->copy());
-    field.meta()->set_offset(off + field.meta()->offset());
-    res->metas_.push_back(field);
-  }
+  // int off = 0;
+  // for (auto &meta : res->metas_) {
+  //   off += meta.meta()->len();
+  // }
+  // for (auto meta : t2->metas_) {
+  //   // meta.meta()->set_offset(off + meta.meta()->offset());
+  //   Field field(meta.table(), meta.metac()->copy());
+  //   field.meta()->set_offset(off + field.meta()->offset());
+  //   res->metas_.push_back(field);
+  // }
   for (auto cell : t2->cells_) {
     res->cells_.push_back(cell);
   }
   return res;
 }
 
-void TupleSet::filter_fields(const std::vector<Field> &fields) {
-  std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<AggreType, int>>> mp;
-  std::vector<Field> metas(fields.size());
-  std::vector<TupleCell> cells(fields.size());
+void TupleSet::filter_fields(const std::vector<int> &orders) {
   data_.clear();
-  for (size_t i = 0; i < fields.size(); i++) {
-    mp[fields[i].table_name()][fields[i].field_name()][fields[i].aggr_type()] = i+1;
+  std::vector<TupleCell> cells(orders.size());
+  for (size_t i = 0; i < orders.size(); i++) {
+    cells[i] = cells_[orders[i]];
+    data_ += std::string(cells[i].data(), cells[i].length());
   }
+  // std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<AggreType, int>>> mp;
+  // std::vector<Field> metas(fields.size());
+  // std::vector<TupleCell> cells(fields.size());
+  // data_.clear();
+  // for (size_t i = 0; i < fields.size(); i++) {
+  //   mp[fields[i].table_name()][fields[i].field_name()][fields[i].aggr_type()] = i+1;
+  // }
 
-  table_num_ = mp.size();
+  // table_num_ = mp.size();
 
-  for (size_t i = 0; i < metas_.size(); i++) {
-    auto &p = metas_[i];
-    int j = mp[p.table_name()][p.meta()->name()][p.aggr_type()];
-    if (j > 0) {
-      cells[j-1] = cells_[i];
-      metas[j-1] = metas_[i];
-    }
-  }
+  // for (size_t i = 0; i < metas_.size(); i++) {
+  //   auto &p = metas_[i];
+  //   int j = mp[p.table_name()][p.meta()->name()][p.aggr_type()];
+  //   if (j > 0) {
+  //     cells[j-1] = cells_[i];
+  //     metas[j-1] = metas_[i];
+  //   }
+  // }
 
-  cells_.swap(cells);
-  metas_.swap(metas);
-  int offset = 0;
-  for (size_t i = 0; i < cells_.size(); i++) {
-    metas_[i].meta()->set_offset(offset);
-    offset += metas_[i].meta()->len();
-    data_ += std::string(cells_[i].data(), metas_[i].meta()->len());
-  }
+  // cells_.swap(cells);
+  // metas_.swap(metas);
+  // int offset = 0;
+  // for (size_t i = 0; i < cells_.size(); i++) {
+  //   metas_[i].meta()->set_offset(offset);
+  //   offset += metas_[i].meta()->len();
+  //   data_ += std::string(cells_[i].data(), metas_[i].meta()->len());
+  // }
 }
 
 // used for aggregate, and they have 5 bytes
-void TupleSet::push(const Field &p, const TupleCell &cell)
+void TupleSet::push(const TupleCell &cell)
 {
-  metas_.push_back(p);
-  metas_.back().meta()->set_offset(5 + metas_.back().meta()->offset());
+  // metas_.push_back(p);
+  // metas_.back().meta()->set_offset(5 + metas_.back().meta()->offset());
   cells_.push_back(cell);
   data_ += std::string(cell.data(), cell.length());
 }
 
-void TupleSet::push(const TupleCell &cell)
-{
-  cells_.push_back(cell);
-}
+// void TupleSet::push(const TupleCell &cell)
+// {
+//   cells_.push_back(cell);
+// }
 
-int TupleSet::index(const Field &field) const
-{
-  if (!field.has_table() || !field.has_field()) {
-    return -1;
-  }
-  for (size_t i = 0; i < metas_.size(); i++) {
-    const Field &meta = metas_[i];
-    if (strcmp(meta.table_name(), field.table_name()) == 0 &&
-        strcmp(meta.metac()->name(), field.field_name()) == 0) {
-      return i;
-    }
-  }
-  return -1;
-}
+// int TupleSet::index(const Field &field) const
+// {
+//   if (!field.has_table() || !field.has_field()) {
+//     return -1;
+//   }
+//   for (size_t i = 0; i < metas_.size(); i++) {
+//     const Field &meta = metas_[i];
+//     if (strcmp(meta.table_name(), field.table_name()) == 0 &&
+//         strcmp(meta.metac()->name(), field.field_name()) == 0) {
+//       return i;
+//     }
+//   }
+//   return -1;
+// }
 
-int TupleSet::index_with_aggr(const Field &field) const
-{
-  if (!field.has_table() || !field.has_field()) {
-    return -1;
-  }
-  for (size_t i = 0; i < metas_.size(); i++) {
-    const Field &meta = metas_[i];
-    if (meta.aggr_type() == field.aggr_type() &&
-        strcmp(meta.table_name(), field.table_name()) == 0 &&
-        strcmp(meta.metac()->name(), field.field_name()) == 0) {
-      return i;
-    }
-  }
-  return -1;
-}
+// int TupleSet::index_with_aggr(const Field &field) const
+// {
+//   if (!field.has_table() || !field.has_field()) {
+//     return -1;
+//   }
+//   for (size_t i = 0; i < metas_.size(); i++) {
+//     const Field &meta = metas_[i];
+//     if (meta.aggr_type() == field.aggr_type() &&
+//         strcmp(meta.table_name(), field.table_name()) == 0 &&
+//         strcmp(meta.metac()->name(), field.field_name()) == 0) {
+//       return i;
+//     }
+//   }
+//   return -1;
+// }
 
-int TupleSet::index(const Table* table, const FieldMeta& field_meta) const {
-  for (size_t i = 0; i < metas_.size(); i++) {
-    const Field &meta = metas_[i];
-    if (strcmp(meta.table_name(), table->name()) == 0 &&
-        strcmp(meta.metac()->name(), field_meta.name()) == 0) {
-      return i;
-    }
-  }
-  return -1;
-}
+// int TupleSet::index(const Table* table, const FieldMeta& field_meta) const {
+//   for (size_t i = 0; i < metas_.size(); i++) {
+//     const Field &meta = metas_[i];
+//     if (strcmp(meta.table_name(), table->name()) == 0 &&
+//         strcmp(meta.metac()->name(), field_meta.name()) == 0) {
+//       return i;
+//     }
+//   }
+//   return -1;
+// }
 
 TupleCell &TupleSet::get_cell(int idx)
 {
   return cells_[idx];
 }
 
-const Field &TupleSet::get_field(int idx)
-{
-  if (idx == -1) {
-    return metas_[0];
-  }
-  return metas_[idx];
-}
+// const Field &TupleSet::get_field(int idx)
+// {
+//   if (idx == -1) {
+//     return metas_[0];
+//   }
+//   return metas_[idx];
+// }
 
-const Field *TupleSet::get_field(const char *table_name, const char *field_name) const
-{
-  for (auto &field : metas_) {
-    if (strcmp(table_name, field.table_name()) == 0 &&
-        strcmp(field_name, field.metac()->name()) == 0) {
-      return &field;
-    }
-  }
-  return nullptr;
-}
+// const Field *TupleSet::get_field(const char *table_name, const char *field_name) const
+// {
+//   for (auto &field : metas_) {
+//     if (strcmp(table_name, field.table_name()) == 0 &&
+//         strcmp(field_name, field.metac()->name()) == 0) {
+//       return &field;
+//     }
+//   }
+//   return nullptr;
+// }
 
-int TupleSet::get_offset(const char *table_name, const char *field_name) const
-{
-  const Field *f = get_field(table_name, field_name);
-  if (f != nullptr) {
-    return f->metac()->offset();
-  }
-  return -1;
-}
+// int TupleSet::get_offset(const char *table_name, const char *field_name) const
+// {
+//   const Field *f = get_field(table_name, field_name);
+//   if (f != nullptr) {
+//     return f->metac()->offset();
+//   }
+//   return -1;
+// }
+//
+// const FieldMeta &TupleSet::meta(int idx) const {
+//   return *metas_[idx].metac();
+// }
 
 // TODO: trivial implementation currently
 bool TupleSet::in(TupleCell &cell) const
@@ -1228,9 +1238,6 @@ bool TupleSet::not_in(TupleCell &cell) const
   return true;
 }
 
-const FieldMeta &TupleSet::meta(int idx) const {
-  return *metas_[idx].metac();
-}
 
 const std::vector<TupleCell> &TupleSet::cells() const {
   return cells_;
@@ -1344,6 +1351,12 @@ RC Pretable::init(Table *table, FilterStmt *old_filter)
   Operator *scan_oper = new TableScanOperator(table);
   DEFER([&] () {delete scan_oper;});
 
+  // add fields
+  for (const auto &meta : *table->table_meta().field_metas()) {
+    Field f(table, meta.copy());
+    fields_.push_back(f);
+  }
+
   // first get a subset of filter
   PredicateOperator pred_oper(filter);
   pred_oper.add_child(scan_oper);
@@ -1372,14 +1385,34 @@ RC Pretable::init(Table *table, FilterStmt *old_filter)
   return rc;
 }
 
-const FieldMeta *Pretable::field(const Field &field) const {
-  for (auto table : tables_) {
-    if (strcmp(table->name(), field.table_name()) == 0) {
-      const FieldMeta *tp = table->table_meta().field(field.field_name());
-      if (tp != nullptr) {
-        return tp;
-      }
+// before aggregation
+const Field *Pretable::field(const Field &field) const
+{
+  for (auto &f : fields_) {
+    if (strcmp(f.table_name(), field.table_name()) == 0 &&
+        strcmp(f.metac()->name(), field.metac()->name()) == 0) {
+      return &f;
     }
+  }
+  return nullptr;
+}
+
+const Field *Pretable::field(const char *table_name, const char *field_name) const
+{
+  for (const auto &f : fields_) {
+    if (strcmp(f.table_name(), table_name) == 0 &&
+        strcmp(f.metac()->name(), field_name) == 0) {
+      return &f;
+    }
+  }
+  return nullptr;
+}
+
+const FieldMeta *Pretable::field_meta(const Field &field) const {
+
+  const Field *p_field = this->field(field);
+  if (p_field) {
+    return p_field->metac();
   }
   return nullptr;
 }
@@ -1390,8 +1423,8 @@ RC Pretable::aggregate_max(int idx, TupleCell *res, int group_id)
 {
   LOG_INFO("aggregate max");
   std::vector<TupleSet> &group = groups_[group_id];
-  const FieldMeta &meta = group[0].meta(idx);
-  size_t len = meta.len();
+  const FieldMeta *meta = field_meta(idx);
+  size_t len = meta->len();
   res->set_length(len);
   char *data = new char[len];
   memset(data, 0, len);
@@ -1415,7 +1448,7 @@ RC Pretable::aggregate_max(int idx, TupleCell *res, int group_id)
     res->set_type(NULLS);
     data[len-1] = 1;
   } else {
-    res->set_type(meta.type());
+    res->set_type(meta->type());
     memcpy(data, tmp->data(), len-1);
   }
   res->set_data(data);
@@ -1426,8 +1459,8 @@ RC Pretable::aggregate_min(int idx, TupleCell *res, int group_id)
 {
   LOG_INFO("aggregate min");
   std::vector<TupleSet> &group = groups_[group_id];
-  const FieldMeta &meta = group[0].meta(idx);
-  size_t len = meta.len();
+  const FieldMeta *meta = field_meta(idx);
+  size_t len = meta->len();
   res->set_length(len);
   char *data = new char[len];
   memset(data, 0, len);
@@ -1450,7 +1483,7 @@ RC Pretable::aggregate_min(int idx, TupleCell *res, int group_id)
     res->set_type(NULLS);
     data[len-1] = 1;
   } else {
-    res->set_type(meta.type());
+    res->set_type(meta->type());
     memcpy(data, tmp->data(), len-1);
   }
   res->set_data(data);
@@ -1579,12 +1612,37 @@ RC Pretable::aggregate_avg(int idx, TupleCell *res, int group_id)
   return RC::SUCCESS;
 }
 
+// before aggregate
+int Pretable::index(const Field &field) const
+{
+  for (size_t i = 0; i < fields_.size(); i++) {
+    const Field &f = fields_[i];
+    if (strcmp(f.table_name(), field.table_name()) == 0 &&
+        strcmp(f.metac()->name(), field.metac()->name()) == 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+int Pretable::index(const char *table_name, const char *field_name) const
+{
+  for (size_t i = 0; i < fields_.size(); i++) {
+    const Field &f = fields_[i];
+    if (strcmp(f.table_name(), table_name) == 0 &&
+        strcmp(f.metac()->name(), field_name) == 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 void Pretable::groupby(const std::vector<Field> groupby_fields)
 {
   for (const auto &field : groupby_fields) {
     PretableHash hash(field.attr_type());
     std::vector<std::vector<TupleSet>> groups;
-    int idx = groups_[0][0].index(field);
+    int idx = index(field);
     for (auto &group : groups_) {
       for (auto &tuple : group) {
         int group_idx = hash.get_value(tuple.get_cell(idx));
@@ -1635,6 +1693,7 @@ RC Pretable::aggregate(const std::vector<Field> fields)
   if (groups_.size() == 0) {
     return RC::SUCCESS;
   }
+
   RC rc = RC::SUCCESS;
   for (size_t i = 0; i < groups_.size(); i++) {
     std::vector<TupleSet> &group = groups_[i];
@@ -1643,7 +1702,7 @@ RC Pretable::aggregate(const std::vector<Field> fields)
     }
     TupleSet res;
     for (auto &field : fields) {
-      int idx = group[0].index(field);
+      int idx = index(field);
       TupleCell cell;
       if (field.aggr_type() == AggreType::A_NO) {
         cell = group[0].get_cell(idx);
@@ -1676,18 +1735,31 @@ RC Pretable::aggregate(const std::vector<Field> fields)
           return rc;
         }
       }
-      res.push(field, cell);
+      res.push(cell);
     }
     group.clear();
     group.push_back(res);
   }
+  for (const auto &f : fields) {
+    fields_.push_back(f);
+  }
   return RC::SUCCESS;
 }
 
+const FieldMeta *Pretable::field_meta(const char *table_name, const char *field_name) const
+{
+  const Field *f = this->field(table_name, field_name);
+  return f->metac();
+}
 
+int Pretable::get_offset(const char *table_name, const char *field_name) const
+{
+  const FieldMeta *meta = this->field_meta(table_name, field_name);
+  return meta->offset();
+}
 
 // if table is null, then it's this table, else its table outside
-ConDesc Pretable::make_cond_desc(Expression *expr, Pretable *t2)
+ConDesc Pretable::make_cond_desc(Expression *expr)
 {
   ConDesc desc;
   if (expr->type() == ExprType::FIELD) {
@@ -1695,12 +1767,13 @@ ConDesc Pretable::make_cond_desc(Expression *expr, Pretable *t2)
     FieldExpr *field_expr = dynamic_cast<FieldExpr*>(expr);
     desc.attr_length = field_expr->field().meta()->len();
     std::cout << "tuple size: " << groups_[0][0].size() << std::endl;
-    if (field(field_expr->field()) != nullptr) {
-      desc.attr_offset = groups_[0][0].get_offset(field_expr->table_name(), field_expr->field_name());
-    } else {
-      desc.attr_offset = groups_[0][0].size() + t2->groups_[0][0].get_offset(field_expr->table_name(), field_expr->field_name());
-    }
+    // const FieldMeta *field_meta = this->field_meta(field_expr->field());
+    desc.attr_offset = get_offset(field_expr->table_name(), field_expr->field_name());
+    // if (field(field_expr->field()) != nullptr) {
 
+    // } else {
+    //   desc.attr_offset = groups_[0][0].size() + t2->groups_[0][0].get_offset(field_expr->table_name(), field_expr->field_name());
+    // }
   } else {
     desc.is_attr = false;
     ValueExpr *value_expr = dynamic_cast<ValueExpr*>(expr);
@@ -1727,7 +1800,7 @@ CompositeConditionFilter *Pretable::make_having_filter(Condition *conditions, in
 
     if (cond.left_is_attr) {
       RelAttr &attr = cond.left_attr;
-      const Field *field = groups_[0][0].get_field(attr.relation_name, attr.attribute_name);
+      const Field *field = this->field(attr.relation_name, attr.attribute_name);
       left_type = field->metac()->type();
       left.attr_length = field->metac()->len();
       left.attr_offset = field->metac()->offset();
@@ -1738,7 +1811,7 @@ CompositeConditionFilter *Pretable::make_having_filter(Condition *conditions, in
 
     if (cond.right_is_attr) {
       RelAttr &attr = cond.right_attr;
-      const Field *field = groups_[0][0].get_field(attr.relation_name, attr.attribute_name);
+      const Field *field = this->field(attr.relation_name, attr.attribute_name);
       right_type = field->metac()->type();
       right.attr_length = field->metac()->len();
       right.attr_offset = field->metac()->offset();
@@ -1757,7 +1830,7 @@ CompositeConditionFilter *Pretable::make_having_filter(Condition *conditions, in
 }
 
 // combine two tupleset -> record, then filter
-CompositeConditionFilter *Pretable::make_cond_filter(std::vector<FilterUnit*> &units, Pretable *t2)
+CompositeConditionFilter *Pretable::make_cond_filter(std::vector<FilterUnit*> &units)
 {
   int n = units.size();
   if (n == 0) {
@@ -1766,8 +1839,8 @@ CompositeConditionFilter *Pretable::make_cond_filter(std::vector<FilterUnit*> &u
   ConditionFilter **filters = new ConditionFilter*[n];
 
   for (int i = 0; i < n; i++) {
-    ConDesc left = make_cond_desc(units[i]->left(), t2);
-    ConDesc right = make_cond_desc(units[i]->right(), t2);
+    ConDesc left = make_cond_desc(units[i]->left());
+    ConDesc right = make_cond_desc(units[i]->right());
     AttrType left_type, right_type;
     if (units[i]->left()->type() == ExprType::FIELD) {
       left_type = dynamic_cast<FieldExpr*>(units[i]->left())->field().attr_type();
@@ -1817,7 +1890,18 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
     return RC::SUCCESS;
   }
 
-  CompositeConditionFilter *cond_filter = make_cond_filter(units, pre2);
+  // combine fields
+  int off = 0;
+  for (auto &field : fields_) {
+    off += field.metac()->len();
+  }
+  for (auto &field : pre2->fields_) {
+    field.meta()->set_offset(off + field.meta()->offset());
+    fields_.push_back(field);
+  }
+
+  // combine tupleset
+  CompositeConditionFilter *cond_filter = make_cond_filter(units);
   std::vector<TupleSet> &tuple1 = groups_[0];
   std::vector<TupleSet> &tuple2 = pre2->groups_[0];
   std::vector<TupleSet> res;
@@ -1891,10 +1975,30 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
   }
 }
 
+// only for non-aggregations
 void Pretable::filter_fields(const std::vector<Field> &fields) {
+  std::unordered_map<std::string, std::unordered_map<std::string, int>> mp;
+  std::vector<Field> new_fields(fields.size());
+
+  for (size_t i = 0; i < fields.size(); i++) {
+    mp[fields[i].table_name()][fields[i].field_name()] = i+1;
+  }
+
+  std::vector<int> orders(fields.size());
+  for (size_t i = 0; i < fields_.size(); i++) {
+    auto &f = fields_[i];
+    int j = mp[f.table_name()][f.meta()->name()];
+    if (j > 0) {
+      orders[j-1] = i;
+      // new_fields[j-1] = fields_[i];
+    }
+  }
+
+  fields_ = fields;
+
   for (auto &group : groups_) {
     for (auto &tuple : group) {
-      tuple.filter_fields(fields);
+      tuple.filter_fields(orders);
     }
   }
 }
@@ -1911,7 +2015,8 @@ void Pretable::order_by(const std::vector<OrderByField> &order_by_fields){
     }
     std::vector<std::pair<int,int>> index_desc_pairs;
     for(auto &order_by_field : order_by_fields){
-      int index = group[0].index(order_by_field.table, *order_by_field.field_meta);
+      int index = this->index(order_by_field.table->name(), order_by_field.field_meta->name());
+      // int index = group[0].index(order_by_field.table, *order_by_field.field_meta);
       index_desc_pairs.push_back(std::make_pair(index, order_by_field.is_desc));
     }
     std::reverse(index_desc_pairs.begin(), index_desc_pairs.end());
@@ -1960,12 +2065,12 @@ RC Pretable::assign_row_to_value(Value *value)
 {
   if (only_one_cell()) {
     TupleSet &tuple = groups_[0][0];
-    const FieldMeta &meta = tuple.meta(0);
+    const FieldMeta *meta = this->field_meta(0);
     value->type = tuple.get_cell(0).attr_type();
-    value->data = new char[meta.len()];
-    memcpy(value->data, tuple.get_cell(0).data(), meta.len());
+    value->data = new char[meta->len()];
+    memcpy(value->data, tuple.get_cell(0).data(), meta->len());
     // null case
-    if (((char *)value->data)[meta.len() - 1] == 1) {
+    if (((char *)value->data)[meta->len() - 1] == 1) {
       value->type = NULLS;
     }
     return RC::SUCCESS;
