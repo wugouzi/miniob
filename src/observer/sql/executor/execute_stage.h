@@ -15,10 +15,8 @@ See the Mulan PSL v2 for more details. */
 #ifndef __OBSERVER_SQL_EXECUTE_STAGE_H__
 #define __OBSERVER_SQL_EXECUTE_STAGE_H__
 
-#include "common/log/log.h"
 #include "sql/expr/tuple_cell.h"
 #include "sql/parser/parse_defs.h"
-#include "sql/parser/yacc_sql.tab.h"
 #include "sql/stmt/stmt.h"
 #include "sql/stmt/select_stmt.h"
 #include "sql/stmt/update_stmt.h"
@@ -32,7 +30,6 @@ See the Mulan PSL v2 for more details. */
 #include "storage/common/field.h"
 #include "storage/common/condition_filter.h"
 #include <string>
-#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -102,31 +99,25 @@ class TupleSet {
   void filter_fields(const std::vector<Field> &fields);
   const std::vector<TupleCell> &cells() const;
   const FieldMeta &meta(int idx) const;
-  const std::vector<Field> &metas() const { return metas_; }
+  const std::vector<std::pair<Table*, FieldMeta>> &metas() const { return metas_; }
 
-  void push(const Field &p, const TupleCell &cell);
+  void push(const std::pair<Table*, FieldMeta> &p, const TupleCell &cell);
   void push(const TupleCell &cell); // only for in values
 
-  TupleCell &get_cell(int idx);
-  const Field &get_field(int idx);
-  const Field *get_field(const char *table_name, const char *field_name) const;
+  const TupleCell &get_cell(int idx);
+  const std::pair<Table *, FieldMeta> &get_meta(int idx);
 
   int index(const Field &field) const;
   int index(const Table* table, const FieldMeta& field_meta) const;
-  int index_with_aggr(const Field &field) const;
   const std::string& data() const { return data_; }
-  int get_offset(const char *table_name, const char *field_name) const;
-
+  int get_offset(const char *table_name, const char *field_name) const ;
   int size() const { return data_.size(); }
   bool in(TupleCell &cell) const;
   bool not_in(TupleCell &cell) const;
 
  private:
   int table_num_ = 0;
-  // std::vector<std::pair<Table*, FieldMeta>> metas_;
-  // std::vector<std::pair<Table*, Field>> metas_;
-  // each meta has new fieldmeta
-  std::vector<Field> metas_;
+  std::vector<std::pair<Table*, FieldMeta>> metas_;
   std::vector<TupleCell> cells_;
   std::string data_;
 };
@@ -148,54 +139,32 @@ class Pretable {
   void print(std::stringstream &os);
   void filter_fields(const std::vector<Field> &fields);
   RC aggregate(const std::vector<Field> fields);
-  RC aggregate_max(int idx, TupleCell *res, int group_id);
-  RC aggregate_sum(int idx, TupleCell *res, int group_id);
-  RC aggregate_min(int idx, TupleCell *res, int group_id);
-  RC aggregate_avg(int idx, TupleCell *res, int group_id);
-  RC aggregate_count(int idx, TupleCell *res, int group_id);
+  RC aggregate_max(int idx, TupleCell *res);
+  RC aggregate_sum(int idx, TupleCell *res);
+  RC aggregate_min(int idx, TupleCell *res);
+  RC aggregate_avg(int idx, TupleCell *res);
+  RC aggregate_count(int idx, TupleCell *res);
   void order_by(const std::vector<OrderByField> &fields);
   const FieldMeta *field(const Field &field) const;
   CompositeConditionFilter *make_cond_filter(std::vector<FilterUnit*> &units, Pretable *t2);
-  CompositeConditionFilter *make_having_filter(Condition *conditions, int num);
   ConDesc make_cond_desc(Expression *expr, Pretable *t2);
 
-  // std::vector<TupleSet>::iterator begin() { return tuples_.begin(); }
-  // std::vector<TupleSet>::iterator end() { return tuples_.end(); }
+  std::vector<TupleSet>::iterator begin() { return tuples_.begin(); }
+  std::vector<TupleSet>::iterator end() { return tuples_.end(); }
 
   RC assign_row_to_value(Value *value);
 
   bool in(Value *value) const;
   bool in(TupleCell &cell) const;
   bool not_in(TupleCell &cell) const;
-  // int group_num() { return get_group(0).size(); }
-  std::vector<TupleSet> &get_group(int group_id) { return groups_[group_id]; }
-  int group_num() const { return groups_.size(); }
-  int tuple_num() const;
-  void groupby(const std::vector<Field> groupby_fields);
-  void having(Condition *having_conditions, int having_condition_num);
-  bool only_one_cell() const {
-    return groups_.size() == 1
-        && groups_[0].size() == 1
-        && groups_[0][0].cells().size() == 1; }
+  int tuple_num() const { return tuples_.size(); }
+  bool only_one_cell() const { return tuples_.size() == 1 && tuples_[0].cells().size() == 1; }
   bool valid_operation(CompOp op) const;
-  TupleCell get_first_cell() { return groups_[0][0].get_cell(0); }
+  TupleCell get_first_cell() { return tuples_[0].get_cell(0); }
 
-  // first coordinate is group
-  std::vector<std::vector<TupleSet>> groups_;
-
+  std::vector<TupleSet> tuples_;
   std::vector<Table*> tables_;
 };
 
-class PretableHash {
- public:
-
-  PretableHash(AttrType type);
-  int get_value(const TupleCell &cell);
-
-  void *map_ = nullptr;
-  AttrType type_;
-  int index_;
-  int null_index_;
-};
 
 #endif  //__OBSERVER_SQL_EXECUTE_STAGE_H__
