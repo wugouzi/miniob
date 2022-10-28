@@ -26,7 +26,9 @@ public:
   {}
 
   const Table *table() const { return table_; }
-  const FieldMeta *meta() const { return field_; }
+  FieldMeta *meta() { return const_cast<FieldMeta *>(field_); }
+  const FieldMeta *metac() const { return field_; }
+  FieldMeta meta_copy() const { return *field_; }
 
   AttrType attr_type() const
   {
@@ -49,6 +51,7 @@ public:
 
   void set_aggr(AggreType type) {
     aggr_type_ = type;
+    // const_cast<FieldMeta *>(field_)->set_aggr_type(type);
   }
   const std::string &aggr_str() const { return aggr_str_; }
   void set_aggr_str(std::string cnt) { aggr_str_ = cnt; }
@@ -62,5 +65,6 @@ private:
   const FieldMeta *field_ = nullptr;
   AggreType aggr_type_ = A_NO;
   std::string aggr_str_;
+  // for count(1), avg(1.111)
   bool print_table_ = false;
 };
