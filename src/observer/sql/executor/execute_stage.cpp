@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -47,9 +48,11 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/select_stmt.h"
 #include "sql/stmt/stmt.h"
 #include "sql/stmt/update_stmt.h"
+#include "storage/common/field.h"
 #include "storage/common/field_meta.h"
 #include "storage/common/table.h"
 #include "storage/common/table_meta.h"
+#include "storage/index/bplus_tree.h"
 #include "storage/index/index.h"
 #include "storage/default/default_handler.h"
 #include "storage/common/condition_filter.h"
@@ -466,13 +469,21 @@ Pretable *ExecuteStage::select_to_pretable(SelectStmt *select_stmt, RC *rc)
 
   *rc = RC::SUCCESS;
 
+
+  // group by
+  res->groupby(select_stmt->groupby_fields());
+  // aggregate
   if (select_stmt->aggregate_num() > 0) {
     *rc = res->aggregate(select_stmt->query_fields());
+    // having
+    res->having(select_stmt->having_conditions(), select_stmt->having_condition_num());
   } else {
     // order by fields, if necessary
     res->order_by(select_stmt->order_by_fields());
     res->filter_fields(select_stmt->query_fields());
   }
+
+
 
   if (*rc != RC::SUCCESS) {
     LOG_ERROR("aggregate error");
@@ -528,7 +539,7 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
   ProjectOperator project_oper;
   project_oper.add_child(&pred_oper);
   for (const Field &field : select_stmt->query_fields()) {
-    project_oper.add_projection(field.table(), field.meta());
+    project_oper.add_projection(field.table(), field.metac());
   }
   rc = project_oper.open();
   if (rc != RC::SUCCESS) {
@@ -1012,13 +1023,15 @@ TupleSet::TupleSet(const Tuple *t, Table *table) {
   table_num_ = 1;
   data_ = std::string(t->get_record().data(), table->table_meta().record_size());
   for (const FieldMeta &meta : *table->table_meta().field_metas()) {
-    metas_.emplace_back(table, meta);
+    FieldMeta *new_meta = new FieldMeta;
+    new_meta->init(meta.name(), meta.type(), meta.offset(), meta.len(), meta.visible(), meta.nullable());
+    metas_.push_back(Field(table, new_meta));
   }
   for (int i = 0; i < t->cell_num(); i++) {
     TupleCell cell;
     t->cell_at(i, cell);
     cells_.push_back(cell);
-    if (is_null(cell, &metas_[i].second)) {
+    if (is_null(cell, metas_[i].meta())) {
       LOG_DEBUG("cell %d is null", i);
       cell.set_type(NULLS);
     } else {
@@ -1052,10 +1065,10 @@ TupleSet *TupleSet::generate_combine(const TupleSet *t2) {
   res->data_ += t2->data();
   int off = 0;
   for (auto &meta : res->metas_) {
-    off += meta.second.len();
+    off += meta.meta()->len();
   }
   for (auto meta : t2->metas_) {
-    meta.second.set_offset(off + meta.second.offset());
+    meta.meta()->set_offset(off + meta.meta()->offset());
     res->metas_.push_back(meta);
   }
   for (auto cell : t2->cells_) {
@@ -1065,19 +1078,19 @@ TupleSet *TupleSet::generate_combine(const TupleSet *t2) {
 }
 
 void TupleSet::filter_fields(const std::vector<Field> &fields) {
-  std::unordered_map<std::string, std::unordered_map<std::string, int>> mp;
-  std::vector<std::pair<Table*, FieldMeta>> metas(fields.size());
+  std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<AggreType, int>>> mp;
+  std::vector<Field> metas(fields.size());
   std::vector<TupleCell> cells(fields.size());
   data_.clear();
   for (size_t i = 0; i < fields.size(); i++) {
-    mp[fields[i].table_name()][fields[i].field_name()] = i+1;
+    mp[fields[i].table_name()][fields[i].field_name()][fields[i].aggr_type()] = i+1;
   }
 
   table_num_ = mp.size();
 
   for (size_t i = 0; i < metas_.size(); i++) {
     auto &p = metas_[i];
-    int j = mp[p.first->name()][p.second.name()];
+    int j = mp[p.table_name()][p.meta()->name()][p.aggr_type()];
     if (j > 0) {
       cells[j-1] = cells_[i];
       metas[j-1] = metas_[i];
@@ -1088,17 +1101,17 @@ void TupleSet::filter_fields(const std::vector<Field> &fields) {
   metas_.swap(metas);
   int offset = 0;
   for (size_t i = 0; i < cells_.size(); i++) {
-    metas_[i].second.set_offset(offset);
-    offset += metas_[i].second.len();
-    data_ += std::string(cells_[i].data(), metas_[i].second.len());
+    metas_[i].meta()->set_offset(offset);
+    offset += metas_[i].meta()->len();
+    data_ += std::string(cells_[i].data(), metas_[i].meta()->len());
   }
 }
 
-// used for aggregate, and they have 4 bytes
-void TupleSet::push(const std::pair<Table*, FieldMeta> &p, const TupleCell &cell)
+// used for aggregate, and they have 5 bytes
+void TupleSet::push(const Field &p, const TupleCell &cell)
 {
   metas_.push_back(p);
-  metas_.back().second.set_offset(4 + metas_.back().second.offset());
+  metas_.back().meta()->set_offset(5 + metas_.back().meta()->offset());
   cells_.push_back(cell);
   data_ += std::string(cell.data(), cell.length());
 }
@@ -1114,8 +1127,25 @@ int TupleSet::index(const Field &field) const
     return -1;
   }
   for (size_t i = 0; i < metas_.size(); i++) {
-    if (strcmp(metas_[i].first->name(), field.table_name()) == 0 &&
-        strcmp(metas_[i].second.name(), field.field_name()) == 0) {
+    const Field &meta = metas_[i];
+    if (strcmp(meta.table_name(), field.table_name()) == 0 &&
+        strcmp(meta.metac()->name(), field.field_name()) == 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+int TupleSet::index_with_aggr(const Field &field) const
+{
+  if (!field.has_table() || !field.has_field()) {
+    return -1;
+  }
+  for (size_t i = 0; i < metas_.size(); i++) {
+    const Field &meta = metas_[i];
+    if (meta.aggr_type() == field.aggr_type() &&
+        strcmp(meta.table_name(), field.table_name()) == 0 &&
+        strcmp(meta.metac()->name(), field.field_name()) == 0) {
       return i;
     }
   }
@@ -1124,19 +1154,21 @@ int TupleSet::index(const Field &field) const
 
 int TupleSet::index(const Table* table, const FieldMeta& field_meta) const {
   for (size_t i = 0; i < metas_.size(); i++) {
-    if (strcmp(metas_[i].first->name(), table->name()) == 0 &&
-        strcmp(metas_[i].second.name(), field_meta.name()) == 0) {
+    const Field &meta = metas_[i];
+    if (strcmp(meta.table_name(), table->name()) == 0 &&
+        strcmp(meta.metac()->name(), field_meta.name()) == 0) {
       return i;
     }
   }
   return -1;
 }
 
-const TupleCell &TupleSet::get_cell(int idx)
+TupleCell &TupleSet::get_cell(int idx)
 {
   return cells_[idx];
 }
-const std::pair<Table *, FieldMeta> &TupleSet::get_meta(int idx)
+
+const Field &TupleSet::get_field(int idx)
 {
   if (idx == -1) {
     return metas_[0];
@@ -1144,13 +1176,22 @@ const std::pair<Table *, FieldMeta> &TupleSet::get_meta(int idx)
   return metas_[idx];
 }
 
+const Field *TupleSet::get_field(const char *table_name, const char *field_name) const
+{
+  for (auto &field : metas_) {
+    if (strcmp(table_name, field.table_name()) == 0 &&
+        strcmp(field_name, field.metac()->name()) == 0) {
+      return &field;
+    }
+  }
+  return nullptr;
+}
+
 int TupleSet::get_offset(const char *table_name, const char *field_name) const
 {
-  for (auto &meta : metas_) {
-    if (strcmp(table_name, meta.first->name()) == 0 &&
-        strcmp(field_name, meta.second.name()) == 0) {
-      return meta.second.offset();
-    }
+  const Field *f = get_field(table_name, field_name);
+  if (f != nullptr) {
+    return f->metac()->offset();
   }
   return -1;
 }
@@ -1183,7 +1224,7 @@ bool TupleSet::not_in(TupleCell &cell) const
 }
 
 const FieldMeta &TupleSet::meta(int idx) const {
-  return metas_[idx].second;
+  return *metas_[idx].metac();
 }
 
 const std::vector<TupleCell> &TupleSet::cells() const {
@@ -1222,7 +1263,7 @@ FilterStmt *get_sub_filter(Table *table, FilterStmt *old_filter)
 }
 
 Pretable::Pretable(Pretable&& t)
-    :tuples_(std::move(t.tuples_)),
+    :groups_(std::move(t.groups_)),
      tables_(std::move(t.tables_))
 {
 
@@ -1235,15 +1276,18 @@ Pretable::Pretable(ValueList *valuelist)
     TupleCell cell(valuelist->values[i].type, (char *)valuelist->values[i].data);
     tupleset.push(cell);
   }
-  tuples_.push_back(tupleset);
+  groups_.resize(1);
+  groups_[0].push_back(tupleset);
 }
 
 bool Pretable::in(Value *value) const
 {
   TupleCell cell(value->type, (char *)value->data);
-  for (auto &tuple : tuples_) {
-    if (tuple.in(cell)) {
-      return true;
+  for (auto &group : groups_) {
+    for (auto &tuple : group) {
+      if (tuple.in(cell)) {
+        return true;
+      }
     }
   }
   return false;
@@ -1254,9 +1298,11 @@ bool Pretable::in(TupleCell &cell) const
   if (cell.attr_type() == NULLS) {
     return false;
   }
-  for (auto &tuple : tuples_) {
-    if (tuple.in(cell)) {
-      return true;
+  for (auto &group : groups_) {
+    for (auto &tuple : group) {
+      if (tuple.in(cell)) {
+        return true;
+      }
     }
   }
   return false;
@@ -1267,9 +1313,11 @@ bool Pretable::not_in(TupleCell &cell) const
   if (cell.attr_type() == NULLS) {
     return false;
   }
-  for (auto &tuple : tuples_) {
-    if (!tuple.not_in(cell)) {
-      return false;
+  for (auto &group : groups_) {
+    for (auto &tuple : group) {
+      if (!tuple.not_in(cell)) {
+        return false;
+      }
     }
   }
   return true;
@@ -1277,7 +1325,7 @@ bool Pretable::not_in(TupleCell &cell) const
 
 Pretable& Pretable::operator=(Pretable&& t)
 {
-  tuples_ = std::move(t.tuples_);
+  groups_ = std::move(t.groups_);
   tables_ = std::move(t.tables_);
   return *this;
 }
@@ -1301,6 +1349,8 @@ RC Pretable::init(Table *table, FilterStmt *old_filter)
     LOG_WARN("failed to open operator");
     return rc;
   }
+
+  groups_.resize(1);
   while ((rc = pred_oper.next()) == RC::SUCCESS) {
     // get current record
     // write to response
@@ -1310,7 +1360,7 @@ RC Pretable::init(Table *table, FilterStmt *old_filter)
       LOG_WARN("failed to get current record. rc=%s", strrc(rc));
       break;
     }
-    tuples_.push_back(new TupleSet(tuple, table));
+    groups_[0].push_back(new TupleSet(tuple, table));
   }
   // delete filter;
 
@@ -1329,18 +1379,21 @@ const FieldMeta *Pretable::field(const Field &field) const {
   return nullptr;
 }
 
-RC Pretable::aggregate_max(int idx, TupleCell *res)
+
+
+RC Pretable::aggregate_max(int idx, TupleCell *res, int group_id)
 {
   LOG_INFO("aggregate max");
-  const FieldMeta &meta = tuples_[0].meta(idx);
+  std::vector<TupleSet> &group = groups_[group_id];
+  const FieldMeta &meta = group[0].meta(idx);
   size_t len = meta.len();
   res->set_length(len);
   char *data = new char[len];
   memset(data, 0, len);
 
-  const TupleCell *tmp = &tuples_[0].get_cell(idx);
+  const TupleCell *tmp = &group[0].get_cell(idx);
 
-  for (TupleSet &tuple : tuples_) {
+  for (TupleSet &tuple : group) {
     const TupleCell &cell = tuple.get_cell(idx);
     if (cell.attr_type() != NULLS) {
       if (tmp->attr_type() == NULLS) {
@@ -1364,17 +1417,18 @@ RC Pretable::aggregate_max(int idx, TupleCell *res)
   return RC::SUCCESS;
 }
 
-RC Pretable::aggregate_min(int idx, TupleCell *res)
+RC Pretable::aggregate_min(int idx, TupleCell *res, int group_id)
 {
   LOG_INFO("aggregate min");
-  const FieldMeta &meta = tuples_[0].meta(idx);
+  std::vector<TupleSet> &group = groups_[group_id];
+  const FieldMeta &meta = group[0].meta(idx);
   size_t len = meta.len();
   res->set_length(len);
   char *data = new char[len];
   memset(data, 0, len);
 
-  const TupleCell *tmp = &tuples_[0].get_cell(idx);
-  for (TupleSet &tuple : tuples_) {
+  const TupleCell *tmp = &group[0].get_cell(idx);
+  for (TupleSet &tuple : group) {
     const TupleCell &cell = tuple.get_cell(idx);
     if (cell.attr_type() != NULLS) {
       if (tmp->attr_type() == NULLS) {
@@ -1398,17 +1452,18 @@ RC Pretable::aggregate_min(int idx, TupleCell *res)
   return RC::SUCCESS;
 }
 
-RC Pretable::aggregate_count(int idx, TupleCell *res)
+RC Pretable::aggregate_count(int idx, TupleCell *res, int group_id)
 {
   LOG_INFO("aggregate count");
+  std::vector<TupleSet> &group = groups_[group_id];
   int ans = 0;
   size_t len = sizeof(int) + 1;
   char *data = new char[len];
 
   if (idx == -1) {
-    ans = tuples_.size();
+    ans = group.size();
   } else {
-    for (TupleSet &tuple : tuples_) {
+    for (TupleSet &tuple : group) {
       const TupleCell &cell = tuple.get_cell(idx);
       if (cell.attr_type() != NULLS) {
         ans++;
@@ -1423,13 +1478,14 @@ RC Pretable::aggregate_count(int idx, TupleCell *res)
   return RC::SUCCESS;
 }
 
-RC Pretable::aggregate_sum(int idx, TupleCell *res)
+RC Pretable::aggregate_sum(int idx, TupleCell *res, int group_id)
 {
   LOG_INFO("aggregate sum");
+  std::vector<TupleSet> &group = groups_[group_id];
   float ans = 0;
   AttrType type = UNDEFINED;
   int cnt = 0;
-  for (TupleSet &tuple : tuples_) {
+  for (TupleSet &tuple : group) {
     const TupleCell &cell = tuple.get_cell(idx);
     type = cell.attr_type();
     switch (cell.attr_type()) {
@@ -1472,12 +1528,13 @@ RC Pretable::aggregate_sum(int idx, TupleCell *res)
   return RC::SUCCESS;
 }
 
-RC Pretable::aggregate_avg(int idx, TupleCell *res)
+RC Pretable::aggregate_avg(int idx, TupleCell *res, int group_id)
 {
   LOG_INFO("aggregate avg");
+  std::vector<TupleSet> &group = groups_[group_id];
   float ans = 0;
   int cnt = 0;
-  for (TupleSet &tuple : tuples_) {
+  for (TupleSet &tuple : group) {
     const TupleCell &cell = tuple.get_cell(idx);
     switch (cell.attr_type()) {
       case INTS: {
@@ -1517,55 +1574,108 @@ RC Pretable::aggregate_avg(int idx, TupleCell *res)
   return RC::SUCCESS;
 }
 
+void Pretable::groupby(const std::vector<Field> groupby_fields)
+{
+  for (const auto &field : groupby_fields) {
+    PretableHash hash(field.attr_type());
+    std::vector<std::vector<TupleSet>> groups;
+    int idx = groups_[0][0].index(field);
+    for (auto &group : groups_) {
+      for (auto &tuple : group) {
+        int group_idx = hash.get_value(tuple.get_cell(idx));
+        if (group_idx >= groups.size()) {
+          groups.resize(group_idx + 1);
+        }
+        groups[group_idx].push_back(tuple);
+      }
+    }
+    groups_.swap(groups);
+  }
+}
+
+void Pretable::having(Condition *having_conditions, int having_condition_num)
+{
+  if (having_condition_num == 0) {
+    return;
+  }
+  CompositeConditionFilter *filter = make_having_filter(having_conditions, having_condition_num);
+
+  std::vector<std::vector<TupleSet>> groups;
+  for (auto &group : groups_) {
+    assert(group.size() == 1);
+    TupleSet &tuple = group[0];
+    Record rec;
+    char *buf = new char[tuple.data().size()];
+    memcpy(buf, tuple.data().c_str(), tuple.data().size());
+    rec.set_data(buf);
+    if (filter->filter(rec)) {
+      groups.push_back(group);
+    }
+  }
+}
+
+int Pretable::tuple_num() const {
+  int ans = 0;
+  for (auto &group : groups_) {
+    ans += group.size();
+  }
+  return ans;
+}
+
+
+// after aggregation, there are original field and aggregation field in the tuple
 RC Pretable::aggregate(const std::vector<Field> fields)
 {
   LOG_INFO("begin aggregate");
-  if (tuples_.size() == 0) {
+  if (groups_.size() == 0) {
     return RC::SUCCESS;
   }
-  TupleSet res;
   RC rc = RC::SUCCESS;
-  for (const auto &field : fields) {
-    int idx = tuples_[0].index(field);
-    TupleCell cell;
-    if (idx == -1 && field.aggr_type() != AggreType::A_COUNT) {
-      LOG_INFO("log i don't know");
-      cell.set_type(AttrType::CHARS);
-      const std::string &s = field.aggr_str();
-      cell.set_length(s.size());
-      cell.set_data(strdup(s.c_str()));
-    } else {
-      switch (field.aggr_type()) {
-        case A_NO:
-          res.push(tuples_[0].get_meta(idx), tuples_[0].get_cell(idx));
-          continue;
-          break;
-        case A_MAX:
-          rc = aggregate_max(idx, &cell);
-          break;
-        case A_MIN:
-          rc = aggregate_min(idx, &cell);
-          break;
-        case A_AVG:
-          rc = aggregate_avg(idx, &cell);
-          break;
-        case A_COUNT:
-          rc = aggregate_count(idx, &cell);break;
-        case A_SUM:
-          rc = aggregate_sum(idx, &cell); break;
-        case A_FAILURE:
-          return RC::SCHEMA_FIELD_REDUNDAN;
-      }
-      if (rc != SUCCESS) {
-        LOG_ERROR("wrong wrong wrong");
-        return rc;
-      }
+  for (size_t i = 0; i < groups_.size(); i++) {
+    std::vector<TupleSet> &group = groups_[i];
+    if (group.size() == 0) {
+      continue;
     }
-
-    res.push(tuples_[0].get_meta(idx), cell);
+    TupleSet res;
+    for (auto &field : fields) {
+      int idx = group[0].index(field);
+      TupleCell cell;
+      if (field.aggr_type() == AggreType::A_NO) {
+        cell = group[0].get_cell(idx);
+      } else if (idx == -1 && field.aggr_type() != AggreType::A_COUNT) {
+        LOG_INFO("log i don't know");
+        cell.set_type(AttrType::CHARS);
+        cell.set_length(strlen(field.metac()->name()) + 2);
+        cell.set_data(field.metac()->name());
+      }  else {
+        switch (field.aggr_type()) {
+          case A_MAX:
+            rc = aggregate_max(idx, &cell, i);break;
+          case A_MIN:
+            rc = aggregate_min(idx, &cell, i);break;
+          case A_AVG:
+            rc = aggregate_avg(idx, &cell, i);break;
+          case A_COUNT:
+            rc = aggregate_count(idx, &cell, i);break;
+          case A_SUM:
+            rc = aggregate_sum(idx, &cell, i); break;
+          case A_FAILURE:
+            return RC::SCHEMA_FIELD_REDUNDAN;
+          default:
+            LOG_ERROR("WTF");
+            return RC::GENERIC_ERROR;
+        }
+        LOG_INFO("CELL type %d, len %d", cell.attr_type(), cell.length());
+        if (rc != SUCCESS) {
+          LOG_ERROR("wrong wrong wrong");
+          return rc;
+        }
+      }
+      res.push(field, cell);
+    }
+    group.clear();
+    group.push_back(res);
   }
-  tuples_.clear();
-  tuples_.push_back(res);
   return RC::SUCCESS;
 }
 
@@ -1580,9 +1690,9 @@ ConDesc Pretable::make_cond_desc(Expression *expr, Pretable *t2)
     FieldExpr *field_expr = dynamic_cast<FieldExpr*>(expr);
     desc.attr_length = field_expr->field().meta()->len();
     if (field(field_expr->field()) != nullptr) {
-      desc.attr_offset = tuples_[0].get_offset(field_expr->table_name(), field_expr->field_name());
+      desc.attr_offset = groups_[0][0].get_offset(field_expr->table_name(), field_expr->field_name());
     } else {
-      desc.attr_offset = tuples_[0].size() + t2->tuples_[0].get_offset(field_expr->table_name(), field_expr->field_name());
+      desc.attr_offset = groups_[0][0].size() + t2->groups_[0][0].get_offset(field_expr->table_name(), field_expr->field_name());
     }
 
   } else {
@@ -1591,6 +1701,53 @@ ConDesc Pretable::make_cond_desc(Expression *expr, Pretable *t2)
     desc.value = value_expr->get_data();
   }
   return desc;
+}
+
+CompositeConditionFilter *Pretable::make_having_filter(Condition *conditions, int num)
+{
+  if (num == 0) {
+    return nullptr;
+  }
+
+  ConditionFilter **filters = new ConditionFilter*[num];
+
+  for (int i = 0; i < num; i++) {
+    Condition &cond = conditions[i];
+    ConDesc left, right;
+    AttrType left_type, right_type;
+
+    left.is_attr = cond.left_is_attr;
+    right.is_attr = cond.right_is_attr;
+
+    if (cond.left_is_attr) {
+      RelAttr &attr = cond.left_attr;
+      const Field *field = groups_[0][0].get_field(attr.relation_name, attr.attribute_name);
+      left_type = field->metac()->type();
+      left.attr_length = field->metac()->len();
+      left.attr_offset = field->metac()->offset();
+    } else {
+      left_type = cond.left_value.type;
+      left.value = cond.left_value.data;
+    }
+
+    if (cond.right_is_attr) {
+      RelAttr &attr = cond.right_attr;
+      const Field *field = groups_[0][0].get_field(attr.relation_name, attr.attribute_name);
+      right_type = field->metac()->type();
+      right.attr_length = field->metac()->len();
+      right.attr_offset = field->metac()->offset();
+    } else {
+      right_type = cond.right_value.type;
+      right.value = cond.right_value.data;
+    }
+
+    filters[i] = new DefaultConditionFilter();
+    dynamic_cast<DefaultConditionFilter*>(filters[i])->init(left, right, left_type, right_type, cond.comp);
+  }
+  CompositeConditionFilter *ans = new CompositeConditionFilter();
+
+  ans->init((const ConditionFilter**)filters, num);
+  return ans;
 }
 
 // combine two tupleset -> record, then filter
@@ -1648,17 +1805,19 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
     }
   }
 
-  if (pre2->tuples_.size() == 0 || tuples_.size() == 0) {
-    tuples_.clear();
+  if (pre2->group_num() == 0 || pre2->groups_[0].size() == 0 ||
+      groups_.size() == 0 || groups_[0].size() == 0) {
+    groups_.clear();
     return RC::SUCCESS;
   }
 
   CompositeConditionFilter *cond_filter = make_cond_filter(units, pre2);
-
+  std::vector<TupleSet> &tuple1 = groups_[0];
+  std::vector<TupleSet> &tuple2 = pre2->groups_[0];
   std::vector<TupleSet> res;
   if (cond_filter != nullptr) {
-    for (TupleSet &t1 : tuples_) {
-      for (TupleSet &t2 : pre2->tuples_) {
+    for (TupleSet &t1 : tuple1) {
+      for (TupleSet &t2 : tuple2) {
         TupleSet *tuple = t1.generate_combine(&t2);
         Record rec;
         char *buf = new char[tuple->data().size()];
@@ -1670,26 +1829,18 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
       }
     }
   } else {
-    for (TupleSet &t1 : tuples_) {
-      for (TupleSet &t2 : pre2->tuples_) {
+    for (TupleSet &t1 : tuple1) {
+      for (TupleSet &t2 : tuple2) {
         res.push_back(*t1.generate_combine(&t2));
       }
     }
   }
 
-  // need to write hash functions to support hash join
-
-  // // hash join
-  // if (left_field != nullptr && right_field != nullptr) {
-  //   std::unordered_map<std::string, class _Tp>
-  // } else {
-  //   // nested loop join
-
-  // }
   for (Table *t : pre2->tables_) {
     tables_.push_back(t);
   }
-  tuples_.swap(res);
+  groups_.clear();
+  groups_.push_back(res);
   return RC::SUCCESS;
 }
 
@@ -1717,7 +1868,8 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
   for (auto &field : fields) {
     ss << (first ? "" : " | ");
     first = false;
-    std::string tp = field.has_field() ? field.field_name() : field.aggr_str();
+    // std::string tp = field.has_field() ? field.field_name() : field.aggr_str();
+    std::string tp = field.field_name();
     if (field.should_print_table() ||
         (multi && field.has_table())) {
       tp = field.table_name() + ("." + tp);
@@ -1734,8 +1886,10 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
 }
 
 void Pretable::filter_fields(const std::vector<Field> &fields) {
-  for (auto &tuple : tuples_) {
+  for (auto &group : groups_) {
+    for (auto &tuple : group) {
       tuple.filter_fields(fields);
+    }
   }
 }
 
@@ -1745,59 +1899,65 @@ void Pretable::order_by(const std::vector<OrderByField> &order_by_fields){
   if(order_by_fields.empty()){
     return;
   }
-  if(tuples_.empty()){
-    return;
-  }
-  std::vector<std::pair<int,int>> index_desc_pairs;
-  for(auto &order_by_field : order_by_fields){
-    int index = tuples_[0].index(order_by_field.table, *order_by_field.field_meta);
-    index_desc_pairs.push_back(std::make_pair(index, order_by_field.is_desc));
-  }
-  std::reverse(index_desc_pairs.begin(), index_desc_pairs.end());
-  sort(tuples_.begin(), tuples_.end(), [&](TupleSet& a, TupleSet& b) -> bool {
-    for(auto i_d: index_desc_pairs){
-      auto& index = i_d.first;
-      auto& is_desc = i_d.second;
-      TupleCell va = a.get_cell(index);
-      TupleCell vb = b.get_cell(index);
-      auto res = va.compare(vb);
-      if(res == 0){
-        continue;
-      }
-      if (is_desc) {
-        return res>0;
-      } else {
-        return res<0;
-      }
+  for (auto &group : groups_) {
+    if(group.empty()){
+      return;
     }
-    return false;
-  });
+    std::vector<std::pair<int,int>> index_desc_pairs;
+    for(auto &order_by_field : order_by_fields){
+      int index = group[0].index(order_by_field.table, *order_by_field.field_meta);
+      index_desc_pairs.push_back(std::make_pair(index, order_by_field.is_desc));
+    }
+    std::reverse(index_desc_pairs.begin(), index_desc_pairs.end());
+    sort(group.begin(), group.end(), [&](TupleSet& a, TupleSet& b) -> bool {
+      for(auto i_d: index_desc_pairs){
+        auto& index = i_d.first;
+        auto& is_desc = i_d.second;
+        TupleCell va = a.get_cell(index);
+        TupleCell vb = b.get_cell(index);
+        auto res = va.compare(vb);
+        if(res == 0){
+          continue;
+        }
+        if (is_desc) {
+          return res>0;
+        } else {
+          return res<0;
+        }
+      }
+      return false;
+    });
+  }
+
 }
 
 void Pretable::print(std::stringstream &ss)
 {
-  for (const TupleSet &tuple : tuples_) {
-    bool first = true;
-    for (const TupleCell &cell : tuple.cells()) {
-      if (!first) {
-        ss << " | ";
-      } else {
-        first = false;
+  for (auto &group : groups_) {
+    for (const TupleSet &tuple : group) {
+      bool first = true;
+      for (const TupleCell &cell : tuple.cells()) {
+        if (!first) {
+          ss << " | ";
+        } else {
+          first = false;
+        }
+        cell.to_string(ss);
       }
-      cell.to_string(ss);
+      ss << '\n';
     }
-    ss << '\n';
   }
 }
 
 
 RC Pretable::assign_row_to_value(Value *value)
 {
-  if (tuples_.size() == 1 && tuples_[0].metas().size() == 1) {
-    const FieldMeta &meta = tuples_[0].meta(0);
-    value->type = tuples_[0].get_cell(0).attr_type();
+  if (only_one_cell()) {
+    TupleSet &tuple = groups_[0][0];
+    const FieldMeta &meta = tuple.meta(0);
+    value->type = tuple.get_cell(0).attr_type();
     value->data = new char[meta.len()];
-    memcpy(value->data, tuples_[0].get_cell(0).data(), meta.len());
+    memcpy(value->data, tuple.get_cell(0).data(), meta.len());
     // null case
     if (((char *)value->data)[meta.len() - 1] == 1) {
       value->type = NULLS;
@@ -1807,16 +1967,71 @@ RC Pretable::assign_row_to_value(Value *value)
   return RC::SCHEMA_FIELD_TYPE_MISMATCH;
 }
 
+// this is before group by
 bool Pretable::valid_operation(CompOp op) const {
-  if (tuples_.size() == 0 || op == VALUE_EXISTS || op == VALUE_NOT_EXISTS) {
+  if (groups_[0].size() == 0 || op == VALUE_EXISTS || op == VALUE_NOT_EXISTS) {
     return true;
   }
   if (op == VALUE_IN || op == VALUE_NOT_IN) {
-    return tuples_[0].cells().size() == 1;
+    return groups_[0][0].cells().size() == 1;
   }
   return only_one_cell();
 }
 
+PretableHash::PretableHash(AttrType type) : type_(type), index_(0), null_index_(-1) {
+  switch (type) {
+    case INTS: case DATES:
+      map_ = new std::unordered_map<int, int>;
+      break;
+    case CHARS:
+      map_ = new std::unordered_map<std::string, int>;
+      break;
+    case FLOATS:
+      map_ = new std::unordered_map<float, int>;
+    default:
+      LOG_ERROR("wtf");
+      map_ = nullptr;
+  }
+}
+
+
+int PretableHash::get_value(const TupleCell &cell) {
+  switch (cell.attr_type()) {
+    case INTS: case DATES: {
+      auto map = static_cast<std::unordered_map<int, int> *>(map_);
+      int val = *(int*)cell.data();
+      if (map->count(val)) {
+        (*map)[val] = index_++;
+      }
+      return (*map)[val];
+    }
+    case CHARS: {
+      auto map = static_cast<std::unordered_map<std::string, int> *>(map_);
+      std::string val = cell.data();
+      if (map->count(val)) {
+        (*map)[val] = index_++;
+      }
+      return (*map)[val];
+    }
+    case FLOATS: {
+      auto map = static_cast<std::unordered_map<float, int> *>(map_);
+      int val = *(float*)cell.data();
+      if (map->count(val)) {
+        (*map)[val] = index_++;
+      }
+      return (*map)[val];
+    }
+    case NULLS:
+      if (null_index_ == -1) {
+        null_index_ = index_++;
+      }
+      return null_index_;
+    default:
+      LOG_ERROR("WTF");
+      return -1;
+  }
+
+}
 
 /*
 RC ExecuteStage::do_update(SQLStageEvent *sql_event)

@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include <vector>
 
 #include "rc.h"
+#include "sql/parser/parse_defs.h"
 #include "sql/stmt/stmt.h"
 #include "storage/common/field.h"
 
@@ -49,15 +50,22 @@ public:
   const std::vector<Table *> &tables() const { return tables_; }
   const std::vector<Field> &query_fields() const { return query_fields_; }
   std::vector<Field> &query_fields() { return query_fields_; }
+  const std::vector<Field> &groupby_fields() const { return groupby_fields_; }
+  std::vector<Field> &groupby_fields() { return groupby_fields_; }
   const std::vector<OrderByField> &order_by_fields() const { return order_by_fields_; }
   std::vector<OrderByField> &order_by_fields() { return order_by_fields_; }
   FilterStmt *filter_stmt() const { return filter_stmt_; }
   int aggregate_num() const { return aggregate_num_; }
+  Condition *having_conditions() { return having_conditions_; }
+  int having_condition_num() { return having_condition_num_; }
   // void add_parent_tables(std::unordered_set<Table *> tables) { parent_tables_ = tables; }
   // std::unordered_set<Table *> parent_tables() { return parent_tables_; }
 
 private:
   std::vector<Field> query_fields_;
+  std::vector<Field> groupby_fields_;
+  Condition *having_conditions_;
+  int having_condition_num_;
   std::vector<Table *> tables_;
   // std::unordered_set<Table *> parent_tables_;
   FilterStmt *filter_stmt_ = nullptr;

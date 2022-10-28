@@ -119,8 +119,10 @@ typedef struct _Selects {
   size_t aggregate_num;              // -1 means error
   size_t order_by_num;
   OrderByRelAttr order_fields[MAX_NUM];
-  char *groupby_attrs[MAX_NUM];
+  RelAttr groupby_attrs[MAX_NUM];
   size_t groupby_num;
+  Condition having_conditions[MAX_NUM];
+  size_t having_num;
 } Selects;
 
 // struct of insert
@@ -279,6 +281,9 @@ void selects_append_order_field(Selects* selects, RelAttr* attr, size_t is_desc)
 void selects_append_conditions(Selects* selects,
                                Condition conditions[],
                                size_t condition_num);
+void selects_append_having_conditions(Selects* selects,
+                                      Condition having_conditions[],
+                                      size_t having_condition_num);
 void selects_destroy(Selects *selects);
 
 //void inserts_init(Inserts *inserts, const char *relation_name, Value values[], size_t value_num);
