@@ -2274,3 +2274,23 @@ select * from t_basic2;
 create table t(id int, age int, name char);
 select * from t;
 drop table t;
+
+
+create table t_clog(id int, age int, name char);
+begin;
+insert into t_clog values(1,1, 'a');
+insert into t_clog values(2,2, 'b');
+commit;
+
+begin;
+insert into t_clog values(3,3, 'c');
+UPDATE t_clog set age=22 where id = 2;
+commit;
+
+SELECT * FROM T_CLOG;
+
+-- 1 | 1 | A
+-- -2 | 22 | B
+-- +2 | 2 | B
+-- +3 | 3 | C
+-- ID | AGE | NAME
