@@ -105,6 +105,10 @@ bool PredicateOperator::do_predicate(RowTuple &tuple, RC *rc)
         }
         if (comp == VALUE_IN || comp == VALUE_NOT_IN ||
             comp == VALUE_EXISTS || comp == VALUE_NOT_EXISTS) {
+          if (res->fields_.size() > 1) {
+            *rc = RC::SCHEMA_FIELD_TYPE_MISMATCH;
+            return true;
+          }
           val_expr->set_pretable(res);
         } else {
           *rc = res->assign_row_to_value(left_cell);
@@ -125,15 +129,19 @@ bool PredicateOperator::do_predicate(RowTuple &tuple, RC *rc)
         auto context = make_context(tuple);
         Pretable *res = ExecuteStage::Selects_to_pretable(db_, val_expr->selects(), context, rc);
         if (*rc != RC::SUCCESS) {
-          return false;
+          return true;
         }
         if (comp == VALUE_IN || comp == VALUE_NOT_IN ||
             comp == VALUE_EXISTS || comp == VALUE_NOT_EXISTS) {
+          if (res->fields_.size() > 1) {
+            *rc = RC::SCHEMA_FIELD_TYPE_MISMATCH;
+            return true;
+          }
           val_expr->set_pretable(res);
         } else {
           *rc = res->assign_row_to_value(right_cell);
           if (*rc != RC::SUCCESS) {
-            return false;
+            return true;
           }
         }
       } else {
