@@ -1991,10 +1991,11 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
     ss << (first ? "" : " | ");
     first = false;
     // std::string tp = field.has_field() ? field.field_name() : field.aggr_str();
-    std::string tp = field.field_name();
+    std::string tp = field.has_alias() ? field.alias() : field.field_name();
     if (field.should_print_table() ||
         (multi && field.has_table())) {
-      tp = field.table_name() + ("." + tp);
+      const Table *table = field.table();
+      tp = (table->has_alias() ? table->alias() : table->name()) + ("." + tp);
     }
     if (field.aggr_type() != A_NO) {
       tp = aggr_to_string(field.aggr_type()) + '(' + tp + ')';

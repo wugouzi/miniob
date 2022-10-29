@@ -111,6 +111,16 @@ private:
 public:
   RC recover_insert_record(Record *record);
 
+ public:
+  void set_alias(std::string alias) { alias_ = alias; }
+  void set_alias(const char *alias) {
+    if (alias != nullptr) {
+      alias_ = alias;
+    }
+  }
+  const std::string &alias() const { return alias_; }
+  bool has_alias() const { return alias_.size() > 0; }
+
 private:
   friend class RecordUpdater;
   friend class RecordDeleter;
@@ -135,6 +145,7 @@ private:
   DiskBufferPool *data_buffer_pool_ = nullptr;   /// 数据文件关联的buffer pool
   RecordFileHandler *record_handler_ = nullptr;  /// 记录操作
   std::vector<Index *> indexes_;
+  std::string alias_;
 };
 
 #endif  // __OBSERVER_STORAGE_COMMON_TABLE_H__

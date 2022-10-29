@@ -41,6 +41,7 @@ typedef struct {
   char *attribute_name;  // attribute name              属性名
   AggreType type;
   int print_attr;
+  char *alias;
 } RelAttr;
 
 typedef enum {
@@ -108,12 +109,17 @@ typedef struct {
   size_t is_desc;
 } OrderByRelAttr;
 
+typedef struct {
+  char *relation_name;
+  char *alias;
+} Relation;
+
 // struct of select
 typedef struct _Selects {
   size_t attr_num;                // Length of attrs in Select clause
   RelAttr attributes[MAX_NUM];    // attrs in Select clause
   size_t relation_num;            // Length of relations in Fro clause
-  char *relations[MAX_NUM];       // relations in From clause
+  Relation relations[MAX_NUM];       // relations in From clause
   size_t condition_num;           // Length of conditions in Where clause
   Condition conditions[MAX_NUM];  // conditions in Where clause
   size_t aggregate_num;              // -1 means error
@@ -250,6 +256,7 @@ extern "C" {
 #endif  // __cplusplus
 
 void relation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name);
+void relation_init(Relation *relation, const char *relation_name, const char *alias);
 void relation_attr_destroy(RelAttr *relation_attr);
 
 void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type, int is_digit);
@@ -274,9 +281,9 @@ void attr_info_destroy(AttrInfo *attr_info);
 void selects_init(Selects *s1, ...);
 void selects_reverse_relations(Selects *selects, int len);
 void selects_append_in_value(ValueList *valuelist, Value *value);
-void selects_append_attribute(Selects *selects, RelAttr *rel_attr);
+void selects_append_attribute(Selects *selects, RelAttr *rel_attr, const char *alias);
 void selects_append_groupby(Selects *selects, RelAttr *groupby_attr);
-void selects_append_relation(Selects *selects, const char *relation_name);
+void selects_append_relation(Selects *selects, const char *relation_name, const char *alias);
 void selects_append_order_field(Selects* selects, RelAttr* attr, size_t is_desc);
 void selects_append_conditions(Selects* selects,
                                Condition conditions[],

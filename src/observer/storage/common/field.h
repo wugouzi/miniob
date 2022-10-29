@@ -60,7 +60,15 @@ public:
   bool has_field() const { return field_ != nullptr; }
   void set_print_table() { print_table_ = true; }
   bool should_print_table() const { return print_table_; }
+  void set_alias(const char *alias) {
+    if (alias != nullptr) {
+      alias_ = alias;
+    }
+  }
+  const std::string &alias() const { return alias_; }
+  bool has_alias() const { return alias_.size() > 0; }
 private:
+  std::string alias_;
   const Table *table_ = nullptr;
   const FieldMeta *field_ = nullptr;
   AggreType aggr_type_ = A_NO;

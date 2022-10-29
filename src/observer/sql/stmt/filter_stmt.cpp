@@ -157,10 +157,11 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       return RC::INVALID_ARGUMENT;
     }
     if (condition.left_value.type == SELECTS) {
+
       std::unordered_set<Table *> parent_tables;
-      for (auto &kv : *tables) {
+      /*for (auto &kv : *tables) {
         parent_tables.insert(kv.second);
-      }
+      }*/
       Pretable *res = ExecuteStage::Selects_to_pretable(db, &condition.left_value, parent_tables);
       if (res == nullptr) {
         return RC::INTERNAL;

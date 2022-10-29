@@ -1,3 +1,140 @@
+INITIALIZATION
+CREATE TABLE ssq_1(id int, col1 int, feat1 float);
+CREATE TABLE ssq_2(id int, col2 int, feat2 float);
+CREATE TABLE ssq_3(id int, col3 int, feat3 float);
+
+INSERT INTO ssq_1 VALUES (1, 4, 11.2);
+INSERT INTO ssq_1 VALUES (2, 2, 12.0);
+INSERT INTO ssq_1 VALUES (3, 3, 13.5);
+INSERT INTO ssq_2 VALUES (1, 2, 13.0);
+INSERT INTO ssq_2 VALUES (2, 7, 10.5);
+INSERT INTO ssq_2 VALUES (5, 3, 12.6);
+
+select * from ssq_1 where id = (select ssq_2.id from ssq_2 where col2 = 2);
+-1 | 4 | 11.2
+-ID | COL1 | FEAT1
++FAILURE
+select * from ssq_1 where (select ssq_2.id from ssq_2 where col2 = 2) = id;
+-1 | 4 | 11.2
+-ID | COL1 | FEAT1
++FAILURE
+
+select * from ssq_1 where id in (select ssq_2.id from ssq_2);
+1 | 4 | 11.2
+2 | 2 | 12
+ID | COL1 | FEAT1
+select * from ssq_1 where col1 not in (select ssq_2.col2 from ssq_2);
+1 | 4 | 11.2
+ID | COL1 | FEAT1
+
+select * from ssq_1 where col1 = (select avg(ssq_2.col2) from ssq_2);
+1 | 4 | 11.2
+ID | COL1 | FEAT1
+select * from ssq_1 where (select avg(ssq_2.col2) from ssq_2) = col1;
+1 | 4 | 11.2
+ID | COL1 | FEAT1
+
+select * from ssq_1 where feat1 >= (select min(ssq_2.feat2) from ssq_2);
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+select * from ssq_1 where (select min(ssq_2.feat2) from ssq_2) <= feat1;
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+
+select * from ssq_1 where feat1 <= (select max(ssq_2.feat2) from ssq_2);
+1 | 4 | 11.2
+2 | 2 | 12
+ID | COL1 | FEAT1
+select * from ssq_1 where (select max(ssq_2.feat2) from ssq_2) >= feat1;
+1 | 4 | 11.2
+2 | 2 | 12
+ID | COL1 | FEAT1
+
+select * from ssq_1 where feat1 > (select min(ssq_2.feat2) from ssq_2);
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+select * from ssq_1 where (select min(ssq_2.feat2) from ssq_2) < feat1;
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+
+select * from ssq_1 where feat1 < (select max(ssq_2.feat2) from ssq_2);
+1 | 4 | 11.2
+2 | 2 | 12
+ID | COL1 | FEAT1
+select * from ssq_1 where (select max(ssq_2.feat2) from ssq_2) > feat1;
+1 | 4 | 11.2
+2 | 2 | 12
+ID | COL1 | FEAT1
+
+select * from ssq_1 where feat1 <> (select avg(ssq_2.feat2) from ssq_2);
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+
+2. SELECT WITH EMPTY TABLE
+select * from ssq_1 where feat1 < (select max(ssq_2.feat2) from ssq_2 where 1=0);
+ID | COL1 | FEAT1
+select * from ssq_1 where id in (select ssq_2.id from ssq_2 where 1=0);
+ID | COL1 | FEAT1
+select * from ssq_1 where id not in (select ssq_2.id from ssq_2 where 1=0);
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+ID | COL1 | FEAT1
+select * from ssq_3 where feat3 < (select max(ssq_2.feat2) from ssq_2);
+ID | COL3 | FEAT3
+select * from ssq_3 where id in (select ssq_2.id from ssq_2);
+ID | COL3 | FEAT3
+select * from ssq_3 where id not in (select ssq_2.id from ssq_2);
+ID | COL3 | FEAT3
+
+3. ERROR
+select * from ssq_1 where col1 = (select ssq_2.col2 from ssq_2);
+FAILURE
+select * from ssq_1 where col1 = (select * from ssq_2);
+FAILURE
+select * from ssq_1 where col1 in (select * from ssq_2);
+FAILURE
+select * from ssq_1 where col1 not in (select * from ssq_2);
+FAILURE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+create table table_name_1(id int, col1 int, feat1 int);
+create table table_name_2(id int, col2 int, feat2 int);
+insert into table_name_1 values(2,2,12);
+insert into table_name_1 values(2,2,12);
+
+-- alias
+3. alias of table name
+select * from table_name_1 t1 where id in (select t2.id from table_name_2 t2 where t2.col2 >= t1.col1);
+-2 | 2 | 12
+-ID | COL1 | FEAT1
++FAILED TO PARSE SQL
+
+
 4 | 3
 ID | AVG(SCORE)
 select id, avg(score) from t_group_by group by id having count(*)>2;
@@ -108,8 +245,20 @@ T_GROUP_BY.ID | T_GROUP_BY.NAME | AVG(T_GROUP_BY.SCORE) | AVG(T_GROUP_BY_2.AGE)
 create table t1(id int, col1 int);
 create table t2(id int, col2 int);
 insert into t1 values(1,4);
+insert into t1 values(2,3);
 insert into t2 values(1,2);
-insert into t1 values(2,1);
+insert into t2 values(2,1);
+select * from t1 where id=(select id from t2 where col2=2);
+drop table t1;
+drop table t2;
+
+create table t1(id int, col1 int);
+create table t2(id int, col2 int);
+insert into t1 values(1,4);
+insert into t1 values(2,3);
+insert into t1 values(null,2);
+insert into t2 values(1,2);
+insert into t2 values(2,1);
 select * from t1 where id=(select id from t2 where col2=2);
 drop table t1;
 drop table t2;
