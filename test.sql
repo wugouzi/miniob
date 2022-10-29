@@ -2188,11 +2188,11 @@ ID | AGE | NAME
 
 create table t_basic(id int, age int, name char, score float);
 insert into t_basic values(7,7, 'g', 7.7);
-delete from t basic where id=3;
+delete from t_basic where id=3;
 select * from t_basic where id=1;
 select * from t_basic where id>=5;
 select t_basic.id, t_basic.age, t_basic.name, t_basic.score from t_basic;
-create index L_id on t_basic (id);
+create index i_id on t_basic (id);
 -- restart
 delete from t_basic where id=1;
 insert into t_basic values(1,1, 'a', 1.0);
