@@ -1,3 +1,4 @@
+select * from ssq_1 where feat1 < (select max(ssq_2.feat2) from ssq_2 where 1=0);
 1 | 4 | 11.2
 ID | COL1 | FEAT1
 select * from ssq_1 where exists (select ssq_2.id from ssq_2 where ssq_1.id > ssq_2.id);
@@ -341,6 +342,11 @@ select * from ssq_1 where col1 not in (2,3);
 1 | 4 | 11.2
 +2 | NULL | 12
 ID | COL1 | FEAT1
+
+select * from ssq_1 where id in (1,3,4,5);
+-1 | 4 | 11.2
+-3 | 3 | 13.5
+-ID | COL1 | FEAT1
 
 create table t1(id int, num int);
 create table t2(id int, num int);

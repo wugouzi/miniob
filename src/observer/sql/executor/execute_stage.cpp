@@ -483,6 +483,7 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
     res->filter_fields(select_stmt->query_fields());
   }
 
+  res->filter_fields(select_stmt->query_num());
 
   if (*rc != RC::SUCCESS) {
     LOG_ERROR("aggregate error");
@@ -1087,6 +1088,13 @@ TupleSet *TupleSet::generate_combine(const TupleSet *t2) {
   return res;
 }
 
+void TupleSet::filter_fields(int num) {
+  int k = cells_.size() - num;
+  while (k--) {
+    cells_.pop_back();
+  }
+}
+
 void TupleSet::filter_fields(const std::vector<int> &orders) {
   data_.clear();
   std::vector<TupleCell> cells(orders.size());
@@ -1666,10 +1674,10 @@ int Pretable::index(const char *table_name, const char *field_name) const
 void Pretable::groupby(const std::vector<Field> groupby_fields)
 {
   for (const auto &field : groupby_fields) {
-    PretableHash hash(field.attr_type());
     std::vector<std::vector<TupleSet>> groups;
     int idx = index(field);
     for (auto &group : groups_) {
+      PretableHash hash(field.attr_type());
       std::vector<std::vector<TupleSet>> sub_groups;
       for (auto &tuple : group) {
         int group_idx = hash.get_value(tuple.get_cell(idx));
@@ -1733,7 +1741,13 @@ RC Pretable::aggregate(std::vector<Field> fields)
     for (auto &field : fields) {
       int idx = index(field);
       TupleCell cell;
-      if (field.aggr_type() == AggreType::A_NO) {
+      if (group.size() == 0) {
+        cell.set_type(NULLS);
+        char *buf = new char[5];
+        buf[4] = 1;
+        cell.set_length(5);
+        cell.set_data(buf);
+      } else if (field.aggr_type() == AggreType::A_NO) {
         cell = group[0].get_cell(idx);
       } else if (idx == -1 && field.aggr_type() != AggreType::A_COUNT) {
         LOG_INFO("log i don't know");
@@ -2042,6 +2056,18 @@ void Pretable::filter_fields(const std::vector<Field> &fields) {
   }
 }
 
+void Pretable::filter_fields(int num)
+{
+  int k = fields_.size() - num;
+  while (k--) {
+    fields_.pop_back();
+  }
+  for (auto &group : groups_) {
+    for (auto &tuple : group) {
+      tuple.filter_fields(num);
+    }
+  }
+}
 
 
 void Pretable::order_by(const std::vector<OrderByField> &order_by_fields){
@@ -2102,7 +2128,14 @@ void Pretable::print(std::stringstream &ss, int num)
 
 RC Pretable::assign_row_to_value(TupleCell &cell)
 {
-  if (only_one_cell()) {
+  if (groups_.size() == 1 && groups_[0].size() == 0) {
+    cell.set_type(NULLS);
+    cell.set_length(5);
+    char *buf = new char[5];
+    buf[4] = 1;
+    cell.set_data(buf);
+    return RC::SUCCESS;
+  } else if (only_one_cell()) {
     TupleSet &tuple = groups_[0][0];
     const FieldMeta *meta = this->field_meta(0);
     cell.set_type(tuple.get_cell(0).attr_type());

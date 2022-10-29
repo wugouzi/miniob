@@ -92,6 +92,8 @@ public:
     }
   }
 
+  ValueExpr(Pretable *pre) : pretable_(pre) {}
+
   virtual ~ValueExpr() = default;
 
   RC get_value(const Tuple &tuple, TupleCell & cell) const override;

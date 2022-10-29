@@ -155,7 +155,13 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     if (condition.left_value.type == DATES && *(int *)condition.left_value.data == -1) {
       return RC::INVALID_ARGUMENT;
     }
-    left = new ValueExpr(condition.left_value);
+    if (condition.left_value.type == VALUELIST) {
+      Pretable *res = new Pretable(condition.left_value.value_list);
+      left = new ValueExpr(res);
+    } else {
+      left = new ValueExpr(condition.left_value);
+    }
+
   }
 
   if (condition.right_is_attr) {
@@ -185,7 +191,12 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     if (condition.right_value.type == DATES && *(int *)condition.right_value.data == -1) {
       return RC::INVALID_ARGUMENT;
     }
-    right = new ValueExpr(condition.right_value);
+    if (condition.right_value.type == VALUELIST) {
+      Pretable *res = new Pretable(condition.right_value.value_list);
+      right = new ValueExpr(res);
+    } else {
+      right = new ValueExpr(condition.right_value);
+    }
   }
 
   filter_unit = new FilterUnit;
