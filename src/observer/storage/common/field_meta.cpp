@@ -106,6 +106,10 @@ void FieldMeta::set_offset(int off) {
   attr_offset_ = off;
 }
 
+void FieldMeta::set_type(AttrType type) {
+  attr_type_ = type;
+}
+
 void FieldMeta::desc(std::ostream &os) const
 {
   os << "field name=" << name_ << ", type=" << attr_type_to_string(attr_type_) << ", len=" << attr_len_

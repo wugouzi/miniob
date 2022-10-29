@@ -58,14 +58,17 @@ public:
   int aggregate_num() const { return aggregate_num_; }
   Condition *having_conditions() { return having_conditions_; }
   int having_condition_num() { return having_condition_num_; }
+  int query_num() { return query_num_; }
   // void add_parent_tables(std::unordered_set<Table *> tables) { parent_tables_ = tables; }
   // std::unordered_set<Table *> parent_tables() { return parent_tables_; }
 
 private:
   std::vector<Field> query_fields_;
   std::vector<Field> groupby_fields_;
+  // std::vector<Field> having_fields_;
   Condition *having_conditions_;
   int having_condition_num_;
+  int query_num_;
   std::vector<Table *> tables_;
   // std::unordered_set<Table *> parent_tables_;
   FilterStmt *filter_stmt_ = nullptr;

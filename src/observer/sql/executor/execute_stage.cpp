@@ -484,7 +484,6 @@ Pretable *ExecuteStage::select_to_pretable(SelectStmt *select_stmt, RC *rc)
   }
 
 
-
   if (*rc != RC::SUCCESS) {
     LOG_ERROR("aggregate error");
     return nullptr;
@@ -508,8 +507,8 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
   }
   std::stringstream ss;
 
-  print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1);
-  res->print(ss);
+  print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1, select_stmt->query_num());
+  res->print(ss, select_stmt->query_num());
 
   session_event->set_response(ss.str());
   return rc;
@@ -1417,6 +1416,18 @@ const Field *Pretable::field(const char *table_name, const char *field_name) con
   return nullptr;
 }
 
+const Field *Pretable::field_with_aggr(const char *table_name, const char *field_name, AggreType type) const
+{
+  for (const auto &f : fields_) {
+    if (strcmp(f.table_name(), table_name) == 0 &&
+        strcmp(f.metac()->name(), field_name) == 0 &&
+        f.aggr_type() == type) {
+      return &f;
+    }
+  }
+  return nullptr;
+}
+
 const FieldMeta *Pretable::field_meta(const Field &field) const {
 
   const Field *p_field = this->field(field);
@@ -1506,7 +1517,7 @@ RC Pretable::aggregate_count(int idx, TupleCell *res, int group_id)
   int ans = 0;
   size_t len = sizeof(int) + 1;
   char *data = new char[len];
-
+  memset(data, 0, len);
   if (idx == -1) {
     ans = group.size();
   } else {
@@ -1699,7 +1710,7 @@ int Pretable::tuple_num() const {
 
 
 // after aggregation, there are original field and aggregation field in the tuple
-RC Pretable::aggregate(const std::vector<Field> fields)
+RC Pretable::aggregate(std::vector<Field> fields)
 {
   LOG_INFO("begin aggregate");
   if (groups_.size() == 0) {
@@ -1973,16 +1984,18 @@ std::string aggr_to_string(AggreType type) {
 
 
 // TODO: ALIAS
-void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi) {
+void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi, int num) {
   bool first = true;
-  for (auto &field : fields) {
+  for (int i = 0; i < num; i++) {
+    const Field &field = fields[i];
     ss << (first ? "" : " | ");
     first = false;
     // std::string tp = field.has_field() ? field.field_name() : field.aggr_str();
-    std::string tp = field.field_name();
+    std::string tp = field.has_alias() ? field.alias() : field.field_name();
     if (field.should_print_table() ||
         (multi && field.has_table())) {
-      tp = field.table_name() + ("." + tp);
+      const Table *table = field.table();
+      tp = (table->has_alias() ? table->alias() : table->name()) + ("." + tp);
     }
     if (field.aggr_type() != A_NO) {
       tp = aggr_to_string(field.aggr_type()) + '(' + tp + ')';
@@ -1995,20 +2008,19 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
   }
 }
 
-// only for non-aggregations
 // haven't changed field offset
 void Pretable::filter_fields(const std::vector<Field> &fields) {
-  std::unordered_map<std::string, std::unordered_map<std::string, int>> mp;
+  std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<AggreType, int>>> mp;
   std::vector<Field> new_fields(fields.size());
 
   for (size_t i = 0; i < fields.size(); i++) {
-    mp[fields[i].table_name()][fields[i].field_name()] = i+1;
+    mp[fields[i].table_name()][fields[i].field_name()][fields[i].aggr_type()] = i+1;
   }
 
   std::vector<int> orders(fields.size());
   for (size_t i = 0; i < fields_.size(); i++) {
     auto &f = fields_[i];
-    int j = mp[f.table_name()][f.meta()->name()];
+    int j = mp[f.table_name()][f.meta()->name()][f.aggr_type()];
     if (j > 0) {
       orders[j-1] = i;
       // new_fields[j-1] = fields_[i];
@@ -2063,12 +2075,13 @@ void Pretable::order_by(const std::vector<OrderByField> &order_by_fields){
 
 }
 
-void Pretable::print(std::stringstream &ss)
+void Pretable::print(std::stringstream &ss, int num)
 {
   for (auto &group : groups_) {
     for (const TupleSet &tuple : group) {
       bool first = true;
-      for (const TupleCell &cell : tuple.cells()) {
+      for (int i = 0; i < num; i++) {
+        const TupleCell &cell = tuple.cells()[i];
         if (!first) {
           ss << " | ";
         } else {

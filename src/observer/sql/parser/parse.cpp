@@ -34,6 +34,13 @@ void relation_attr_init(RelAttr *relation_attr, const char *relation_name, const
   relation_attr->attribute_name = strdup(attribute_name);
   relation_attr->type = A_NO;
   relation_attr->print_attr = false;
+  relation_attr->alias = nullptr;
+}
+
+void relation_init(Relation *relation, const char *relation_name, const char *alias)
+{
+  relation->relation_name = strdup(relation_name);
+  relation->alias = strdup(alias);
 }
 
 void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type, int is_digit)
@@ -229,15 +236,19 @@ void selects_reverse_relations(Selects *selects, int len)
 {
   for (int i = 0; i < len / 2; i++) {
     int j = i + selects->relation_num - len;
-    char *tp = selects->relations[j];
+    Relation tp = selects->relations[j];
     selects->relations[j] = selects->relations[selects->relation_num-1-j];
     selects->relations[selects->relation_num-1-j] = tp;
   }
 }
-void selects_append_attribute(Selects *selects, RelAttr *rel_attr)
+void selects_append_attribute(Selects *selects, RelAttr *rel_attr, const char *alias)
 {
-  printf("append attribute to %s\n", selects->relations[0]);
-  selects->attributes[selects->attr_num++] = *rel_attr;
+  // printf("append attribute to %s\n", selects->relations[0].relation_name);
+  selects->attributes[selects->attr_num] = *rel_attr;
+  if (alias != nullptr) {
+    selects->attributes[selects->attr_num].alias = strdup(alias);
+  }
+  selects->attr_num++;
   if (rel_attr->type != AggreType::A_NO) {
     selects->aggregate_num++;
   }
@@ -252,10 +263,16 @@ void selects_append_groupby(Selects *selects, RelAttr *groupby_attr)
   selects->groupby_attrs[selects->groupby_num++] = *groupby_attr;
 }
 
-void selects_append_relation(Selects *selects, const char *relation_name)
+void selects_append_relation(Selects *selects, const char *relation_name, const char *alias)
 {
-  printf("append relation %s\n", relation_name);
-  selects->relations[selects->relation_num++] = strdup(relation_name);
+  // printf("append relation %s\n", relation_name);
+  selects->relations[selects->relation_num].relation_name = strdup(relation_name);
+  if (alias == nullptr) {
+    selects->relations[selects->relation_num++].alias = nullptr;
+  } else {
+    selects->relations[selects->relation_num++].alias = strdup(alias);
+  }
+
 }
 
 void selects_append_order_field(Selects *selects, RelAttr* attr, size_t is_desc)
@@ -268,7 +285,7 @@ void selects_append_order_field(Selects *selects, RelAttr* attr, size_t is_desc)
 void selects_append_conditions(Selects *selects, Condition conditions[], size_t condition_num)
 {
   assert(condition_num <= sizeof(selects->conditions) / sizeof(selects->conditions[0]));
-  printf("append conditions to %s, num %zu, ", selects->relations[0], condition_num);
+  // printf("append conditions to %s, num %zu, ", selects->relations[0].relation_name, condition_num);
   for (size_t i = 0; i < condition_num; i++) {
     printf("op: %d", conditions[i].comp);
     selects->conditions[i] = conditions[i];
@@ -294,8 +311,12 @@ void selects_destroy(Selects *selects)
   selects->attr_num = 0;
 
   for (size_t i = 0; i < selects->relation_num; i++) {
-    free(selects->relations[i]);
-    selects->relations[i] = NULL;
+    free(selects->relations[i].relation_name);
+    if (selects->relations[i].alias != nullptr) {
+      free(selects->relations[i].alias);
+    }
+    selects->relations[i].alias = NULL;
+    selects->relations[i].relation_name = NULL;
   }
   selects->relation_num = 0;
 
