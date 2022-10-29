@@ -342,6 +342,11 @@ select * from ssq_1 where col1 not in (2,3);
 +2 | NULL | 12
 ID | COL1 | FEAT1
 
+select * from ssq_1 where id in (1,3,4,5);
+-1 | 4 | 11.2
+-3 | 3 | 13.5
+-ID | COL1 | FEAT1
+
 create table t1(id int, num int);
 create table t2(id int, num int);
 insert into t1 values(1,1);
