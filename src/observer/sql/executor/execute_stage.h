@@ -49,8 +49,9 @@ class ExecuteStage : public common::Stage {
 public:
   ~ExecuteStage();
   static Stage *make_stage(const std::string &tag);
-  static Pretable *select_to_pretable(SelectStmt *select_stmt, RC *rc);
-  static Pretable *Selects_to_pretable(Db *db, Value *value, std::unordered_set<Table *> &parent_tables);
+  static Pretable *select_to_pretable(Db *db, SelectStmt *select_stmt, RC *rc);
+  static Pretable *Selects_to_pretable(Db *db, Selects *selects,
+                                       std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> &context, RC *rc);
 
 protected:
   // common function
@@ -142,7 +143,7 @@ class Pretable {
   // ~Pretable() = default;
 
 
-  RC init(Table *table, FilterStmt *filter);
+  RC init(Db *db, Table *table, FilterStmt *filter);
   RC join(Pretable *pre2, FilterStmt *filter);
   void print(std::stringstream &os, int num);
   void filter_fields(const std::vector<Field> &fields);
@@ -176,6 +177,7 @@ class Pretable {
   // std::vector<TupleSet>::iterator end() { return tuples_.end(); }
 
   RC assign_row_to_value(Value *value);
+  RC assign_row_to_value(TupleCell &cell);
 
   bool in(Value *value) const;
   bool in(TupleCell &cell) const;

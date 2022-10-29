@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/lang/string.h"
 #include "sql/expr/expression.h"
 #include "sql/executor/execute_stage.h"
+#include "sql/expr/tuple_cell.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/filter_stmt.h"
 #include "sql/stmt/select_stmt.h"
@@ -35,8 +36,17 @@ FilterStmt::~FilterStmt()
 }
 
 RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-		      Condition *conditions, int condition_num,
-		      FilterStmt *&stmt)
+                      Condition *conditions, int condition_num,
+                      FilterStmt *&stmt)
+{
+  std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> tmp;
+  return create(db, default_table, tables, conditions, condition_num, stmt, tmp);
+}
+
+RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
+                      Condition *conditions, int condition_num,
+                      FilterStmt *&stmt,
+                      std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> &context)
 {
   RC rc = RC::SUCCESS;
   stmt = nullptr;
@@ -44,7 +54,7 @@ RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::stri
   FilterStmt *tmp_stmt = new FilterStmt();
   for (int i = 0; i < condition_num; i++) {
     FilterUnit *filter_unit = nullptr;
-    rc = create_filter_unit(db, default_table, tables, conditions[i], filter_unit);
+    rc = create_filter_unit(db, default_table, tables, conditions[i], filter_unit, context);
     if (rc != RC::SUCCESS) {
       delete tmp_stmt;
       LOG_WARN("failed to create filter unit. condition index=%d", i);
@@ -86,11 +96,13 @@ RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::str
 }
 
 RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-                                  Condition &condition, FilterUnit *&filter_unit)
+                                  Condition &condition, FilterUnit *&filter_unit,
+                                  std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> &context)
 {
   RC rc = RC::SUCCESS;
   
   CompOp comp = condition.comp;
+
   if (comp < EQUAL_TO || comp >= NO_OP) {
     LOG_WARN("invalid compare operator : %d", comp);
     return RC::INVALID_ARGUMENT;
@@ -115,104 +127,65 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     }
   }
 
-  // type checks
-  if (condition.left_is_attr && !condition.right_is_attr) {
-    Table *table = nullptr;
-    const FieldMeta *field = nullptr;
-    rc = get_table_and_field(db, default_table, tables, condition.left_attr, table, field);
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("cannot find attr");
-      return rc;
-    }
-    // only check dates, and don't check null
-    if (!Stmt::check_type(condition.right_value.type, field->type())) {
-      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-    }
-  } else if (!condition.left_is_attr && condition.right_is_attr) {
-    Table *table = nullptr;
-    const FieldMeta *field = nullptr;
-    rc = get_table_and_field(db, default_table, tables, condition.right_attr, table, field);
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("cannot find attr");
-      return rc;
-    }
-    if (!Stmt::check_type(condition.left_value.type, field->type())) {
-      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-    }
-  }
-
   Expression *left = nullptr;
   Expression *right = nullptr;
   if (condition.left_is_attr) {
-    Table *table = nullptr;
-    const FieldMeta *field = nullptr;
-    rc = get_table_and_field(db, default_table, tables, condition.left_attr, table, field);
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("cannot find attr");
-      return rc;
+    RelAttr &attr = condition.left_attr;
+    if (attr.relation_name != nullptr &&
+        context.count(attr.relation_name) &&
+        context[attr.relation_name].count(attr.attribute_name)) {
+      TupleCell &cell = context[attr.relation_name][attr.attribute_name];
+      Value value;
+      value.type = cell.attr_type();
+      value.data = cell.get_data();
+      value.select = nullptr;
+      value.value_list = nullptr;
+      left = new ValueExpr(value);
+    } else {
+      Table *table = nullptr;
+      const FieldMeta *field = nullptr;
+      rc = get_table_and_field(db, default_table, tables, condition.left_attr, table, field);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("cannot find attr");
+        return rc;
+      }
+      left = new FieldExpr(table, field->copy());
     }
-    left = new FieldExpr(table, field->copy());
   } else {
     if (condition.left_value.type == DATES && *(int *)condition.left_value.data == -1) {
       return RC::INVALID_ARGUMENT;
     }
-    if (condition.left_value.type == SELECTS) {
-
-      std::unordered_set<Table *> parent_tables;
-      /*for (auto &kv : *tables) {
-        parent_tables.insert(kv.second);
-      }*/
-      Pretable *res = ExecuteStage::Selects_to_pretable(db, &condition.left_value, parent_tables);
-      if (res == nullptr) {
-        return RC::INTERNAL;
-      }
-      if (!res->valid_operation(comp)) {
-        LOG_INFO("select have 0 or more than 1 values");
-        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-      }
-      left = new ValueExpr(res);
-    } else if (condition.left_value.type == VALUELIST) {
-      Pretable *res = new Pretable(condition.left_value.value_list);
-      left = new ValueExpr(res);
-    } else {
-      left = new ValueExpr(condition.left_value);
-    }
+    left = new ValueExpr(condition.left_value);
   }
 
   if (condition.right_is_attr) {
-    Table *table = nullptr;
-    const FieldMeta *field = nullptr;
-    rc = get_table_and_field(db, default_table, tables, condition.right_attr, table, field);
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("cannot find attr");
-      delete left;
-      return rc;
+    RelAttr &attr = condition.right_attr;
+    if (attr.relation_name != nullptr &&
+        context.count(attr.relation_name) &&
+        context[attr.relation_name].count(attr.attribute_name)) {
+      TupleCell &cell = context[attr.relation_name][attr.attribute_name];
+      Value value;
+      value.type = cell.attr_type();
+      value.data = cell.get_data();
+      value.select = nullptr;
+      value.value_list = nullptr;
+      right = new ValueExpr(value);
+    } else {
+      Table *table = nullptr;
+      const FieldMeta *field = nullptr;
+      rc = get_table_and_field(db, default_table, tables, condition.right_attr, table, field);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("cannot find attr");
+        // delete left;
+        return rc;
+      }
+      right = new FieldExpr(table, field->copy());
     }
-    right = new FieldExpr(table, field->copy());
   } else {
     if (condition.right_value.type == DATES && *(int *)condition.right_value.data == -1) {
       return RC::INVALID_ARGUMENT;
     }
-    if (condition.right_value.type == SELECTS) {
-      std::unordered_set<Table *> parent_tables;
-      /*for (auto &kv : *tables) {
-        parent_tables.insert(kv.second);
-      }*/
-      Pretable *res = ExecuteStage::Selects_to_pretable(db, &condition.right_value, parent_tables);
-      if (res == nullptr) {
-        return RC::INTERNAL;
-      }
-      if (!res->valid_operation(comp)) {
-        LOG_INFO("select have 0 or more than 1 values");
-        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-      }
-      right = new ValueExpr(res);
-    } else if (condition.right_value.type == VALUELIST) {
-      Pretable *res = new Pretable(condition.right_value.value_list);
-      right = new ValueExpr(res);
-    } else {
-      right = new ValueExpr(condition.right_value);
-    }
+    right = new ValueExpr(condition.right_value);
   }
 
   filter_unit = new FilterUnit;

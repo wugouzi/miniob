@@ -676,7 +676,7 @@ attr_list:
 ;
 rel_name:
 ID alias inner_joins {
-selects_append_relation(&CONTEXT->ssql->selects[S_TOP], $1, CONTEXT->alias);
+  selects_append_relation(&CONTEXT->ssql->selects[S_TOP], $1, CONTEXT->alias);
   selects_reverse_relations(&CONTEXT->ssql->selects[S_TOP], ++CONTEXT->joins);
   CONTEXT->joins = 0;
 }

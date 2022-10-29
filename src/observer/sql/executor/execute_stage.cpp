@@ -424,7 +424,7 @@ void reorder_fields(std::vector<Field> &fields)
   }
 }
 
-Pretable *ExecuteStage::select_to_pretable(SelectStmt *select_stmt, RC *rc)
+Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *rc)
 {
   FilterStmt *filter_stmt = select_stmt->filter_stmt();
 
@@ -434,7 +434,7 @@ Pretable *ExecuteStage::select_to_pretable(SelectStmt *select_stmt, RC *rc)
 
   for (size_t i = 0; i < select_stmt->tables().size(); i++) {
     Pretable *pre = new Pretable;
-    *rc = pre->init(select_stmt->tables()[i], filter_stmt);
+    *rc = pre->init(db, select_stmt->tables()[i], filter_stmt);
     if (*rc != RC::RECORD_EOF) {
       delete pre;
       for (auto &t : pretables)
@@ -496,11 +496,12 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
 {
   SelectStmt *select_stmt = (SelectStmt *)(sql_event->stmt());
   SessionEvent *session_event = sql_event->session_event();
+  Db *db = session_event->session()->get_current_db();
   // FilterStmt *filter_stmt = select_stmt->filter_stmt();
 
   RC rc;
   // reorder_fields(select_stmt->query_fields());
-  Pretable *res = select_to_pretable(select_stmt, &rc);
+  Pretable *res = select_to_pretable(db, select_stmt, &rc);
   if (res == nullptr) {
     session_event->set_response("FAILURE\n");
     return rc;
@@ -519,6 +520,7 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
 {
   SelectStmt *select_stmt = (SelectStmt *)(sql_event->stmt());
   SessionEvent *session_event = sql_event->session_event();
+  Db *db = session_event->session()->get_current_db();
   RC rc = RC::SUCCESS;
   if (select_stmt->tables().size() != 1) {
     LOG_WARN("select more than 1 tables is not supported");
@@ -533,7 +535,7 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
 
   DEFER([&] () {delete scan_oper;});
 
-  PredicateOperator pred_oper(select_stmt->filter_stmt());
+  PredicateOperator pred_oper(select_stmt->filter_stmt(), db);
   pred_oper.add_child(scan_oper);
   ProjectOperator project_oper;
   project_oper.add_child(&pred_oper);
@@ -825,7 +827,7 @@ RC ExecuteStage::compute_value_from_select(Db *db, Value *value)
     return rc;
   }
   SelectStmt *select_stmt = dynamic_cast<SelectStmt*>(stmt);
-  Pretable *res = select_to_pretable(select_stmt, &rc);
+  Pretable *res = select_to_pretable(db, select_stmt, &rc);
   value->select = nullptr;
   if (res == nullptr) {
     return rc;
@@ -834,16 +836,20 @@ RC ExecuteStage::compute_value_from_select(Db *db, Value *value)
   return rc;
 }
 
-Pretable *ExecuteStage::Selects_to_pretable(Db *db, Value *value, std::unordered_set<Table *> &tables)
+
+
+Pretable *ExecuteStage::Selects_to_pretable(Db *db, Selects *selects,
+                                            std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> &context,
+                                            RC *rc)
 {
   Stmt *stmt = nullptr;
-  RC rc = SelectStmt::create(db, value->select, stmt, tables);
-  if (rc != RC::SUCCESS) {
+  *rc = SelectStmt::create(db, selects, stmt, context);
+  if (*rc != RC::SUCCESS) {
     return nullptr;
   }
   SelectStmt *select_stmt = dynamic_cast<SelectStmt*>(stmt);
   // select_stmt->add_parent_tables(tables);
-  return select_to_pretable(select_stmt, &rc);
+  return select_to_pretable(db, select_stmt, rc);
 }
 
 RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
@@ -907,7 +913,7 @@ RC ExecuteStage::do_delete(SQLStageEvent *sql_event)
 
   DeleteStmt *delete_stmt = (DeleteStmt *)stmt;
   TableScanOperator scan_oper(delete_stmt->table());
-  PredicateOperator pred_oper(delete_stmt->filter_stmt());
+  PredicateOperator pred_oper(delete_stmt->filter_stmt(), db);
   pred_oper.add_child(&scan_oper);
   DeleteOperator delete_oper(delete_stmt, trx);
   delete_oper.add_child(&pred_oper);
@@ -1350,7 +1356,7 @@ Pretable& Pretable::operator=(Pretable&& t)
   return *this;
 }
 
-RC Pretable::init(Table *table, FilterStmt *old_filter)
+RC Pretable::init(Db *db, Table *table, FilterStmt *old_filter)
 {
   // TODO: check how to use index scan
   FilterStmt *filter = get_sub_filter(table, old_filter);
@@ -1366,7 +1372,7 @@ RC Pretable::init(Table *table, FilterStmt *old_filter)
   }
 
   // first get a subset of filter
-  PredicateOperator pred_oper(filter);
+  PredicateOperator pred_oper(filter, db);
   pred_oper.add_child(scan_oper);
 
   RC rc = RC::SUCCESS;
@@ -2092,6 +2098,25 @@ void Pretable::print(std::stringstream &ss, int num)
       ss << '\n';
     }
   }
+}
+
+RC Pretable::assign_row_to_value(TupleCell &cell)
+{
+  if (only_one_cell()) {
+    TupleSet &tuple = groups_[0][0];
+    const FieldMeta *meta = this->field_meta(0);
+    cell.set_type(tuple.get_cell(0).attr_type());
+    char *buf = new char[meta->len()];
+    memcpy(buf, tuple.get_cell(0).data(), meta->len());
+    // null case
+    if (buf[meta->len() - 1] == 1) {
+      cell.set_type(NULLS);
+    }
+    cell.set_data(buf);
+    cell.set_length(meta->len());
+    return RC::SUCCESS;
+  }
+  return RC::SCHEMA_FIELD_TYPE_MISMATCH;
 }
 
 

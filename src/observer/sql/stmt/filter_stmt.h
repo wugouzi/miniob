@@ -96,9 +96,13 @@ public:
 public:
   static RC create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
                    Condition *conditions, int condition_num, FilterStmt *&stmt);
+  static RC create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
+                   Condition *conditions, int condition_num, FilterStmt *&stmt,
+                   std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> &context);
 
   static RC create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-                               Condition &condition, FilterUnit *&filter_unit);
+                               Condition &condition, FilterUnit *&filter_unit,
+                               std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> &context);
 
 private:
   std::vector<FilterUnit *>  filter_units_; // 默认当前都是AND关系

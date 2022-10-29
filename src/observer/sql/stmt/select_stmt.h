@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "rc.h"
 #include "sql/parser/parse_defs.h"
+#include "sql/expr/tuple_cell.h"
 #include "sql/stmt/stmt.h"
 #include "storage/common/field.h"
 
@@ -44,7 +45,8 @@ public:
   StmtType type() const override { return StmtType::SELECT; }
 public:
   static RC create(Db *db, Selects *select_sql, Stmt *&stmt);
-  static RC create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_set<Table *> &parent_tables);
+  static RC create(Db *db, Selects *select_sql, Stmt *&stmt,
+                   std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> &context);
 
 public:
   const std::vector<Table *> &tables() const { return tables_; }
