@@ -2408,7 +2408,7 @@ CONTEXT->value_lengths[S_TOP] = 0;
   case 104:
 #line 678 "yacc_sql.y"
                      {
-selects_append_relation(&CONTEXT->ssql->selects[S_TOP], (yyvsp[-2].string), CONTEXT->alias);
+  selects_append_relation(&CONTEXT->ssql->selects[S_TOP], (yyvsp[-2].string), CONTEXT->alias);
   selects_reverse_relations(&CONTEXT->ssql->selects[S_TOP], ++CONTEXT->joins);
   CONTEXT->joins = 0;
 }
