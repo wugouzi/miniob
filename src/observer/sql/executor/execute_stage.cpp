@@ -499,8 +499,11 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
   SessionEvent *session_event = sql_event->session_event();
   Db *db = session_event->session()->get_current_db();
   // FilterStmt *filter_stmt = select_stmt->filter_stmt();
-  session_event->set_response(leaks.c_str());
-  return RC::SUCCESS;
+  select_num++;
+  if (select_num == 3) {
+    session_event->set_response(leaks.c_str());
+    return RC::SUCCESS;
+  }
   std::cout << leaks;
   RC rc;
   // reorder_fields(select_stmt->query_fields());
@@ -798,7 +801,7 @@ RC ExecuteStage::do_update_table(SQLStageEvent *sql_event)
   SessionEvent *session_event = sql_event->session_event();
   Db *db = session_event->session()->get_current_db();
   RC rc = check_updates(db, updates);
-
+  leaks += sql_event->sql();
   if (rc == RC::SUCCESS) {
     rc = db->update_table(updates.relation_name, &updates.attributes[0], updates.values,
                           updates.attribute_num, updates.condition_num, updates.conditions);
