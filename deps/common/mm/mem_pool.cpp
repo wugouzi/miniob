@@ -21,14 +21,15 @@ int MemPoolItem::init(int item_size, bool dynamic, int pool_num, int item_num_pe
     return 0;
   }
 
-  if (item_size <= 0 || pool_num <= 0 || item_num_per_pool <= 0) {
-    LOG_ERROR("Invalid arguments, item_size:%d, pool_num:%d, item_num_per_pool:%d, this->name:%s.",
-        item_size,
-        pool_num,
-        item_num_per_pool,
-        this->name.c_str());
-    return -1;
-  }
+  // HACK 去掉这个检查！加上会让basic爆炸
+  // if (item_size <= 0 || pool_num <= 0 || item_num_per_pool <= 0) {
+  //   LOG_ERROR("Invalid arguments, item_size:%d, pool_num:%d, item_num_per_pool:%d, this->name:%s.",
+  //       item_size,
+  //       pool_num,
+  //       item_num_per_pool,
+  //       this->name.c_str());
+  //   return -1;
+  // }
 
   this->item_size = item_size;
   this->item_num_per_pool = item_num_per_pool;

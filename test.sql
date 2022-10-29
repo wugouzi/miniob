@@ -2232,11 +2232,11 @@ select * from text_table;
 
 create table t_basic(id int, age int, name char, score float);
 insert into t_basic values(7,7, 'g', 7.7);
-delete from t basic where id=3;
+delete from t_basic where id=3;
 select * from t_basic where id=1;
 select * from t_basic where id>=5;
 select t_basic.id, t_basic.age, t_basic.name, t_basic.score from t_basic;
-create index L_id on t_basic (id);
+create index i_id on t_basic (id);
 -- restart
 delete from t_basic where id=1;
 insert into t_basic values(1,1, 'a', 1.0);
@@ -2249,26 +2249,18 @@ select * from t_basic;
 create table t_basic2(id int, age int, name char);
 begin;
 insert into t_basic2 values(1,1, 'a');
-insert into t_basic2 values(3,3, 'd');
-insert into t_basic2 values(2,2, 'b');
-delete from t_basic2 where id=2;
-commit;
 -- connection client1
 begin;
 insert into t_basic2 values(2,2, 'b');
-insert into t_basic2 values(4,4, 'b');
-
--- restart
-select * from t_basic2;
 -- connection client2
-
--- connection clientl
+insert into t_basic2 values(3,3, 'd');
+-- connection client1
 delete from t_basic where id=8;
 -- connection client2
 delete from t_basic where id=6;
 commit;
-- restart
-select * from t_basic2;
+-- restart
+select * from t_basic;
 
 
 create table t(id int, age int, name char);
@@ -2276,18 +2268,23 @@ select * from t;
 drop table t;
 
 
+-- 客户端1
 create table t_clog(id int, age int, name char);
 begin;
 insert into t_clog values(1,1, 'a');
 insert into t_clog values(2,2, 'b');
 commit;
 
+-- 客户端2
 begin;
 insert into t_clog values(3,3, 'c');
 UPDATE t_clog set age=22 where id = 2;
-commit;
 
-SELECT * FROM T_CLOG;
+-- 重启服务器
+
+SELECT * FROM t_clog;
+
+-- 做一些其他的操作
 
 -- 1 | 1 | A
 -- -2 | 22 | B
