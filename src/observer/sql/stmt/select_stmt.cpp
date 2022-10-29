@@ -184,12 +184,13 @@ static RC extract_from_order_by_clause(
 }
 RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt)
 {
-  std::unordered_set<Table *> tp;
-  return create(db, select_sql, stmt, tp);
+  std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> tmp;
+  return create(db, select_sql, stmt, tmp);
 }
 
 // every field's fieldmeta is a copy since we will change offset later
-RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_set<Table *> &parent_tables)
+RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
+                      std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> &context)
 {
   if (nullptr == db) {
     LOG_WARN("invalid argument. db is null");
@@ -462,15 +463,11 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt, std::unordered_s
     default_table = tables[0];
   }
 
-  for (Table *table : parent_tables) {
-    tables.push_back(table);
-    table_map.insert(std::pair<std::string, Table*>(table->name(), table));
-  }
-
   // create filter statement in `where` statement
   FilterStmt *filter_stmt = nullptr;
   RC rc = FilterStmt::create(db, default_table, &table_map,
-           select_sql->conditions, select_sql->condition_num, filter_stmt);
+                             select_sql->conditions, select_sql->condition_num, filter_stmt,
+                             context);
 
   if (rc != RC::SUCCESS) {
     LOG_WARN("cannot construct filter stmt");

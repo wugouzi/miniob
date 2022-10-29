@@ -1,3 +1,14 @@
+1 | 4 | 11.2
+ID | COL1 | FEAT1
+select * from ssq_1 where exists (select ssq_2.id from ssq_2 where ssq_1.id > ssq_2.id);
+-2 | NULL | 12
+-3 | 3 | 13.5
+-ID | COL1 | FEAT1
++FAILURE
+select * from ssq_1 where not exists (select ssq_2.id from ssq_2 where ssq_1.feat1 <= ssq_2.feat2);
+-3 | 3 | 13.5
+-ID | COL1 | FEAT1
+
 INITIALIZATION
 CREATE TABLE ssq_1(id int, col1 int, feat1 float);
 CREATE TABLE ssq_2(id int, col2 int, feat2 float);
@@ -11,13 +22,11 @@ INSERT INTO ssq_2 VALUES (2, 7, 10.5);
 INSERT INTO ssq_2 VALUES (5, 3, 12.6);
 
 select * from ssq_1 where id = (select ssq_2.id from ssq_2 where col2 = 2);
--1 | 4 | 11.2
--ID | COL1 | FEAT1
-+FAILURE
+1 | 4 | 11.2
+ID | COL1 | FEAT1
 select * from ssq_1 where (select ssq_2.id from ssq_2 where col2 = 2) = id;
--1 | 4 | 11.2
--ID | COL1 | FEAT1
-+FAILURE
+1 | 4 | 11.2
+ID | COL1 | FEAT1
 
 select * from ssq_1 where id in (select ssq_2.id from ssq_2);
 1 | 4 | 11.2
@@ -26,6 +35,15 @@ ID | COL1 | FEAT1
 select * from ssq_1 where col1 not in (select ssq_2.col2 from ssq_2);
 1 | 4 | 11.2
 ID | COL1 | FEAT1
+
+select * from ssq_1 where exists (select ssq_2.id from ssq_2 where ssq_1.id > ssq_2.id);
+-2 | NULL | 12
+-3 | 3 | 13.5
+-ID | COL1 | FEAT1
+
+select * from ssq_1 where not exists (select ssq_2.id from ssq_2 where ssq_1.feat1 <= ssq_2.feat2);
+-3 | 3 | 13.5
+-ID | COL1 | FEAT1
 
 select * from ssq_1 where col1 = (select avg(ssq_2.col2) from ssq_2);
 1 | 4 | 11.2

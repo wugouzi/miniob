@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
+#include "storage/common/db.h"
 #include "sql/operator/operator.h"
 
 class FilterStmt;
@@ -25,8 +26,8 @@ class FilterStmt;
 class PredicateOperator : public Operator
 {
 public:
-  PredicateOperator(FilterStmt *filter_stmt)
-    : filter_stmt_(filter_stmt)
+  PredicateOperator(FilterStmt *filter_stmt, Db *db)
+      : filter_stmt_(filter_stmt), db_(db)
   {}
 
   virtual ~PredicateOperator() = default;
@@ -39,7 +40,8 @@ public:
   //int tuple_cell_num() const override;
   //RC tuple_cell_spec_at(int index, TupleCellSpec &spec) const override;
 private:
-  bool do_predicate(RowTuple &tuple);
+  bool do_predicate(RowTuple &tuple, RC *rc);
 private:
   FilterStmt *filter_stmt_ = nullptr;
+  Db *db_;
 };

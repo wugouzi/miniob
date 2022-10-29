@@ -15,6 +15,8 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include "sql/expr/expression.h"
 #include "sql/executor/execute_stage.h"
+#include "sql/expr/tuple.h"
+#include "sql/expr/tuple_cell.h"
 #include "util/util.h"
 #include "sql/operator/predicate_operator.h"
 #include "sql/parser/parse_defs.h"
@@ -22,6 +24,8 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/filter_stmt.h"
 #include "storage/common/field.h"
 #include <cstring>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 RC PredicateOperator::open()
@@ -47,7 +51,7 @@ RC PredicateOperator::next()
       break;
     }
 
-    if (do_predicate(static_cast<RowTuple &>(*tuple))) {
+    if (do_predicate(static_cast<RowTuple &>(*tuple), &rc)) {
       return rc;
     }
   }
@@ -65,7 +69,19 @@ Tuple * PredicateOperator::current_tuple()
   return children_[0]->current_tuple();
 }
 
-bool PredicateOperator::do_predicate(RowTuple &tuple)
+std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> make_context(RowTuple &tuple)
+{
+  const Table *t = tuple.table();
+  std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> context;
+  for (int i = 0; i < tuple.cell_num(); i++) {
+    TupleCell cell;
+    tuple.cell_at(i, cell);
+    context[t->name()][t->table_meta().field(i)->name()] = cell;
+  }
+  return context;
+}
+
+bool PredicateOperator::do_predicate(RowTuple &tuple, RC *rc)
 {
   if (filter_stmt_ == nullptr || filter_stmt_->filter_units().empty()) {
     return true;
@@ -74,11 +90,58 @@ bool PredicateOperator::do_predicate(RowTuple &tuple)
   for (const FilterUnit *filter_unit : filter_stmt_->filter_units()) {
     Expression *left_expr = filter_unit->left();
     Expression *right_expr = filter_unit->right();
-    CompOp comp = filter_unit->comp();
     TupleCell left_cell;
     TupleCell right_cell;
-    left_expr->get_value(tuple, left_cell);
-    right_expr->get_value(tuple, right_cell);
+
+    CompOp comp = filter_unit->comp();
+
+    if (left_expr->type() == ExprType::VALUE) {
+      ValueExpr *val_expr = dynamic_cast<ValueExpr *>(left_expr);
+      if (val_expr->is_selects()) {
+        auto context = make_context(tuple);
+        Pretable *res = ExecuteStage::Selects_to_pretable(db_, val_expr->selects(), context, rc);
+        if (*rc != RC::SUCCESS) {
+          return true;
+        }
+        if (comp == VALUE_IN || comp == VALUE_NOT_IN ||
+            comp == VALUE_EXISTS || comp == VALUE_NOT_EXISTS) {
+          val_expr->set_pretable(res);
+        } else {
+          *rc = res->assign_row_to_value(left_cell);
+          if (*rc != RC::SUCCESS) {
+            return true;
+          }
+        }
+      } else {
+        left_expr->get_value(tuple, left_cell);
+      }
+    } else {
+      left_expr->get_value(tuple, left_cell);
+    }
+
+    if (right_expr->type() == ExprType::VALUE) {
+      ValueExpr *val_expr = dynamic_cast<ValueExpr *>(right_expr);
+      if (val_expr->is_selects()) {
+        auto context = make_context(tuple);
+        Pretable *res = ExecuteStage::Selects_to_pretable(db_, val_expr->selects(), context, rc);
+        if (*rc != RC::SUCCESS) {
+          return false;
+        }
+        if (comp == VALUE_IN || comp == VALUE_NOT_IN ||
+            comp == VALUE_EXISTS || comp == VALUE_NOT_EXISTS) {
+          val_expr->set_pretable(res);
+        } else {
+          *rc = res->assign_row_to_value(right_cell);
+          if (*rc != RC::SUCCESS) {
+            return false;
+          }
+        }
+      } else {
+        right_expr->get_value(tuple, right_cell);
+      }
+    } else {
+      right_expr->get_value(tuple, right_cell);
+    }
 
     // NULL COMPARE
     // TODO: type check

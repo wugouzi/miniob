@@ -84,11 +84,13 @@ public:
   ValueExpr() = default;
   ValueExpr(const Value &value) : tuple_cell_(value.type, (char *)value.data)
   {
+    if (value.type == SELECTS) {
+      selects_ = value.select;
+    }
     if (value.type == CHARS) {
       tuple_cell_.set_length(strlen((const char *)value.data));
     }
   }
-  ValueExpr(Pretable *table) : pretable_(table) {}
 
   virtual ~ValueExpr() = default;
 
@@ -110,13 +112,18 @@ public:
     return tuple_cell_.get_data();
   }
 
-  bool is_pretable() {
-    return pretable_ != nullptr;
+  bool is_selects() {
+    return selects_ != nullptr;
   }
+
+  Selects *selects() { return selects_; }
+
+  void set_pretable(Pretable *t) { pretable_ = t; }
 
   Pretable *pretable() { return pretable_; }
 
 private:
   TupleCell tuple_cell_;
+  Selects *selects_ = nullptr;
   Pretable *pretable_ = nullptr;
 };
