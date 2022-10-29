@@ -102,6 +102,7 @@ class TupleSet {
 
   TupleSet *generate_combine(const TupleSet *t2);
   void filter_fields(const std::vector<int> &orders);
+  void filter_fields(int num);
   const std::vector<TupleCell> &cells() const;
 
   void push(const TupleCell &cell); // only for in values
@@ -147,6 +148,7 @@ class Pretable {
   RC join(Pretable *pre2, FilterStmt *filter);
   void print(std::stringstream &os, int num);
   void filter_fields(const std::vector<Field> &fields);
+  void filter_fields(int num);
   RC aggregate(const std::vector<Field> fields);
   RC aggregate_max(int idx, TupleCell *res, int group_id);
   RC aggregate_sum(int idx, TupleCell *res, int group_id);

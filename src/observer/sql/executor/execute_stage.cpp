@@ -483,6 +483,7 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
     res->filter_fields(select_stmt->query_fields());
   }
 
+  res->filter_fields(select_stmt->query_num());
 
   if (*rc != RC::SUCCESS) {
     LOG_ERROR("aggregate error");
@@ -1085,6 +1086,13 @@ TupleSet *TupleSet::generate_combine(const TupleSet *t2) {
     res->cells_.push_back(cell);
   }
   return res;
+}
+
+void TupleSet::filter_fields(int num) {
+  int k = cells_.size() - num;
+  while (k--) {
+    cells_.pop_back();
+  }
 }
 
 void TupleSet::filter_fields(const std::vector<int> &orders) {
@@ -1726,9 +1734,6 @@ RC Pretable::aggregate(std::vector<Field> fields)
   RC rc = RC::SUCCESS;
   for (size_t i = 0; i < groups_.size(); i++) {
     std::vector<TupleSet> &group = groups_[i];
-    if (group.size() == 0) {
-      continue;
-    }
     TupleSet res;
     for (auto &field : fields) {
       int idx = index(field);
@@ -1740,7 +1745,13 @@ RC Pretable::aggregate(std::vector<Field> fields)
         cell.set_type(AttrType::CHARS);
         cell.set_length(strlen(field.metac()->name()) + 2);
         cell.set_data(field.metac()->name());
-      }  else {
+      }  else if (groups_.size() == 1 && groups_[0].size() == 0) {
+        cell.set_type(NULLS);
+        char *buf = new char[5];
+        buf[4] = 1;
+        cell.set_length(5);
+        cell.set_data(buf);
+      } else {
         switch (field.aggr_type()) {
           case A_MAX:
             rc = aggregate_max(idx, &cell, i);break;
@@ -2042,6 +2053,18 @@ void Pretable::filter_fields(const std::vector<Field> &fields) {
   }
 }
 
+void Pretable::filter_fields(int num)
+{
+  int k = fields_.size() - num;
+  while (k--) {
+    fields_.pop_back();
+  }
+  for (auto &group : groups_) {
+    for (auto &tuple : group) {
+      tuple.filter_fields(num);
+    }
+  }
+}
 
 
 void Pretable::order_by(const std::vector<OrderByField> &order_by_fields){
