@@ -1674,10 +1674,10 @@ int Pretable::index(const char *table_name, const char *field_name) const
 void Pretable::groupby(const std::vector<Field> groupby_fields)
 {
   for (const auto &field : groupby_fields) {
-    PretableHash hash(field.attr_type());
     std::vector<std::vector<TupleSet>> groups;
     int idx = index(field);
     for (auto &group : groups_) {
+      PretableHash hash(field.attr_type());
       std::vector<std::vector<TupleSet>> sub_groups;
       for (auto &tuple : group) {
         int group_idx = hash.get_value(tuple.get_cell(idx));
@@ -1738,20 +1738,20 @@ RC Pretable::aggregate(std::vector<Field> fields)
     for (auto &field : fields) {
       int idx = index(field);
       TupleCell cell;
-      if (field.aggr_type() == AggreType::A_NO) {
+      if (group.size() == 0) {
+        cell.set_type(NULLS);
+        char *buf = new char[5];
+        buf[4] = 1;
+        cell.set_length(5);
+        cell.set_data(buf);
+      } if (field.aggr_type() == AggreType::A_NO) {
         cell = group[0].get_cell(idx);
       } else if (idx == -1 && field.aggr_type() != AggreType::A_COUNT) {
         LOG_INFO("log i don't know");
         cell.set_type(AttrType::CHARS);
         cell.set_length(strlen(field.metac()->name()) + 2);
         cell.set_data(field.metac()->name());
-      }  else if (groups_.size() == 1 && groups_[0].size() == 0) {
-        cell.set_type(NULLS);
-        char *buf = new char[5];
-        buf[4] = 1;
-        cell.set_length(5);
-        cell.set_data(buf);
-      } else {
+      }  else {
         switch (field.aggr_type()) {
           case A_MAX:
             rc = aggregate_max(idx, &cell, i);break;
