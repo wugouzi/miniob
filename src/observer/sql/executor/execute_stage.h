@@ -89,6 +89,7 @@ protected:
 private:
   Stage *default_storage_stage_ = nullptr;
   Stage *mem_storage_stage_ = nullptr;
+  std::string leaks;
 };
 
 // TODO: check that we only need field name and table name

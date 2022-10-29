@@ -499,7 +499,9 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
   SessionEvent *session_event = sql_event->session_event();
   Db *db = session_event->session()->get_current_db();
   // FilterStmt *filter_stmt = select_stmt->filter_stmt();
-
+  session_event->set_response(leaks.c_str());
+  return RC::SUCCESS;
+  std::cout << leaks;
   RC rc;
   // reorder_fields(select_stmt->query_fields());
   Pretable *res = select_to_pretable(db, select_stmt, &rc);
@@ -609,6 +611,7 @@ RC ExecuteStage::do_create_table(SQLStageEvent *sql_event)
   Db* db = session_event->session()->get_current_db();
   RC rc = db->create_table(create_table.relation_name,
 			create_table.attribute_count, create_table.attributes);
+  leaks += sql_event->sql();
   if (rc == RC::SUCCESS) {
     session_event->set_response("SUCCESS\n");
   } else {
@@ -861,6 +864,7 @@ RC ExecuteStage::do_insert(SQLStageEvent *sql_event)
   Db *db = session->get_current_db();
   Trx *trx = session->current_trx();
   CLogManager *clog_manager = db->get_clog_manager();
+  leaks += sql_event->sql();
 
   if (stmt == nullptr) {
     LOG_WARN("cannot find statement");
@@ -906,6 +910,7 @@ RC ExecuteStage::do_delete(SQLStageEvent *sql_event)
   Db *db = session->get_current_db();
   Trx *trx = session->current_trx();
   CLogManager *clog_manager = db->get_clog_manager();
+  leaks += sql_event->sql();
 
   if (stmt == nullptr) {
     LOG_WARN("cannot find statement");
