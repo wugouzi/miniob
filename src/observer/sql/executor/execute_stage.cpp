@@ -1744,7 +1744,7 @@ RC Pretable::aggregate(std::vector<Field> fields)
         buf[4] = 1;
         cell.set_length(5);
         cell.set_data(buf);
-      } if (field.aggr_type() == AggreType::A_NO) {
+      } else if (field.aggr_type() == AggreType::A_NO) {
         cell = group[0].get_cell(idx);
       } else if (idx == -1 && field.aggr_type() != AggreType::A_COUNT) {
         LOG_INFO("log i don't know");
