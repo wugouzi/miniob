@@ -1734,6 +1734,9 @@ RC Pretable::aggregate(std::vector<Field> fields)
   RC rc = RC::SUCCESS;
   for (size_t i = 0; i < groups_.size(); i++) {
     std::vector<TupleSet> &group = groups_[i];
+    if (group.size() == 0) {
+      continue;
+    }
     TupleSet res;
     for (auto &field : fields) {
       int idx = index(field);
@@ -2125,7 +2128,14 @@ void Pretable::print(std::stringstream &ss, int num)
 
 RC Pretable::assign_row_to_value(TupleCell &cell)
 {
-  if (only_one_cell()) {
+  if (groups_.size() == 1 && groups_[0].size() == 0) {
+    cell.set_type(NULLS);
+    cell.set_length(5);
+    char *buf = new char[5];
+    buf[4] = 1;
+    cell.set_data(buf);
+    return RC::SUCCESS;
+  } else if (only_one_cell()) {
     TupleSet &tuple = groups_[0][0];
     const FieldMeta *meta = this->field_meta(0);
     cell.set_type(tuple.get_cell(0).attr_type());

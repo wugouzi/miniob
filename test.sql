@@ -1,3 +1,4 @@
+select * from ssq_1 where feat1 < (select max(ssq_2.feat2) from ssq_2 where 1=0);
 1 | 4 | 11.2
 ID | COL1 | FEAT1
 select * from ssq_1 where exists (select ssq_2.id from ssq_2 where ssq_1.id > ssq_2.id);
