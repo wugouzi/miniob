@@ -243,7 +243,11 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
   for (size_t i = 0; i < select_sql->relation_num; i++) {
     const char *table_name = select_sql->relations[i].relation_name;
     const char *table_alias = select_sql->relations[i].alias;
-    Table *table;
+    Table *table = db->find_table(table_name);
+    if (nullptr == table) {
+      LOG_WARN("no such table. db=%s, table_name=%s", db->name(), table_name);
+      return RC::SCHEMA_TABLE_NOT_EXIST;
+    }
 
     if (table_alias == nullptr) {
       if (original_names.count(table_name) == 0 && table_map.count(table_name)) {
@@ -253,66 +257,17 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
       if (original_names.count(table_name) > 0) {
         continue;
       }
-      table = db->find_table(table_name);
-      if (nullptr == table) {
-        LOG_WARN("no such table. db=%s, table_name=%s", db->name(), table_name);
-        return RC::SCHEMA_TABLE_NOT_EXIST;
-      }
       original_names.insert(table_name);
+      table_map.insert(std::pair<std::string, Table*>(table_name, table));
     } else {
       if (table_map.count(table_alias) > 0) {
         LOG_ERROR("conflict alias");
         return RC::SCHEMA_TABLE_NAME_ILLEGAL;
       }
-      table = db->find_table(table_name);
-      if (nullptr == table) {
-        LOG_WARN("no such table. db=%s, table_name=%s", db->name(), table_name);
-        return RC::SCHEMA_TABLE_NOT_EXIST;
-      }
       table = table->copy_for_alias(table_alias);
+      table_map.insert(std::pair<std::string, Table*>(table_alias, table));
     }
     tables.push_back(table);
-    table_map.insert(std::pair<std::string, Table*>(table_name, table));
-  }
-
-  for (size_t i = 0; i < select_sql->relation_num; i++) {
-    const char *table_name = select_sql->relations[i].relation_name;
-    const char *table_alias = select_sql->relations[i].alias;
-    if (table_map.count(table_name) > 0) {
-      continue;
-    }
-    if (table_alias != nullptr) {
-      if (table_alias_map.count(table_alias) > 0) {
-        LOG_ERROR("conflict alias");
-        return RC::INVALID_ARGUMENT;
-      }
-      table_alias_map[table_alias] = table_name;
-    }
-
-    if (table_map.count(table_name) > 0) {
-      continue;
-    }
-    // table_alias_map[table_name] = table_name;
-    if (nullptr == table_name) {
-      LOG_WARN("invalid argument. relation name is null. index=%d", i);
-      return RC::INVALID_ARGUMENT;
-    }
-
-    Table *table = db->find_table(table_name);
-    if (nullptr == table) {
-      LOG_WARN("no such table. db=%s, table_name=%s", db->name(), table_name);
-      return RC::SCHEMA_TABLE_NOT_EXIST;
-    }
-
-    tables.push_back(table);
-    table_map.insert(std::pair<std::string, Table*>(table_name, table));
-  }
-
-  for (size_t i = 0; i < select_sql->relation_num; i++) {
-    const char *alias = select_sql->relations[i].alias;
-    if (alias != nullptr) {
-      table_map[alias] = table_map[select_sql->relations[i].relation_name];
-    }
   }
   
   // collect query fields in `select` statement
@@ -539,7 +494,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
     LOG_WARN("cannot handle order by clause");
     return rc;
   }
-  
+
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
   select_stmt->tables_.swap(tables);
