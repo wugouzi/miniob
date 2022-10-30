@@ -1,3 +1,30 @@
+create table t1(id int, col int);
+create table t2(id int, col int);
+insert into t1 values(1,1);
+select * from t1 t2, t2 where t2.id =1;
+drop table t1;
+
+
+CREATE TABLE table_name_1(id INT, col1 INT, feat1 FLOAT);
+CREATE TABLE table_name_2(id INT, col2 INT, feat2 FLOAT);
+CREATE TABLE table_name_3(id INT, col3 INT, feat3 FLOAT);
+INSERT INTO table_name_1 VALUES (1, 4, 11.2);
+INSERT INTO table_name_1 VALUES (2, 2, 12.0);
+INSERT INTO table_name_1 VALUES (3, 3, 13.5);
+INSERT INTO table_name_2 VALUES (1, 2, 13.0);
+INSERT INTO table_name_2 VALUES (2, 7, 10.5);
+INSERT INTO table_name_2 VALUES (5, 3, 12.6);
+INSERT INTO table_name_3 VALUES (1, 2, 11.0);
+INSERT INTO table_name_3 VALUES (3, 6, 16.5);
+INSERT INTO table_name_3 VALUES (5, 5, 14.6);
+
+select * from table_name_1 t1 where table_name_1.id=1;
+
+select * from table_name_1 t1 where id in (select t1.id from table_name_2 t1 where t1.id=1);
+
+select * from table_name_1 t1 where id in (select t2.id from table_name_2 t2 where t2.col2 >= t1.col1);
+
+
 select * from ssq_1 where feat1 < (select max(ssq_2.feat2) from ssq_2 where 1=0);
 1 | 4 | 11.2
 ID | COL1 | FEAT1
