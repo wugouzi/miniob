@@ -199,13 +199,6 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
 
   print_select(select_sql, 0);
 
-  /*
-  if (select_sql->aggregate_num > 0 && select_sql->attr_num != select_sql->aggregate_num) {
-    LOG_WARN("different number of aggregates");
-    return RC::INVALID_ARGUMENT;
-  }
-  */
-
   // treat having condition attr as extra attr
   // collect tables in `from` statement
   std::vector<Table *> tables;
@@ -215,7 +208,18 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
   // alias -> attr name
   std::unordered_map<std::string, std::string> attr_alias_map;
 
-  // we can use table_alias_map to find the name of table;
+  // TODO: corner case
+  // select * from t1 t2, t2 t1;
+  // select * from t1 t3 where t1.id=1;
+  // select * from t1 where id = (select t1.id from t2 t1);
+
+  // TODO: make a new table and change its name according to alias
+  // 1. fetch table A by its original name
+  // 2. copy new table B from A with alias name (change table meta)
+  // 3. at this point B and A should have the same data, the only difference is their name
+  //    the reason to do this is that the same table may have different alias
+  // 4. put alias name into table_map
+  // 5. no need to use attr_alias_map, delete it
 
   for (size_t i = 0; i < select_sql->relation_num; i++) {
     const char *table_name = select_sql->relations[i].relation_name;
