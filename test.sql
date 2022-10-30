@@ -1,3 +1,12 @@
+select t1.id num, t1.col1 age, t1.feat1 from table_name_1 t1;
+-1 | 4 | 11.2
+-2 | 2 | 12
+-3 | 3 | 13.5
+-NUM | AGE | FEAT1
++FAILED TO PARSE SQL
+select t1.id as num, t1.col1 as age, t1.feat1, t2.* from table_name_1 t1, table_name_2 t2 where t1.id < t2.id;
+-1 | 4 | 11.2 | 2 | 7 | 10.5
+
 create table t1(id int, col int);
 create table t2(id int, col int);
 insert into t2 values(1,1);

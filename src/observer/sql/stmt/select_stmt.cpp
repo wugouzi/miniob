@@ -311,6 +311,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
         Field field(tables[0], meta);
         // field.set_aggr_str(relation_attr.attribute_name);
         field.set_aggr(relation_attr.type);
+        field.set_alias(relation_attr.alias);
         query_fields.push_back(field);
       }
     } else if (!common::is_blank(relation_attr.relation_name)) { // TODO

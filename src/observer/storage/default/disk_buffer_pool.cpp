@@ -663,8 +663,10 @@ RC BufferPoolManager::open_file(const char *_file_name, DiskBufferPool *& _bp)
     return rc;
   }
 
-  buffer_pools_.insert(std::pair<std::string, DiskBufferPool *>(file_name, bp));
-  fd_buffer_pools_.insert(std::pair<int, DiskBufferPool *>(bp->file_desc(), bp));
+  buffer_pools_[file_name] = bp;
+  fd_buffer_pools_[bp->file_desc()] = bp;
+  // buffer_pools_.insert(std::pair<std::string, DiskBufferPool *>(file_name, bp));
+  // fd_buffer_pools_.insert(std::pair<int, DiskBufferPool *>(bp->file_desc(), bp));
   _bp = bp;
   return RC::SUCCESS;
 }
