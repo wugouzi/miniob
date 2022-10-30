@@ -156,6 +156,19 @@ RC Table::drop()
   return rc;
 }
 
+Table *Table::copy_for_alias(std::string alias)
+{
+  Table *table = new Table;
+  table->base_dir_ = base_dir_;
+  table->clog_manager_ = clog_manager_;
+  table->table_meta_ = table_meta_;
+  table->table_meta_.set_name(alias);
+  table->data_buffer_pool_ = data_buffer_pool_;
+  table->record_handler_ = record_handler_;
+  table->indexes_ = indexes_;
+  return table;
+}
+
 void Table::show_index(std::stringstream &ss)
 {
   ss << " Table | Non_unique | Key_name | Seq_in_index | Column_name\n";

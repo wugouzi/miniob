@@ -2017,7 +2017,7 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
     if (field.should_print_table() ||
         (multi && field.has_table())) {
       const Table *table = field.table();
-      tp = (table->has_alias() ? table->alias() : table->name()) + ("." + tp);
+      tp = table->name() + ("." + tp);
     }
     if (field.aggr_type() != A_NO) {
       tp = aggr_to_string(field.aggr_type()) + '(' + tp + ')';
