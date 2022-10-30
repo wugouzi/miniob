@@ -793,11 +793,13 @@ RC ExecuteStage::do_update_table(SQLStageEvent *sql_event)
 {
   Updates &updates = sql_event->query()->sstr.update;
   SessionEvent *session_event = sql_event->session_event();
+  Session *session = session_event->session();
   Db *db = session_event->session()->get_current_db();
   RC rc = check_updates(db, updates);
+  Trx *trx = session->current_trx();
 
   if (rc == RC::SUCCESS) {
-    rc = db->update_table(updates.relation_name, &updates.attributes[0], updates.values,
+    rc = db->update_table(trx, updates.relation_name, &updates.attributes[0], updates.values,
                           updates.attribute_num, updates.condition_num, updates.conditions);
   }
 

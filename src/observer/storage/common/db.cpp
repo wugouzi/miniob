@@ -111,7 +111,7 @@ RC Db::drop_table(const char *table_name)
   return rc;
 }
 
-RC Db::update_table(const char *relation_name, char *const *attributes, const Value *value,
+RC Db::update_table(Trx *trx, const char *relation_name, char *const *attributes, const Value *value,
                     const size_t attr_num, const size_t condition_num, const Condition *conditions)
 {
   RC rc = RC::SUCCESS;
@@ -122,7 +122,7 @@ RC Db::update_table(const char *relation_name, char *const *attributes, const Va
 
   Table *table = opened_tables_[relation_name];
   int updated_cnt;
-  rc = table->update_record(nullptr, attributes, value, attr_num, condition_num, conditions, &updated_cnt);
+  rc = table->update_record(trx, attributes, value, attr_num, condition_num, conditions, &updated_cnt);
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Failed to update table %s", relation_name);
     return rc;
