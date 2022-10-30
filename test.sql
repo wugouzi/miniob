@@ -2316,6 +2316,14 @@ SELECT * FROM t_clog;
 -- +3 | 3 | C
 -- ID | AGE | NAME
 
+
+
+ELECT * FROM T_CLOG;
+-1 | 11 | A
+-2 | 22 | B
+-3 | 3 | C
+-5 | 5 | E
+-ID | AGE | NAME
 CREATE TABLE T_CLOG(ID INT, AGE INT, NAME CHAR);
 begin;
 INSERT INTO T_CLOG VALUES(1, 1, 'A');
@@ -2331,14 +2339,10 @@ commit;
 SELECT * FROM T_CLOG;
 -- restart
 SELECT * FROM T_CLOG;
-
--- 简单版的case
+drop table T_CLOG;
 
 CREATE TABLE T_CLOG(ID INT, AGE INT, NAME CHAR);
-begin;
 INSERT INTO T_CLOG VALUES(1, 1, 'A');
-UPDATE T_CLOG SET AGE = 11 WHERE ID = 1;
-commit;
-SELECT * FROM T_CLOG;
--- restart
-SELECT * FROM T_CLOG;
+drop table T_CLOG;
+CREATE TABLE T_CLOG(ID INT, AGE INT, NAME CHAR);
+INSERT INTO T_CLOG VALUES(1, 1, 'A');
