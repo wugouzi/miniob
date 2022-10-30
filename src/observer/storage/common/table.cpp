@@ -819,40 +819,41 @@ RC Table::update_record(Trx *trx, const char *attribute_name, const Value *value
       LOG_WARN("failed to fetch next record. rc=%d:%s", rc, strrc(rc));
       return rc;
     }
-    if (trx == nullptr || trx->is_visible(this, &record)) {
-      // delete entry in index
-      rc = delete_entry_of_indexes(record.data(), record.rid(), false);
-      if (rc != RC::SUCCESS) {
-        LOG_ERROR("Failed to delete indexes of record (rid=%d.%d). rc=%d:%s",
-                  record.rid().page_num, record.rid().slot_num, rc, strrc(rc));
-        return rc;
-      }
-
-      // prepare data
-      size_t copy_len = field->len();
-      if (field->type() == CHARS) {
-        const size_t data_len = strlen((const char *)value->data);
-        if (copy_len > data_len) {
-          copy_len = data_len + 1;
-        }
-      }
-      memcpy(record.data() + field->offset(), value->data, copy_len);
-
-      // update
-      // rc = update_record(trx, &record, has_null);
-      // if (rc != RC::SUCCESS) {
-      //   LOG_WARN("failed to update");
-      //   return rc;
-      // }
-      rc = insert_entry_of_indexes(record.data(), record.rid(), has_null);
-      if (rc != RC::SUCCESS) {
-        return rc;
-      }
-      (*updated_count)++;
-
-      //insert entry in index
-      
+    // TODO: figure out whats is_visible
+    // if (trx == nullptr || trx->is_visible(this, &record)) {
+    // delete entry in index
+    rc = delete_entry_of_indexes(record.data(), record.rid(), false);
+    if (rc != RC::SUCCESS) {
+      LOG_ERROR("Failed to delete indexes of record (rid=%d.%d). rc=%d:%s",
+                record.rid().page_num, record.rid().slot_num, rc, strrc(rc));
+      return rc;
     }
+
+    // prepare data
+    size_t copy_len = field->len();
+    if (field->type() == CHARS) {
+      const size_t data_len = strlen((const char *)value->data);
+      if (copy_len > data_len) {
+        copy_len = data_len + 1;
+      }
+    }
+    memcpy(record.data() + field->offset(), value->data, copy_len);
+
+    // update
+    // rc = update_record(trx, &record, has_null);
+    // if (rc != RC::SUCCESS) {
+    //   LOG_WARN("failed to update");
+    //   return rc;
+    // }
+    rc = insert_entry_of_indexes(record.data(), record.rid(), has_null);
+    if (rc != RC::SUCCESS) {
+      return rc;
+    }
+    (*updated_count)++;
+
+    //insert entry in index
+      
+    // }
   }
 
   scanner.close_scan();
@@ -894,77 +895,72 @@ RC Table::update_record(Trx *trx, char *const *attributes, const Value *values, 
       LOG_WARN("failed to fetch next record. rc=%d:%s", rc, strrc(rc));
       return rc;
     }
-    if (trx == nullptr || trx->is_visible(this, &record)) {
-      for (int i = 0; i < attr_num; i++) {
-        // delete record from index
-        // rc = delete_entry_of_indexes(record.data(), record.rid(), true);
-        char *record_data = new char[table_meta_.record_size()];
-        memcpy(record_data, record.data(), table_meta_.record_size());
-        rc = delete_record(trx, &record);
-        if (rc != RC::SUCCESS) {
-          LOG_ERROR("Failed to delete indexes of record(rid=%d.%d). rc=%d:%s",
-                    record.rid().page_num, record.rid().slot_num, rc, strrc(rc));  // panic?
-          return rc;
-        }
+    // TODO: is_visible
+    // if (trx == nullptr || trx->is_visible(this, &record)) {
+    for (int i = 0; i < attr_num; i++) {
+      // delete record from index
+      // rc = delete_entry_of_indexes(record.data(), record.rid(), true);
+      char *record_data = new char[table_meta_.record_size()];
+      memcpy(record_data, record.data(), table_meta_.record_size());
+      rc = delete_record(trx, &record);
+      if (rc != RC::SUCCESS) {
+        LOG_ERROR("Failed to delete indexes of record(rid=%d.%d). rc=%d:%s",
+                  record.rid().page_num, record.rid().slot_num, rc, strrc(rc));  // panic?
+        return rc;
+      }
 
-        // prepare data
-        size_t copy_len = fields[i]->len();
-        if (fields[i]->type() == CHARS && values[i].type != NULLS) {
-          const size_t data_len = strlen((const char *)values[i].data);
-          if (copy_len > data_len) {
-            copy_len = data_len + 1;
-          }
+      // prepare data
+      size_t copy_len = fields[i]->len();
+      if (fields[i]->type() == CHARS && values[i].type != NULLS) {
+        const size_t data_len = strlen((const char *)values[i].data);
+        if (copy_len > data_len) {
+          copy_len = data_len + 1;
         }
-        char *data_origin = new char[fields[i]->len()];
-        memcpy(data_origin, record_data + fields[i]->offset(), fields[i]->len());
-        if (values[i].type == NULLS) {
-          record_data[fields[i]->offset() + copy_len - 1] = 1;
-        } else {
-          memcpy(record_data + fields[i]->offset(), values[i].data, copy_len);
-        }
+      }
+      char *data_origin = new char[fields[i]->len()];
+      memcpy(data_origin, record_data + fields[i]->offset(), fields[i]->len());
+      if (values[i].type == NULLS) {
+        record_data[fields[i]->offset() + copy_len - 1] = 1;
+      } else {
+        memcpy(record_data + fields[i]->offset(), values[i].data, copy_len);
+      }
 
+      // record_handler_->update_record(&record);
+      Record new_record;
+      new_record.set_data(record_data);
+      rc = insert_record(trx, &new_record, has_null);
+      // rc = insert_entry_of_indexes(record.data(), record.rid(), has_null);
+      if (rc != RC::SUCCESS) {
+        // recover_insert_record(&new_record);
+        recover_delete_record(&new_record);
+        memcpy(record_data + fields[i]->offset(), data_origin, fields[i]->len());
         // record_handler_->update_record(&record);
-        Record new_record;
-        new_record.set_data(record_data);
-        rc = insert_record(trx, &new_record, has_null);
-        // rc = insert_entry_of_indexes(record.data(), record.rid(), has_null);
-        if (rc != RC::SUCCESS) {
-          // recover_insert_record(&new_record);
-          recover_delete_record(&new_record);
-          memcpy(record_data + fields[i]->offset(), data_origin, fields[i]->len());
-          // record_handler_->update_record(&record);
-          has_null = false;
-          // check for null
-          for (int i = 0; i < table_meta_.field_num(); i++) {
-            const FieldMeta *meta = table_meta_.field(i);
-            if (record.data()[meta->offset() + meta->len() - 1] == 1) {
-              has_null = true;
-              break;
-            }
+        has_null = false;
+        // check for null
+        for (int i = 0; i < table_meta_.field_num(); i++) {
+          const FieldMeta *meta = table_meta_.field(i);
+          if (record.data()[meta->offset() + meta->len() - 1] == 1) {
+            has_null = true;
+            break;
           }
-          RC rc2 = insert_record(trx, &new_record, has_null);
-          // RC rc2 = insert_entry_of_indexes(record.data(), record.rid(), false);
-          if (rc2 != RC::SUCCESS) {
-            LOG_ERROR("WTF");
-            return rc2;
-          }
-          delete[] data_origin;
-          // while (scanner.has_next()) {
-          //   rc = scanner.next(record);
-          // }
-          scanner.close_scan();
-          return rc;
+        }
+        RC rc2 = insert_record(trx, &new_record, has_null);
+        // RC rc2 = insert_entry_of_indexes(record.data(), record.rid(), false);
+        if (rc2 != RC::SUCCESS) {
+          LOG_ERROR("WTF");
+          return rc2;
         }
         delete[] data_origin;
-        // update
-        // rc = update_record(trx, &record, has_null);
-        // if (rc != RC::SUCCESS) {
-        //   LOG_WARN("failed to update");
-        //   return rc;
+        // while (scanner.has_next()) {
+        //   rc = scanner.next(record);
         // }
+        scanner.close_scan();
+        return rc;
       }
-      (*updated_count)++;
+      delete[] data_origin;
     }
+    (*updated_count)++;
+    // }
   }
 
   scanner.close_scan();
