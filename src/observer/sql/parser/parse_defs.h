@@ -122,7 +122,8 @@ typedef struct _Selects {
   Relation relations[MAX_NUM];       // relations in From clause
   size_t condition_num;           // Length of conditions in Where clause
   Condition conditions[MAX_NUM];  // conditions in Where clause
-  size_t aggregate_num;              // -1 means error
+  int is_or;
+  size_t aggregate_num;  // -1 means error
   size_t order_by_num;
   OrderByRelAttr order_fields[MAX_NUM];
   RelAttr groupby_attrs[MAX_NUM];
@@ -287,10 +288,10 @@ void selects_append_relation(Selects *selects, const char *relation_name, const 
 void selects_append_order_field(Selects* selects, RelAttr* attr, size_t is_desc);
 void selects_append_conditions(Selects* selects,
                                Condition conditions[],
-                               size_t condition_num);
+                               size_t condition_num, int is_or);
 void selects_append_having_conditions(Selects* selects,
                                       Condition having_conditions[],
-                                      size_t having_condition_num);
+                                      size_t having_condition_num, int is_or);
 void selects_destroy(Selects *selects);
 
 //void inserts_init(Inserts *inserts, const char *relation_name, Value values[], size_t value_num);

@@ -57,7 +57,7 @@ select avg(t1.id) as avg, sum(t2.id) as sum from t1,t2;
 
 select * from t1 t2, t3 where t1.id=1;
 
-select * from t1 t1 where id in (select t1.id from t2 t1 where t1.id=1);
+select * from t1 t1 where id in (select t1.id from t2 t1 where t1.id=1 and t1.id=1);
 
 select * from t1 t1 where id in (select t2.id from t2 t2 where t2.col2 >= t1.col1);
 -2 | 2 | 12
@@ -2442,3 +2442,20 @@ INSERT INTO T_CLOG VALUES(1, 1, 'A');
 drop table T_CLOG;
 CREATE TABLE T_CLOG(ID INT, AGE INT, NAME CHAR);
 INSERT INTO T_CLOG VALUES(1, 1, 'A');
+
+-- wudengke 测试complex用
+
+CREATE TABLE t1(id INT, col1 INT, feat1 FLOAT);
+CREATE TABLE t2(id INT, col2 INT, feat2 FLOAT);
+CREATE TABLE t3(id INT, col3 INT, feat3 FLOAT);
+INSERT INTO t1 VALUES (1, 4, 11.2);
+INSERT INTO t1 VALUES (2, 2, 12.0);
+INSERT INTO t1 VALUES (3, 3, 13.5);
+INSERT INTO t2 VALUES (1, 2, 13.0);
+INSERT INTO t2 VALUES (2, 7, 10.5);
+INSERT INTO t2 VALUES (5, 3, 12.6);
+INSERT INTO t3 VALUES (1, 2, 11.0);
+INSERT INTO t3 VALUES (3, 6, 16.5);
+INSERT INTO t3 VALUES (5, 5, 14.6);
+
+select * from t1 t1 where id in (select t1.id from t2 t1 where t1.id=1 and t1.id=1);

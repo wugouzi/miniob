@@ -59,6 +59,8 @@ typedef struct ParserContext {
 
   // for aggrs
   int in_having;
+
+  int is_or[MAX_NUM];
 } ParserContext;
 
 //获取子串
@@ -142,6 +144,7 @@ ParserContext *get_context(yyscan_t scanner)
         FROM
         WHERE
         AND
+        OR
         SET
         ON
         LOAD
@@ -496,8 +499,8 @@ SELECT {
 select_:
 select_stmt select_attr FROM rel_name rel_list where groupby having order {
   // printf("SELECT: num: %d, ptr: %d pop, table: %s, cond num: %d\n", S_TOP, CONTEXT->ptr, CONTEXT->ssql->selects[S_TOP].relations[0], CONTEXT->condition_lengths[S_TOP]);
-  selects_append_conditions(&CONTEXT->ssql->selects[S_TOP], CONTEXT->conditions[S_TOP], CONTEXT->condition_lengths[S_TOP]);
-  selects_append_having_conditions(&CONTEXT->ssql->selects[S_TOP], CONTEXT->having_conditions[S_TOP], CONTEXT->having_condition_lengths[S_TOP]);
+  selects_append_conditions(&CONTEXT->ssql->selects[S_TOP], CONTEXT->conditions[S_TOP], CONTEXT->condition_lengths[S_TOP], CONTEXT->is_or[S_TOP]);
+  selects_append_having_conditions(&CONTEXT->ssql->selects[S_TOP], CONTEXT->having_conditions[S_TOP], CONTEXT->having_condition_lengths[S_TOP], CONTEXT->is_or[S_TOP]);
   CONTEXT->ptr--;
 }
 
@@ -790,7 +793,12 @@ where:
     ;
 condition_list:
     /* empty */
+    | OR condition condition_list {
+				// CONTEXT->conditions[CONTEXT->condition_length++]=*$2;
+        CONTEXT->is_or[S_TOP]=1;
+			}
     | AND condition condition_list {
+        CONTEXT->is_or[S_TOP]=0;
 				// CONTEXT->conditions[CONTEXT->condition_length++]=*$2;
 			}
     ;

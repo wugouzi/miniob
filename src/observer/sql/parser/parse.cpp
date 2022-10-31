@@ -282,7 +282,7 @@ void selects_append_order_field(Selects *selects, RelAttr* attr, size_t is_desc)
   selects->order_by_num++;
 }
 
-void selects_append_conditions(Selects *selects, Condition conditions[], size_t condition_num)
+void selects_append_conditions(Selects *selects, Condition conditions[], size_t condition_num, int is_or)
 {
   assert(condition_num <= sizeof(selects->conditions) / sizeof(selects->conditions[0]));
   // printf("append conditions to %s, num %zu, ", selects->relations[0].relation_name, condition_num);
@@ -292,15 +292,17 @@ void selects_append_conditions(Selects *selects, Condition conditions[], size_t 
   }
   printf("\n");
   selects->condition_num = condition_num;
+  selects->is_or = is_or;
 }
 
 void selects_append_having_conditions(Selects* selects, Condition having_conditions[],
-                                      size_t having_condition_num)
+                                      size_t having_condition_num, int is_or)
 {
   for (size_t i = 0; i < having_condition_num; i++) {
     selects->having_conditions[i] = having_conditions[i];
   }
   selects->having_num = having_condition_num;
+  selects->is_or = is_or;
 }
 
 void selects_destroy(Selects *selects)
