@@ -1,11 +1,4 @@
-select t1.id num, t1.col1 age, t1.feat1 from table_name_1 t1;
--1 | 4 | 11.2
--2 | 2 | 12
--3 | 3 | 13.5
--NUM | AGE | FEAT1
-+FAILED TO PARSE SQL
-select t1.id as num, t1.col1 as age, t1.feat1, t2.* from table_name_1 t1, table_name_2 t2 where t1.id < t2.id;
--1 | 4 | 11.2 | 2 | 7 | 10.5
+
 
 create table t1(id int, col int);
 create table t2(id int, col int);
@@ -48,6 +41,17 @@ select * from t1 t1 where id in (select t2.id from t2 t2 where t2.col2 >= t1.col
 select * from table_name_1 t1, table_name_2 t2 where t1.id <> t2.id;
 1 | 4 | 11.2 | 2 | 7 | 10.5
 1 | 4 | 11.2 | 5 | 3 | 12.6
+
+select T1.* from t1 T1;
+
+select T1.id num, T1.col1 age, T1.feat1 from t1 T1;
+-1 | 4 | 11.2
+-2 | 2 | 12
+-3 | 3 | 13.5
+-NUM | AGE | FEAT1
++FAILED TO PARSE SQL
+select T1.id as num, T1.col1 as age, T1.feat1, T2.* from t1 T1, t2 T2 where T1.id < T2.id;
+-1 | 4 | 11.2 | 2 | 7 | 10.5
 
 drop table t1;
 drop table t2;

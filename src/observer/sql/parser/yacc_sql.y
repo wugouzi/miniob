@@ -549,10 +549,15 @@ groupby_ids:
 }
 ;
 select_attr:
-STAR attr_list {
+STAR alias attr_list {
   RelAttr attr;
   relation_attr_init(&attr, NULL, "*");
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, NULL);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+}
+| ID DOT STAR alias attr_list {
+  RelAttr attr;
+  relation_attr_init(&attr, $1, "*");
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
 }
 | ID alias attr_list {
 
@@ -649,27 +654,28 @@ aggregation_extra_id:
 }
 ;
 attr_list:
-    /* empty */
-    | COMMA ID attr_list {
-			RelAttr attr;
-			relation_attr_init(&attr, NULL, $2);
-			selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
-     	  // CONTEXT->ssql->sstr.selection.attributes[CONTEXT->select_length].relation_name = NULL;
-        // CONTEXT->ssql->sstr.selection.attributes[CONTEXT->select_length++].attribute_name=$2;
-      }
-    | COMMA ID DOT ID attr_list {
-			RelAttr attr;
-			relation_attr_init(&attr, $2, $4);
-			selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
-        // CONTEXT->ssql->sstr.selection.attributes[CONTEXT->select_length].attribute_name=$4;
-        // CONTEXT->ssql->sstr.selection.attributes[CONTEXT->select_length++].relation_name=$2;
-  	  }
-    | COMMA STAR attr_list {
-			RelAttr attr;
-			relation_attr_init(&attr, NULL, "*");
-			selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
-    }
-| COMMA aggregation_attr attr_list {
+/* empty */
+| COMMA ID alias attr_list {
+  RelAttr attr;
+  relation_attr_init(&attr, NULL, $2);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+}
+| COMMA ID DOT ID alias attr_list {
+  RelAttr attr;
+  relation_attr_init(&attr, $2, $4);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+}
+| COMMA STAR alias attr_list {
+  RelAttr attr;
+  relation_attr_init(&attr, NULL, "*");
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+}
+| COMMA ID DOT STAR alias attr_list {
+  RelAttr attr;
+  relation_attr_init(&attr, $2, "*");
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+}
+| COMMA aggregation_attr alias attr_list {
   printf("append aggr\n");
   selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias);
 }
