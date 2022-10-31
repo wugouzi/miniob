@@ -203,6 +203,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
   // collect tables in `from` statement
   std::vector<Table *> tables;
   std::unordered_map<std::string, Table *> table_map;
+  std::unordered_set<std::string> original_names;
   // alias -> table name
   std::unordered_map<std::string, std::string> table_alias_map;
   // alias -> attr name
@@ -211,54 +212,62 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
   // TODO: corner case
   // select * from t1 t2, t2 t1;
   // select * from t1 t3 where t1.id=1;
+  // select t1.id ii from t1 where id=1;
   // select * from t1 where id = (select t1.id from t2 t1);
 
   // TODO: make a new table and change its name according to alias
+  // 1. alias context: []
+  // 1. pass context to predicate
   // 1. fetch table A by its original name
   // 2. copy new table B from A with alias name (change table meta)
   // 3. at this point B and A should have the same data, the only difference is their name
   //    the reason to do this is that the same table may have different alias
   // 4. put alias name into table_map
   // 5. no need to use attr_alias_map, delete it
+  // 6.
+  // saonima
+  // there are only restrictions on relation's alias, none for attributes'
+  //
+  // TODO: check whether i need to add alias table to db
+
+  // check for relation name and alias name:
+  //
+  // same table name would lead to conflicts except they are not alias
+  //
+  // so, if a table has no alias, if it's in table_map and not in original_names,
+  // there would be conflict: select * from t1 t2, t2;
+  //
+  // if a table has alias, check if there is duplicate in table_map
+
 
   for (size_t i = 0; i < select_sql->relation_num; i++) {
     const char *table_name = select_sql->relations[i].relation_name;
     const char *table_alias = select_sql->relations[i].alias;
-    if (table_map.count(table_name) > 0) {
-      continue;
-    }
-    if (table_alias != nullptr) {
-      if (table_alias_map.count(table_alias) > 0) {
-        LOG_ERROR("conflict alias");
-        return RC::INVALID_ARGUMENT;
-      }
-      table_alias_map[table_alias] = table_name;
-    }
-
-    if (table_map.count(table_name) > 0) {
-      continue;
-    }
-    // table_alias_map[table_name] = table_name;
-    if (nullptr == table_name) {
-      LOG_WARN("invalid argument. relation name is null. index=%d", i);
-      return RC::INVALID_ARGUMENT;
-    }
-
     Table *table = db->find_table(table_name);
     if (nullptr == table) {
       LOG_WARN("no such table. db=%s, table_name=%s", db->name(), table_name);
       return RC::SCHEMA_TABLE_NOT_EXIST;
     }
 
-    tables.push_back(table);
-    table_map.insert(std::pair<std::string, Table*>(table_name, table));
-  }
-
-  for (size_t i = 0; i < select_sql->relation_num; i++) {
-    const char *alias = select_sql->relations[i].alias;
-    if (alias != nullptr) {
-      table_map[alias] = table_map[select_sql->relations[i].relation_name];
+    if (table_alias == nullptr) {
+      if (original_names.count(table_name) == 0 && table_map.count(table_name)) {
+        LOG_ERROR("conflict alias");
+        return RC::SCHEMA_TABLE_NAME_ILLEGAL;
+      }
+      if (original_names.count(table_name) > 0) {
+        continue;
+      }
+      original_names.insert(table_name);
+      table_map.insert(std::pair<std::string, Table*>(table_name, table));
+    } else {
+      if (table_map.count(table_alias) > 0) {
+        LOG_ERROR("conflict alias");
+        return RC::SCHEMA_TABLE_NAME_ILLEGAL;
+      }
+      table = table->copy_for_alias(table_alias);
+      table_map.insert(std::pair<std::string, Table*>(table_alias, table));
     }
+    tables.push_back(table);
   }
   
   // collect query fields in `select` statement
@@ -285,7 +294,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
     }
 
     if (common::is_blank(relation_attr.relation_name) && 0 == strcmp(relation_attr.attribute_name, "*")) {
-      if (relation_attr.alias != nullptr) {
+      if (relation_attr.type == A_NO && relation_attr.alias != nullptr) {
         return RC::INVALID_ARGUMENT;
       }
       if (relation_attr.type == AggreType::A_NO) {
@@ -302,12 +311,13 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
         Field field(tables[0], meta);
         // field.set_aggr_str(relation_attr.attribute_name);
         field.set_aggr(relation_attr.type);
+        field.set_alias(relation_attr.alias);
         query_fields.push_back(field);
       }
     } else if (!common::is_blank(relation_attr.relation_name)) { // TODO
-
       const char *table_name = relation_attr.relation_name;
       const char *field_name = relation_attr.attribute_name;
+      // TODO: WTF
       if (0 == strcmp(field_name, "*") && relation_attr.type != AggreType::A_NO) {
         return RC::SCHEMA_FIELD_NAME_ILLEGAL;
       }
@@ -317,7 +327,8 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
           LOG_WARN("invalid field name while table is *. attr=%s", field_name);
           return RC::SCHEMA_FIELD_MISSING;
         }
-        if (relation_attr.alias != nullptr) {
+        // select * as num as illegal
+        if (relation_attr.type == A_NO && relation_attr.alias != nullptr) {
           return RC::INVALID_ARGUMENT;
         }
         for (Table *table : tables) {
@@ -484,13 +495,6 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
   if (rc != RC::SUCCESS) {
     LOG_WARN("cannot handle order by clause");
     return rc;
-  }
-
-  // set table alias
-  // one extra case, two table with different alias
-  for (auto &iter : table_alias_map) {
-    Table *table = table_map[iter.second];
-    table->set_alias(iter.first);
   }
 
   // everything alright

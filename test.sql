@@ -1,28 +1,97 @@
+
+
 create table t1(id int, col int);
 create table t2(id int, col int);
+insert into t2 values(1,1);
 insert into t1 values(1,1);
-select * from t1 t2, t2 where t2.id =1;
+select t1.id ii from t1 where id=1;
+select id ii from t1 where id=1;
+select id ii from t1 where t1.ii=1;
+select id col, col col from t1;
+select id ii from t1 where ii=1;
+select id ii from t1 where id in (select id from t2 where t1.id=t2.id);
+select * from t1 t2, t2 t1 where t2.id =1;
+select * from t1 t2, t2;
+select * from t1 t1, t1;
 drop table t1;
+drop table t2;
 
 
-CREATE TABLE table_name_1(id INT, col1 INT, feat1 FLOAT);
-CREATE TABLE table_name_2(id INT, col2 INT, feat2 FLOAT);
-CREATE TABLE table_name_3(id INT, col3 INT, feat3 FLOAT);
-INSERT INTO table_name_1 VALUES (1, 4, 11.2);
-INSERT INTO table_name_1 VALUES (2, 2, 12.0);
-INSERT INTO table_name_1 VALUES (3, 3, 13.5);
-INSERT INTO table_name_2 VALUES (1, 2, 13.0);
-INSERT INTO table_name_2 VALUES (2, 7, 10.5);
-INSERT INTO table_name_2 VALUES (5, 3, 12.6);
-INSERT INTO table_name_3 VALUES (1, 2, 11.0);
-INSERT INTO table_name_3 VALUES (3, 6, 16.5);
-INSERT INTO table_name_3 VALUES (5, 5, 14.6);
+CREATE TABLE t1(id INT, col1 INT, feat1 FLOAT);
+CREATE TABLE t2(id INT, col2 INT, feat2 FLOAT);
+CREATE TABLE t3(id INT, col3 INT, feat3 FLOAT);
+INSERT INTO t1 VALUES (1, 4, 11.2);
+INSERT INTO t1 VALUES (2, 2, 12.0);
+INSERT INTO t1 VALUES (3, 3, 13.5);
+INSERT INTO t2 VALUES (1, 2, 13.0);
+INSERT INTO t2 VALUES (2, 7, 10.5);
+INSERT INTO t2 VALUES (5, 3, 12.6);
+INSERT INTO t3 VALUES (1, 2, 11.0);
+INSERT INTO t3 VALUES (3, 6, 16.5);
+INSERT INTO t3 VALUES (5, 5, 14.6);
 
-select * from table_name_1 t1 where table_name_1.id=1;
+select t1.id as num from t1,t2 where num=1;
 
-select * from table_name_1 t1 where id in (select t1.id from table_name_2 t1 where t1.id=1);
+select id num, col1 age, feat1 from t1;
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+-NUM | AGE | FEAT1
++ID | COL1 | FEAT1
+select t1.id as num, t1.col1 as age, t1.feat1, t2.* from t1 t1, t2 t2 where t1.id < t2.id;
+1 | 4 | 11.2 | 2 | 7 | 10.5
+1 | 4 | 11.2 | 5 | 3 | 12.6
+2 | 2 | 12 | 5 | 3 | 12.6
+3 | 3 | 13.5 | 5 | 3 | 12.6
+NUM | AGE | T1.FEAT1 | T2.ID | T2.COL2 | T2.FEAT2
 
-select * from table_name_1 t1 where id in (select t2.id from table_name_2 t2 where t2.col2 >= t1.col1);
+select t1.id as num from t1 t1 where id in (select t2.id from t2 t2 where num > id);
+
+select avg(id) avg from t1;
+select avg(id) sum from t1;
+select avg(id) count from t1;
+
+select avg(id) ee from t1;
+
+select avg(t1.id) as avg, sum(t2.id) as sum from t1,t2;
+
+select * from t1 t2, t3 where t1.id=1;
+
+select * from t1 t1 where id in (select t1.id from t2 t1 where t1.id=1);
+
+select * from t1 t1 where id in (select t2.id from t2 t2 where t2.col2 >= t1.col1);
+-2 | 2 | 12
+-ID | COL1 | FEAT1
+
+select * from t1 t1, t2 t2 where t1.id <> t2.id;
+1 | 4 | 11.2 | 2 | 7 | 10.5
+1 | 4 | 11.2 | 5 | 3 | 12.6
+
+select T1.* from t1 T1;
+
+select T1.id num, T1.col1 age, T1.feat1 from t1 T1;
+-1 | 4 | 11.2
+-2 | 2 | 12
+-3 | 3 | 13.5
+-NUM | AGE | FEAT1
++FAILED TO PARSE SQL
+select T1.id as num, T1.col1 as age, T1.feat1, T2.* from t1 T1, t2 T2 where T1.id < T2.id;
+-1 | 4 | 11.2 | 2 | 7 | 10.5
+
+NUM
+5. alias with aggregation
+select count(*) as num, avg(t1.col1) score from t1 t1, t2 t2 where t1.id < t2.id;
+-4 | 3.25
+-NUM | SCORE
++FAILURE
+6. error
+select t1.id as num from t1 t1 where id in (select t2.id from t2 t2 where num > t2.id);
+-FAILURE
++FAILED TO PARSE SQL
+
+drop table t1;
+drop table t2;
+drop table t3;
 
 
 select * from ssq_1 where feat1 < (select max(ssq_2.feat2) from ssq_2 where 1=0);

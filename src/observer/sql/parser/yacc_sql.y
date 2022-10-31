@@ -31,6 +31,9 @@ typedef struct ParserContext {
   Condition having_conditions[MAX_NUM][MAX_NUM];
   size_t having_condition_lengths[MAX_NUM];
 
+  char *alias[MAX_NUM][MAX_NUM];
+  size_t alias_lengths[MAX_NUM];
+
   CompOp comps[MAX_NUM];
   char id[MAX_NUM];
   size_t is_desc;
@@ -54,7 +57,6 @@ typedef struct ParserContext {
   RelAttr aggr_attrs[MAX_NUM][MAX_NUM];
   size_t aggr_attr_lens[MAX_NUM];
 
-  char *alias;
   // for aggrs
   int in_having;
 } ParserContext;
@@ -549,25 +551,28 @@ groupby_ids:
 }
 ;
 select_attr:
-STAR attr_list {
+STAR alias attr_list {
   RelAttr attr;
   relation_attr_init(&attr, NULL, "*");
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, NULL);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
+}
+| ID DOT STAR alias attr_list {
+  RelAttr attr;
+  relation_attr_init(&attr, $1, "*");
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 | ID alias attr_list {
-
   RelAttr attr;
   relation_attr_init(&attr, NULL, $1);
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 | ID DOT ID alias attr_list {
   RelAttr attr;
   relation_attr_init(&attr, $1, $3);
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 | aggregation_attr alias attr_list {
-  printf("append aggr\n");
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 ;
 
@@ -649,34 +654,35 @@ aggregation_extra_id:
 }
 ;
 attr_list:
-    /* empty */
-    | COMMA ID attr_list {
-			RelAttr attr;
-			relation_attr_init(&attr, NULL, $2);
-			selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
-     	  // CONTEXT->ssql->sstr.selection.attributes[CONTEXT->select_length].relation_name = NULL;
-        // CONTEXT->ssql->sstr.selection.attributes[CONTEXT->select_length++].attribute_name=$2;
-      }
-    | COMMA ID DOT ID attr_list {
-			RelAttr attr;
-			relation_attr_init(&attr, $2, $4);
-			selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
-        // CONTEXT->ssql->sstr.selection.attributes[CONTEXT->select_length].attribute_name=$4;
-        // CONTEXT->ssql->sstr.selection.attributes[CONTEXT->select_length++].relation_name=$2;
-  	  }
-    | COMMA STAR attr_list {
-			RelAttr attr;
-			relation_attr_init(&attr, NULL, "*");
-			selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
-    }
-| COMMA aggregation_attr attr_list {
+/* empty */
+| COMMA ID alias attr_list {
+  RelAttr attr;
+  relation_attr_init(&attr, NULL, $2);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
+}
+| COMMA ID DOT ID alias attr_list {
+  RelAttr attr;
+  relation_attr_init(&attr, $2, $4);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
+}
+| COMMA STAR alias attr_list {
+  RelAttr attr;
+  relation_attr_init(&attr, NULL, "*");
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
+}
+| COMMA ID DOT STAR alias attr_list {
+  RelAttr attr;
+  relation_attr_init(&attr, $2, "*");
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
+}
+| COMMA aggregation_attr alias attr_list {
   printf("append aggr\n");
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 ;
 rel_name:
 ID alias inner_joins {
-  selects_append_relation(&CONTEXT->ssql->selects[S_TOP], $1, CONTEXT->alias);
+  selects_append_relation(&CONTEXT->ssql->selects[S_TOP], $1, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
   selects_reverse_relations(&CONTEXT->ssql->selects[S_TOP], ++CONTEXT->joins);
   CONTEXT->joins = 0;
 }
@@ -685,7 +691,7 @@ ID alias inner_joins {
 inner_joins:
     
 | INNER JOIN ID alias ON condition condition_list inner_joins {
-  selects_append_relation(&CONTEXT->ssql->selects[S_TOP], $3, CONTEXT->alias);
+  selects_append_relation(&CONTEXT->ssql->selects[S_TOP], $3, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
   CONTEXT->joins++;
 }
 ;
@@ -730,14 +736,44 @@ order_component_list:
 
 alias:
 {
-  CONTEXT->alias = NULL;
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = NULL;
 }
 | AS ID {
-  CONTEXT->alias = $2;
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = $2;
  }
 | ID {
-  CONTEXT->alias = $1;
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = $1;
  }
+| AVG {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "avg";
+}
+| COUNT {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "count";
+}
+| SUM {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "sum";
+}
+| MAX {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "max";
+}
+| MIN {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "min";
+}
+| AS AVG {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "avg";
+}
+| AS COUNT {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "count";
+}
+| AS SUM {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "sum";
+}
+| AS MAX {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "max";
+}
+| AS MIN {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "min";
+}
 ;
 
 rel_list:
@@ -759,84 +795,105 @@ condition_list:
 			}
     ;
 condition:
-    ID comOp value 
-		{
-			RelAttr left_attr;
-			relation_attr_init(&left_attr, NULL, $1);
+ID comOp value
+{
+  RelAttr left_attr;
+  relation_attr_init(&left_attr, NULL, $1);
 
-      // printf("current ptr %d\n", CONTEXT->ptr);
-			Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
+  // printf("current ptr %d\n", CONTEXT->ptr);
+  Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
 
-			Condition condition;
-			condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, right_value);
-			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, right_value);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 
-		}
-		|value comOp value 
-		{
-			Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 2];
-			Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
+}
+|value comOp value
+{
+  Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 2];
+  Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
 
-			Condition condition;
-			condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 0, NULL, right_value);
-			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
-		}
-		|ID comOp ID 
-		{
-			RelAttr left_attr;
-			relation_attr_init(&left_attr, NULL, $1);
-			RelAttr right_attr;
-			relation_attr_init(&right_attr, NULL, $3);
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 0, NULL, right_value);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+}
+|ID comOp ID
+{
+  RelAttr left_attr;
+  relation_attr_init(&left_attr, NULL, $1);
+  RelAttr right_attr;
+  relation_attr_init(&right_attr, NULL, $3);
 
-			Condition condition;
-			condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 1, &right_attr, NULL);
-			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
-		}
-    |value comOp ID
-		{
-			Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
-			RelAttr right_attr;
-			relation_attr_init(&right_attr, NULL, $3);
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 1, &right_attr, NULL);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+}
+|value comOp ID
+{
+  Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
+  RelAttr right_attr;
+  relation_attr_init(&right_attr, NULL, $3);
 
-			Condition condition;
-			condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, &right_attr, NULL);
-			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, &right_attr, NULL);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 
-		}
-    |ID DOT ID comOp value
-		{
-			RelAttr left_attr;
-			relation_attr_init(&left_attr, $1, $3);
-			Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
+}
+|ID DOT ID comOp value
+{
+  RelAttr left_attr;
+  relation_attr_init(&left_attr, $1, $3);
+  Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
 
-			Condition condition;
-			condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, right_value);
-      // printf("append condition in %d\n", S_TOP);
-			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, right_value);
+  // printf("append condition in %d\n", S_TOP);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 
-    }
-    |value comOp ID DOT ID
-		{
-			Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
+}
 
-			RelAttr right_attr;
-			relation_attr_init(&right_attr, $3, $5);
+|value comOp ID DOT ID
+{
+  Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
 
-			Condition condition;
-			condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, &right_attr, NULL);
-			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
-    }
-    |ID DOT ID comOp ID DOT ID
-		{
-			RelAttr left_attr;
-			relation_attr_init(&left_attr, $1, $3);
-			RelAttr right_attr;
-			relation_attr_init(&right_attr, $5, $7);
+  RelAttr right_attr;
+  relation_attr_init(&right_attr, $3, $5);
 
-			Condition condition;
-			condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 1, &right_attr, NULL);
-			CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
-    }
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, &right_attr, NULL);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+}
+|ID DOT ID comOp ID DOT ID
+{
+  RelAttr left_attr;
+  relation_attr_init(&left_attr, $1, $3);
+  RelAttr right_attr;
+  relation_attr_init(&right_attr, $5, $7);
+
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 1, &right_attr, NULL);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+}
+| ID DOT ID comOp ID {
+  RelAttr left_attr;
+  relation_attr_init(&left_attr, $1, $3);
+  RelAttr right_attr;
+  relation_attr_init(&right_attr, NULL, $5);
+
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 1, &right_attr, NULL);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+}
+| ID comOp ID DOT ID {
+  RelAttr left_attr;
+  relation_attr_init(&left_attr, NULL, $1);
+  RelAttr right_attr;
+  relation_attr_init(&right_attr, $3, $5);
+
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 1, &right_attr, NULL);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+}
 | ID comOp LBRACE in_value in_value_list RBRACE {
       RelAttr left_attr;
       relation_attr_init(&left_attr, NULL, $1);
