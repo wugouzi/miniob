@@ -744,6 +744,36 @@ alias:
 | ID {
   CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = $1;
  }
+| AVG {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "avg";
+}
+| COUNT {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "count";
+}
+| SUM {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "sum";
+}
+| MAX {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "max";
+}
+| MIN {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "min";
+}
+| AS AVG {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "avg";
+}
+| AS COUNT {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "count";
+}
+| AS SUM {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "sum";
+}
+| AS MAX {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "max";
+}
+| AS MIN {
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = "min";
+}
 ;
 
 rel_list:

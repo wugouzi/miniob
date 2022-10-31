@@ -43,6 +43,15 @@ select t1.id as num, t1.col1 as age, t1.feat1, t2.* from t1 t1, t2 t2 where t1.i
 1 | 4 | 11.2 | 5 | 3 | 12.6
 2 | 2 | 12 | 5 | 3 | 12.6
 3 | 3 | 13.5 | 5 | 3 | 12.6
+NUM | AGE | T1.FEAT1 | T2.ID | T2.COL2 | T2.FEAT2
+
+select avg(id) avg from t1;
+select avg(id) sum from t1;
+select avg(id) count from t1;
+
+select avg(id) ee from t1;
+
+select avg(t1.id) as avg, sum(t2.id) as sum from t1,t2;
 
 select * from t1 t2, t3 where t1.id=1;
 

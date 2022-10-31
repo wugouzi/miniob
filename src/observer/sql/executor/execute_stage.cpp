@@ -2013,14 +2013,19 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
     ss << (first ? "" : " | ");
     first = false;
     // std::string tp = field.has_field() ? field.field_name() : field.aggr_str();
-    std::string tp = field.has_alias() ? field.alias() : field.field_name();
-    if (field.should_print_table() ||
-        (multi && field.has_table())) {
-      const Table *table = field.table();
-      tp = table->name() + ("." + tp);
-    }
-    if (field.aggr_type() != A_NO) {
-      tp = aggr_to_string(field.aggr_type()) + '(' + tp + ')';
+    std::string tp;
+    if (field.has_alias()) {
+      tp = field.alias();
+    } else {
+      tp = field.field_name();
+      if (field.should_print_table() ||
+          (multi && field.has_table())) {
+        const Table *table = field.table();
+        tp = table->name() + ("." + tp);
+      }
+      if (field.aggr_type() != A_NO) {
+        tp = aggr_to_string(field.aggr_type()) + '(' + tp + ')';
+      }
     }
     ss << tp;
   }
