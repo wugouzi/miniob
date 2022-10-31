@@ -45,6 +45,8 @@ select t1.id as num, t1.col1 as age, t1.feat1, t2.* from t1 t1, t2 t2 where t1.i
 3 | 3 | 13.5 | 5 | 3 | 12.6
 NUM | AGE | T1.FEAT1 | T2.ID | T2.COL2 | T2.FEAT2
 
+select t1.id as num from t1 t1 where id in (select t2.id from t2 t2 where num > id);
+
 select avg(id) avg from t1;
 select avg(id) sum from t1;
 select avg(id) count from t1;
@@ -75,6 +77,17 @@ select T1.id num, T1.col1 age, T1.feat1 from t1 T1;
 +FAILED TO PARSE SQL
 select T1.id as num, T1.col1 as age, T1.feat1, T2.* from t1 T1, t2 T2 where T1.id < T2.id;
 -1 | 4 | 11.2 | 2 | 7 | 10.5
+
+NUM
+5. alias with aggregation
+select count(*) as num, avg(t1.col1) score from t1 t1, t2 t2 where t1.id < t2.id;
+-4 | 3.25
+-NUM | SCORE
++FAILURE
+6. error
+select t1.id as num from t1 t1 where id in (select t2.id from t2 t2 where num > t2.id);
+-FAILURE
++FAILED TO PARSE SQL
 
 drop table t1;
 drop table t2;

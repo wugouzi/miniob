@@ -294,7 +294,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
     }
 
     if (common::is_blank(relation_attr.relation_name) && 0 == strcmp(relation_attr.attribute_name, "*")) {
-      if (relation_attr.alias != nullptr) {
+      if (relation_attr.type == A_NO && relation_attr.alias != nullptr) {
         return RC::INVALID_ARGUMENT;
       }
       if (relation_attr.type == AggreType::A_NO) {
@@ -315,9 +315,9 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
         query_fields.push_back(field);
       }
     } else if (!common::is_blank(relation_attr.relation_name)) { // TODO
-
       const char *table_name = relation_attr.relation_name;
       const char *field_name = relation_attr.attribute_name;
+      // TODO: WTF
       if (0 == strcmp(field_name, "*") && relation_attr.type != AggreType::A_NO) {
         return RC::SCHEMA_FIELD_NAME_ILLEGAL;
       }
@@ -327,7 +327,8 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
           LOG_WARN("invalid field name while table is *. attr=%s", field_name);
           return RC::SCHEMA_FIELD_MISSING;
         }
-        if (relation_attr.alias != nullptr) {
+        // select * as num as illegal
+        if (relation_attr.type == A_NO && relation_attr.alias != nullptr) {
           return RC::INVALID_ARGUMENT;
         }
         for (Table *table : tables) {
