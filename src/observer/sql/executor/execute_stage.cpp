@@ -428,8 +428,8 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
 {
   FilterStmt *filter_stmt = select_stmt->filter_stmt();
 
-  std::vector<Pretable*> pretables;
 
+  std::vector<Pretable*> pretables;
   *rc = RC::SUCCESS;
 
   for (size_t i = 0; i < select_stmt->tables().size(); i++) {
@@ -1263,7 +1263,8 @@ const std::vector<TupleCell> &TupleSet::cells() const {
 FilterStmt *get_sub_filter(Table *table, FilterStmt *old_filter)
 {
   FilterStmt *filter = new FilterStmt();
-  for (FilterUnit *unit : old_filter->filter_units()) {
+  filter->is_or = old_filter->is_or;
+  for (FilterUnit* unit : old_filter->filter_units()) {
     Expression *left = unit->left();
     Expression *right = unit->right();
     if (left->type() == ExprType::FIELD && right->type() == ExprType::FIELD) {

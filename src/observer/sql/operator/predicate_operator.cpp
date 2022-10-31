@@ -81,13 +81,13 @@ std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> make
   return context;
 }
 
-bool PredicateOperator::do_predicate(RowTuple &tuple, RC *rc)
-{
-  if (filter_stmt_ == nullptr || filter_stmt_->filter_units().empty()) {
-    return true;
+void append_to_context(TableContext &dst_context, TableContext & src_context){
+  for(auto &context_record: src_context){
+    dst_context[context_record.first] = context_record.second;
   }
+}
 
-  for (const FilterUnit *filter_unit : filter_stmt_->filter_units()) {
+bool PredicateOperator::execute_filter_unit(const FilterUnit *filter_unit, RowTuple &tuple, TableContext &original_context, RC *rc){
     Expression *left_expr = filter_unit->left();
     Expression *right_expr = filter_unit->right();
     TupleCell left_cell;
@@ -99,7 +99,9 @@ bool PredicateOperator::do_predicate(RowTuple &tuple, RC *rc)
       ValueExpr *val_expr = dynamic_cast<ValueExpr *>(left_expr);
       if (val_expr->is_selects()) {
         auto context = make_context(tuple);
-        Pretable *res = ExecuteStage::Selects_to_pretable(db_, val_expr->selects(), context, rc);
+        append_to_context(context, original_context);
+        Pretable* res = ExecuteStage::Selects_to_pretable(
+            db_, val_expr->selects(), context, rc);
         if (*rc != RC::SUCCESS) {
           return true;
         }
@@ -206,8 +208,29 @@ bool PredicateOperator::do_predicate(RowTuple &tuple, RC *rc)
         } break;
       }
     }
-    if (!filter_result) {
-      return false;
+    return filter_result;
+}
+
+bool PredicateOperator::do_predicate(RowTuple &tuple, RC *rc)
+{
+  if (filter_stmt_ == nullptr || filter_stmt_->filter_units().empty()) {
+    return true;
+  }
+
+  for (const FilterUnit *filter_unit : filter_stmt_->filter_units()) {
+    auto res = execute_filter_unit(filter_unit, tuple, filter_stmt_->context, rc);
+    if (*rc != RC::SUCCESS) {
+      return true;
+    }
+    // TODO check rc
+    if(filter_stmt_->is_or){
+      if(res){
+        return true;
+      }
+    }else{
+      if(!res){
+        return false;
+      }
     }
   }
   return true;

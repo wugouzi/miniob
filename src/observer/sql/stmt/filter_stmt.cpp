@@ -62,6 +62,7 @@ RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::stri
     }
     tmp_stmt->filter_units_.push_back(filter_unit);
   }
+  tmp_stmt->context = context;
 
   stmt = tmp_stmt;
   return rc;

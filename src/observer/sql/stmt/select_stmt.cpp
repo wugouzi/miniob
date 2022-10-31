@@ -137,6 +137,11 @@ void print_condition(Condition &cond, int indent)
 void print_conditions(Selects *selects, int indent)
 {
   print_space(indent + 2);
+  if(selects->is_or){
+    std::cout << "OR - ";
+  }else{
+    std::cout << "AND - ";
+  }
   std::cout << "CONDITIONS: " << std::endl;
   for (size_t i = 0; i < selects->condition_num; i++) {
     print_condition(selects->conditions[i], indent + 4);
@@ -483,6 +488,9 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
   RC rc = FilterStmt::create(db, default_table, &table_map,
                              select_sql->conditions, select_sql->condition_num, filter_stmt,
                              context);
+  if(select_sql->is_or){
+    filter_stmt->mark_as_or();
+  }
 
   if (rc != RC::SUCCESS) {
     LOG_WARN("cannot construct filter stmt");

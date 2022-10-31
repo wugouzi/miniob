@@ -30,8 +30,13 @@ public:
       : filter_stmt_(filter_stmt), db_(db)
   {}
 
+
   virtual ~PredicateOperator() = default;
 
+  bool execute_filter_unit(const FilterUnit* filter_unit,
+                           RowTuple& tuple,
+                           TableContext& original_context,
+                           RC* rc);
   RC open() override;
   RC next() override;
   RC close() override;

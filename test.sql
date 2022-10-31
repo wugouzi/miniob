@@ -2458,4 +2458,4 @@ INSERT INTO t3 VALUES (1, 2, 11.0);
 INSERT INTO t3 VALUES (3, 6, 16.5);
 INSERT INTO t3 VALUES (5, 5, 14.6);
 
-select * from t1 t1 where id in (select t1.id from t2 t1 where t1.id=1 and t1.id=1);
+select * from t1 t1 where id in (select t1.id from t2 t1 where t1.id=1 or t1.id=2);
