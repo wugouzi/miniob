@@ -1264,6 +1264,7 @@ FilterStmt *get_sub_filter(Table *table, FilterStmt *old_filter)
 {
   FilterStmt *filter = new FilterStmt();
   filter->is_or = old_filter->is_or;
+  filter->context = old_filter->context;
   for (FilterUnit* unit : old_filter->filter_units()) {
     Expression *left = unit->left();
     Expression *right = unit->right();
@@ -1917,6 +1918,7 @@ CompositeConditionFilter *Pretable::make_cond_filter(std::vector<FilterUnit*> &u
   return ans;
 }
 
+// TODO wudengke add context
 RC Pretable::join(Pretable *pre2, FilterStmt *filter)
 {
   std::vector<FilterUnit*> units;

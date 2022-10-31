@@ -81,7 +81,7 @@ std::unordered_map<std::string, std::unordered_map<std::string, TupleCell>> make
   return context;
 }
 
-void append_to_context(TableContext &dst_context, TableContext & src_context){
+void append_to_context(TableContext &dst_context, TableContext &src_context){
   for(auto &context_record: src_context){
     dst_context[context_record.first] = context_record.second;
   }
@@ -92,6 +92,8 @@ bool PredicateOperator::execute_filter_unit(const FilterUnit *filter_unit, RowTu
     Expression *right_expr = filter_unit->right();
     TupleCell left_cell;
     TupleCell right_cell;
+
+    LOG_INFO("original context size: %d\n", original_context.size());
 
     CompOp comp = filter_unit->comp();
 
@@ -129,6 +131,7 @@ bool PredicateOperator::execute_filter_unit(const FilterUnit *filter_unit, RowTu
       ValueExpr *val_expr = dynamic_cast<ValueExpr *>(right_expr);
       if (val_expr->is_selects()) {
         auto context = make_context(tuple);
+        append_to_context(context, original_context);
         Pretable *res = ExecuteStage::Selects_to_pretable(db_, val_expr->selects(), context, rc);
         if (*rc != RC::SUCCESS) {
           return true;
