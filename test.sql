@@ -30,6 +30,20 @@ INSERT INTO t3 VALUES (1, 2, 11.0);
 INSERT INTO t3 VALUES (3, 6, 16.5);
 INSERT INTO t3 VALUES (5, 5, 14.6);
 
+select t1.id as num from t1,t2 where num=1;
+
+select id num, col1 age, feat1 from t1;
+1 | 4 | 11.2
+2 | 2 | 12
+3 | 3 | 13.5
+-NUM | AGE | FEAT1
++ID | COL1 | FEAT1
+select t1.id as num, t1.col1 as age, t1.feat1, t2.* from t1 t1, t2 t2 where t1.id < t2.id;
+1 | 4 | 11.2 | 2 | 7 | 10.5
+1 | 4 | 11.2 | 5 | 3 | 12.6
+2 | 2 | 12 | 5 | 3 | 12.6
+3 | 3 | 13.5 | 5 | 3 | 12.6
+
 select * from t1 t2, t3 where t1.id=1;
 
 select * from t1 t1 where id in (select t1.id from t2 t1 where t1.id=1);
@@ -38,7 +52,7 @@ select * from t1 t1 where id in (select t2.id from t2 t2 where t2.col2 >= t1.col
 -2 | 2 | 12
 -ID | COL1 | FEAT1
 
-select * from table_name_1 t1, table_name_2 t2 where t1.id <> t2.id;
+select * from t1 t1, t2 t2 where t1.id <> t2.id;
 1 | 4 | 11.2 | 2 | 7 | 10.5
 1 | 4 | 11.2 | 5 | 3 | 12.6
 

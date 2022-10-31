@@ -31,6 +31,9 @@ typedef struct ParserContext {
   Condition having_conditions[MAX_NUM][MAX_NUM];
   size_t having_condition_lengths[MAX_NUM];
 
+  char *alias[MAX_NUM][MAX_NUM];
+  size_t alias_lengths[MAX_NUM];
+
   CompOp comps[MAX_NUM];
   char id[MAX_NUM];
   size_t is_desc;
@@ -54,7 +57,6 @@ typedef struct ParserContext {
   RelAttr aggr_attrs[MAX_NUM][MAX_NUM];
   size_t aggr_attr_lens[MAX_NUM];
 
-  char *alias;
   // for aggrs
   int in_having;
 } ParserContext;
@@ -552,27 +554,25 @@ select_attr:
 STAR alias attr_list {
   RelAttr attr;
   relation_attr_init(&attr, NULL, "*");
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 | ID DOT STAR alias attr_list {
   RelAttr attr;
   relation_attr_init(&attr, $1, "*");
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 | ID alias attr_list {
-
   RelAttr attr;
   relation_attr_init(&attr, NULL, $1);
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 | ID DOT ID alias attr_list {
   RelAttr attr;
   relation_attr_init(&attr, $1, $3);
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 | aggregation_attr alias attr_list {
-  printf("append aggr\n");
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 ;
 
@@ -658,31 +658,31 @@ attr_list:
 | COMMA ID alias attr_list {
   RelAttr attr;
   relation_attr_init(&attr, NULL, $2);
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 | COMMA ID DOT ID alias attr_list {
   RelAttr attr;
   relation_attr_init(&attr, $2, $4);
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 | COMMA STAR alias attr_list {
   RelAttr attr;
   relation_attr_init(&attr, NULL, "*");
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 | COMMA ID DOT STAR alias attr_list {
   RelAttr attr;
   relation_attr_init(&attr, $2, "*");
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 | COMMA aggregation_attr alias attr_list {
   printf("append aggr\n");
-  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias);
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 ;
 rel_name:
 ID alias inner_joins {
-  selects_append_relation(&CONTEXT->ssql->selects[S_TOP], $1, CONTEXT->alias);
+  selects_append_relation(&CONTEXT->ssql->selects[S_TOP], $1, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
   selects_reverse_relations(&CONTEXT->ssql->selects[S_TOP], ++CONTEXT->joins);
   CONTEXT->joins = 0;
 }
@@ -691,7 +691,7 @@ ID alias inner_joins {
 inner_joins:
     
 | INNER JOIN ID alias ON condition condition_list inner_joins {
-  selects_append_relation(&CONTEXT->ssql->selects[S_TOP], $3, CONTEXT->alias);
+  selects_append_relation(&CONTEXT->ssql->selects[S_TOP], $3, CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
   CONTEXT->joins++;
 }
 ;
@@ -736,13 +736,13 @@ order_component_list:
 
 alias:
 {
-  CONTEXT->alias = NULL;
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = NULL;
 }
 | AS ID {
-  CONTEXT->alias = $2;
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = $2;
  }
 | ID {
-  CONTEXT->alias = $1;
+  CONTEXT->alias[S_TOP][CONTEXT->alias_lengths[S_TOP]++] = $1;
  }
 ;
 
