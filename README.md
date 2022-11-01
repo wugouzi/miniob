@@ -33,3 +33,13 @@ miniob 设计的目标是让同学们快速了解数据库并深入学习数据�
 [miniob 源码解析文档](https://www.oceanbase.com/docs/community-developer-quickstart-10000000000627363)
 
 （资料持续整理中，请大家自行查阅标题为“MiniOB...”的视频或文档）
+
+# Progress
+
+## function
+
+TODO:
+[ ] 修改bison，将各个函数及其参数读出，作为field的mark (参考aggr)。增加FuncType。
+[ ] 实现无表查询。select_to_pretable，插入对应的占位元组。
+[ ] 实现where中的函数。修改dopredicate的getValue，将函数进行求值。
+[ ] 实现select中的函数。在输出时，apply marked的func。
