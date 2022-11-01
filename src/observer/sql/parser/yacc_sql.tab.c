@@ -2344,7 +2344,7 @@ CONTEXT->value_lengths[S_TOP] = 0;
   case 91:
 #line 631 "yacc_sql.y"
                                      {
-  // TODO
+  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, (yyvsp[-1].string), CONTEXT->a_types[S_TOP], 0);
 }
 #line 2350 "yacc_sql.tab.c"
     break;

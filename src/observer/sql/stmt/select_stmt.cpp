@@ -297,12 +297,8 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
     if (relation_attr.type == AggreType::A_FAILURE) {
       return RC::SCHEMA_FIELD_NAME_ILLEGAL;
     }
-    if(!relation_attr.relation_name){
-      // 表示这是一个没有from的select语句!
-      continue;
-    }
 
-    if (common::is_blank(relation_attr.relation_name) && 0 == strcmp(relation_attr.attribute_name, "*")) {
+    if (common::is_blank(relation_attr.relation_name) && relation_attr.attribute_name && 0 == strcmp(relation_attr.attribute_name, "*")) {
       if (relation_attr.type == A_NO && relation_attr.alias != nullptr) {
         return RC::INVALID_ARGUMENT;
       }
@@ -384,6 +380,17 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
         }
       }
     } else {
+      if(tables.size() == 0){
+        FieldMeta* meta = new FieldMeta;
+        meta->init(relation_attr.attribute_name, CHARS, 0, sizeof(relation_attr.attribute_name) + 2, true, false);
+        Field field(nullptr, meta);
+        // field.set_table(tables[0]);
+        field.set_aggr(relation_attr.type);
+        field.set_alias(relation_attr.alias);
+        // field.set_aggr_str(relation_attr.attribute_name);
+        query_fields.push_back(field);
+        continue;
+      }
       if (tables.size() != 1) {
         LOG_WARN("invalid. I do not know the attr's table. attr=%s", relation_attr.attribute_name);
         return RC::SCHEMA_FIELD_MISSING;

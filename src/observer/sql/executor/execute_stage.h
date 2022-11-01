@@ -155,6 +155,7 @@ class Pretable {
   RC aggregate_min(int idx, TupleCell *res, int group_id);
   RC aggregate_avg(int idx, TupleCell *res, int group_id);
   RC aggregate_count(int idx, TupleCell *res, int group_id);
+  RC aggregate_length(int idx, TupleCell *res, int group_id);
   void order_by(const std::vector<OrderByField> &fields);
 
   CompositeConditionFilter *make_cond_filter(std::vector<FilterUnit*> &units);

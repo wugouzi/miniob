@@ -629,7 +629,7 @@ aggregation_func LBRACE ID aggregation_extra_id RBRACE {
   CONTEXT->a_types[S_TOP] = A_NO;
 } 
 | aggregation_func LBRACE SSS RBRACE {
-  // TODO
+  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, $3, CONTEXT->a_types[S_TOP], 0);
 }
 ;
 

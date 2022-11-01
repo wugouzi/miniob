@@ -444,6 +444,29 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
     pretables.push_back(pre);
   }
 
+  if(pretables.empty()){
+    auto query_fields = select_stmt->query_fields();
+    int ok = 1;
+    if (!query_fields.empty()) {
+      for (auto &field : query_fields) {
+        if(field.aggr_type() == AggreType::A_LENGTH){
+          // OK
+        }else{
+          ok = 0;
+        }
+      }
+    } else {
+      ok = 0;
+    }
+    if (ok) {
+      Pretable* pre = new Pretable;
+      // pre->group_num = 1;
+      // pre->groups_.push_back(TupleSet);
+      pre->init(db, nullptr, nullptr);
+      pretables.push_back(pre);
+    }
+  }
+
   // no relevant field or something
   if (pretables.empty()) {
     LOG_ERROR("No table or No relevant condition");
@@ -1370,6 +1393,9 @@ Pretable& Pretable::operator=(Pretable&& t)
 
 RC Pretable::init(Db *db, Table *table, FilterStmt *old_filter)
 {
+  if(table == nullptr){
+    return RC::SUCCESS;
+  }
   // TODO: check how to use index scan
   FilterStmt *filter = get_sub_filter(table, old_filter);
   tables_.push_back(table);
@@ -1524,6 +1550,32 @@ RC Pretable::aggregate_min(int idx, TupleCell *res, int group_id)
     res->set_type(meta->type());
     memcpy(data, tmp->data(), len-1);
   }
+  res->set_data(data);
+  return RC::SUCCESS;
+}
+
+RC Pretable::aggregate_length(int idx, TupleCell *res, int group_id)
+{
+  LOG_INFO("aggregate length");
+  std::vector<TupleSet> &group = groups_[group_id];
+  int ans = 0;
+  size_t len = sizeof(int) + 1;
+  char *data = new char[len];
+  memset(data, 0, len);
+  if (idx == -1) {
+    return RC::INTERNAL;
+  } else {
+    for (TupleSet &tuple : group) {
+      const TupleCell &cell = tuple.get_cell(idx);
+      if (cell.attr_type() != NULLS) {
+        ans++;
+      }
+    }
+  }
+
+  memcpy(data, &ans, sizeof(int));
+  res->set_type(INTS);
+  res->set_length(len);
   res->set_data(data);
   return RC::SUCCESS;
 }
@@ -1755,9 +1807,20 @@ RC Pretable::aggregate(std::vector<Field> fields)
         cell = group[0].get_cell(idx);
       } else if (idx == -1 && field.aggr_type() != AggreType::A_COUNT) {
         LOG_INFO("log i don't know");
-        cell.set_type(AttrType::CHARS);
-        cell.set_length(strlen(field.metac()->name()) + 2);
-        cell.set_data(field.metac()->name());
+        switch (field.aggr_type()) {
+          case A_LENGTH:{
+            cell.set_type(AttrType::INTS);
+            cell.set_length(strlen(field.metac()->name()) + 2);
+            cell.set_data(233);
+          }
+          case A_FAILURE:
+            return RC::SCHEMA_FIELD_REDUNDAN;
+          default: {
+            cell.set_type(AttrType::CHARS);
+            cell.set_length(strlen(field.metac()->name()) + 2);
+            cell.set_data(field.metac()->name());
+          }
+        }
       }  else {
         switch (field.aggr_type()) {
           case A_MAX:
