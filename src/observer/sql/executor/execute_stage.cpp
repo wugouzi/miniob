@@ -2002,6 +2002,8 @@ std::string aggr_to_string(AggreType type) {
       return "count";
     case A_SUM:
       return "sum";
+    case A_LENGTH:
+      return "length";
     default:
       return "";
   }

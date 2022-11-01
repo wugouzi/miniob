@@ -164,6 +164,9 @@ ParserContext *get_context(yyscan_t scanner)
         COUNT
         AVG
         SUM
+        LENGTH
+        ROUND
+        DATE_FORMAT
         NULLABLE
         NULL_V
         NOT
@@ -503,6 +506,10 @@ select_stmt select_attr FROM rel_name rel_list where groupby having order {
   selects_append_having_conditions(&CONTEXT->ssql->selects[S_TOP], CONTEXT->having_conditions[S_TOP], CONTEXT->having_condition_lengths[S_TOP], CONTEXT->is_or[S_TOP]);
   CONTEXT->ptr--;
 }
+| select_stmt select_attr {
+  selects_append_conditions(&CONTEXT->ssql->selects[S_TOP], CONTEXT->conditions[S_TOP], CONTEXT->condition_lengths[S_TOP], CONTEXT->is_or[S_TOP]);
+}
+;
 
 select:				/*  select 语句的语法解析树*/
 select_ SEMICOLON
@@ -620,6 +627,9 @@ aggregation_func LBRACE ID aggregation_extra_id RBRACE {
   aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, buf, CONTEXT->a_types[S_TOP], 1);
   // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
   CONTEXT->a_types[S_TOP] = A_NO;
+} 
+| aggregation_func LBRACE SSS RBRACE {
+  // TODO
 }
 ;
 
@@ -638,6 +648,9 @@ MAX {
 }
 | SUM {
   CONTEXT->a_types[S_TOP] = A_SUM;
+}
+| LENGTH {
+  CONTEXT->a_types[S_TOP] = A_LENGTH;
 }
 ;
 

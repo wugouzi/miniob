@@ -44,6 +44,7 @@ QUOTE            [\'\"]
 {DOT}                                                RETURN_TOKEN(DOT);
 "*"                                                  RETURN_TOKEN(STAR);
 {QUOTE}[0-9][0-9]?[0-9]?[0-9]?\-([0-9]?[0-9])\-([0-9]?[0-9]){QUOTE} yylval->string=strdup(yytext); RETURN_TOKEN(DATE_STR);  // 使用正则表达式过滤DATE。需要在yacc文件中增加
+[Dd][Aa][Tt][Ee]_[Ff][Oo][Rr][Mm][Tt]                RETURN_TOKEN(DATE_FORMAT);
 [Dd][Aa][Tt][Ee]                                     RETURN_TOKEN(DATE_T);
 [Mm][Aa][Xx]                                         RETURN_TOKEN(MAX);
 [Cc][Oo][Uu][Nn][Tt]                                 RETURN_TOKEN(COUNT);
@@ -98,6 +99,8 @@ QUOTE            [\'\"]
 [Ii][Nn][Ff][Ii][Ll][Ee]                             RETURN_TOKEN(INFILE);
 [Aa][Ss][Cc]                                         RETURN_TOKEN(ASC);
 [Aa][Ss]                                             RETURN_TOKEN(AS);
+[Ll][Ee][Nn][Gg][Tt][Hh]                             RETURN_TOKEN(LENGTH);
+[Rr][Oo][Uu][Nn][Dd]                                 RETURN_TOKEN(ROUND);
 {QUOTE}[ \40\42A-Za-z0-9_/\.\-\%]*{QUOTE}            yylval->string=strdup(yytext); RETURN_TOKEN(SSS);
 {ID}                                                 yylval->string=strdup(yytext); RETURN_TOKEN(ID);
 "("                                                  RETURN_TOKEN(LBRACE);

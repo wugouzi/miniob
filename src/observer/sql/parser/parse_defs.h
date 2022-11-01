@@ -31,7 +31,8 @@ typedef enum
   A_AVG,
   A_COUNT,
   A_FAILURE,
-  A_SUM
+  A_SUM,
+  A_LENGTH
 } AggreType;
 
 

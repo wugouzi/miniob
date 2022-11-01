@@ -286,7 +286,6 @@ void selects_append_conditions(Selects *selects, Condition conditions[], size_t 
 {
   assert(condition_num <= sizeof(selects->conditions) / sizeof(selects->conditions[0]));
   // printf("append conditions to %s, num %zu, ", selects->relations[0].relation_name, condition_num);
-  printf("is_or=%d\n", is_or);
   for (size_t i = 0; i < condition_num; i++) {
     printf("op: %d", conditions[i].comp);
     selects->conditions[i] = conditions[i];

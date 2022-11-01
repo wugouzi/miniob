@@ -2459,3 +2459,12 @@ INSERT INTO t3 VALUES (3, 6, 16.5);
 INSERT INTO t3 VALUES (5, 5, 14.6);
 
 select * from t1 t1 where id in (select t1.id from t2 t1 where t1.id=1 or t1.id=2);
+
+-- wudengke 测试function用
+
+CREATE TABLE t1(id INT, col1 char, feat1 date);
+
+insert INTO t1 values(1, 'test', '2021-01-02');
+
+select length('this is a string') as len;
+select length(col1) from t1;

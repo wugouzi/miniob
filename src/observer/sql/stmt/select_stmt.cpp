@@ -297,6 +297,10 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
     if (relation_attr.type == AggreType::A_FAILURE) {
       return RC::SCHEMA_FIELD_NAME_ILLEGAL;
     }
+    if(!relation_attr.relation_name){
+      // 表示这是一个没有from的select语句!
+      continue;
+    }
 
     if (common::is_blank(relation_attr.relation_name) && 0 == strcmp(relation_attr.attribute_name, "*")) {
       if (relation_attr.type == A_NO && relation_attr.alias != nullptr) {
@@ -319,7 +323,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
         field.set_alias(relation_attr.alias);
         query_fields.push_back(field);
       }
-    } else if (!common::is_blank(relation_attr.relation_name)) { // TODO
+    } else if (!common::is_blank(relation_attr.relation_name)) {
       const char *table_name = relation_attr.relation_name;
       const char *field_name = relation_attr.attribute_name;
       // TODO: WTF
