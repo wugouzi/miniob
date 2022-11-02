@@ -464,6 +464,7 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
       auto tuple_set = TupleSet();
       auto tuple_cell = new TupleCell();
       // TODO wudengke 填入正确的参数/参数类型
+      // TODO fix 这里报错的问题
       tuple_cell->set_data("test");
       tuple_cell->set_length(233);
       tuple_cell->set_type(AttrType::CHARS);
