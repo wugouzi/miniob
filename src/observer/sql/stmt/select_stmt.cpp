@@ -384,10 +384,14 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
         FieldMeta* meta = new FieldMeta;
         meta->init(relation_attr.attribute_name, CHARS, 0, sizeof(relation_attr.attribute_name) + 2, true, false);
         Field field(nullptr, meta);
-        // field.set_table(tables[0]);
+        auto temp_table = new Table;
+        auto table_meta = new TableMeta;
+        table_meta->set_name("__internal_table__");
+        temp_table->set_table_meta(table_meta);
+        field.set_table(temp_table);
         field.set_aggr(relation_attr.type);
         field.set_alias(relation_attr.alias);
-        // field.set_aggr_str(relation_attr.attribute_name);
+        field.set_aggr_str(relation_attr.attribute_name);
         query_fields.push_back(field);
         continue;
       }
@@ -515,6 +519,18 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
     LOG_WARN("cannot handle order by clause");
     return rc;
   }
+
+  // adjust aggr num and mark field as length
+  auto adjust_aggr_num = [&] {
+    for (auto& f : query_fields) {
+      if(f.fix_aggr_map()){
+        // 减掉多余的aggr_num
+        select_sql->aggregate_num--;
+      }
+    }
+  };
+
+  adjust_aggr_num();
 
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();

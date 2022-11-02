@@ -449,7 +449,7 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
     int ok = 1;
     if (!query_fields.empty()) {
       for (auto &field : query_fields) {
-        if(field.aggr_type() == AggreType::A_LENGTH){
+        if(field.map_func_type_ == MapFuncType::M_LENGTH){
           // OK
         }else{
           ok = 0;
@@ -460,9 +460,15 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
     }
     if (ok) {
       Pretable* pre = new Pretable;
-      // pre->group_num = 1;
-      // pre->groups_.push_back(TupleSet);
       pre->init(db, nullptr, nullptr);
+      auto tuple_set = TupleSet();
+      auto tuple_cell = new TupleCell();
+      // TODO wudengke 填入正确的参数/参数类型
+      tuple_cell->set_data("test");
+      tuple_cell->set_length(233);
+      tuple_cell->set_type(AttrType::CHARS);
+      tuple_set.push(*tuple_cell);
+      pre->groups_.push_back({tuple_set});
       pretables.push_back(pre);
     }
   }
@@ -1807,20 +1813,9 @@ RC Pretable::aggregate(std::vector<Field> fields)
         cell = group[0].get_cell(idx);
       } else if (idx == -1 && field.aggr_type() != AggreType::A_COUNT) {
         LOG_INFO("log i don't know");
-        switch (field.aggr_type()) {
-          case A_LENGTH:{
-            cell.set_type(AttrType::INTS);
-            cell.set_length(strlen(field.metac()->name()) + 2);
-            cell.set_data(233);
-          }
-          case A_FAILURE:
-            return RC::SCHEMA_FIELD_REDUNDAN;
-          default: {
-            cell.set_type(AttrType::CHARS);
-            cell.set_length(strlen(field.metac()->name()) + 2);
-            cell.set_data(field.metac()->name());
-          }
-        }
+        cell.set_type(AttrType::CHARS);
+        cell.set_length(strlen(field.metac()->name()) + 2);
+        cell.set_data(field.metac()->name());
       }  else {
         switch (field.aggr_type()) {
           case A_MAX:
@@ -1981,7 +1976,6 @@ CompositeConditionFilter *Pretable::make_cond_filter(std::vector<FilterUnit*> &u
   return ans;
 }
 
-// TODO wudengke add context
 RC Pretable::join(Pretable *pre2, FilterStmt *filter)
 {
   std::vector<FilterUnit*> units;

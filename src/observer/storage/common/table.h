@@ -91,6 +91,8 @@ public:
 
   const TableMeta &table_meta() const;
 
+  void set_table_meta(TableMeta* meta) { table_meta_ = *meta; }
+
   RC sync();
 
 public:

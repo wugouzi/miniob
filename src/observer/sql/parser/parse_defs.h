@@ -23,6 +23,8 @@ See the Mulan PSL v2 for more details. */
 #define MAX_ERROR_MESSAGE 20
 #define MAX_DATA 50
 
+typedef enum { M_ID, M_LENGTH, M_ROUND, M_DATE_FORMAT  } MapFuncType;
+
 typedef enum
 {
   A_NO,

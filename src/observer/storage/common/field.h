@@ -49,6 +49,17 @@ public:
 
   bool has_table() const { return table_ != nullptr; }
 
+  MapFuncType map_func_type_ = MapFuncType::M_ID;
+
+  bool fix_aggr_map(){
+    if(aggr_type_ == AggreType::A_LENGTH){
+      map_func_type_ = MapFuncType::M_LENGTH;
+      aggr_type_ = AggreType::A_NO;
+      return true;
+    }
+    return false;
+  }
+
   void set_aggr(AggreType type) {
     aggr_type_ = type;
     // const_cast<FieldMeta *>(field_)->set_aggr_type(type);
