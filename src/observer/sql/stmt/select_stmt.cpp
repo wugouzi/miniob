@@ -393,39 +393,43 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
         field.set_alias(relation_attr.alias);
         field.set_aggr_str(relation_attr.attribute_name);
         query_fields.push_back(field);
-        continue;
-      }
-      if (tables.size() != 1) {
-        LOG_WARN("invalid. I do not know the attr's table. attr=%s", relation_attr.attribute_name);
-        return RC::SCHEMA_FIELD_MISSING;
-      }
-
-      Table *table = tables[0];
-      const FieldMeta *field_meta = table->table_meta().field(relation_attr.attribute_name);
-      if (nullptr == field_meta && !relation_attr.print_attr) {
-        LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), relation_attr.attribute_name);
-        return RC::SCHEMA_FIELD_MISSING;
-      }
-
-      if (relation_attr.print_attr) {
-        FieldMeta *meta = new FieldMeta;
-        meta->init(relation_attr.attribute_name, CHARS, 0, sizeof(relation_attr.attribute_name) + 2, true, false);
-        Field field(table, meta);
-        // field.set_table(tables[0]);
-        field.set_aggr(relation_attr.type);
-        field.set_alias(relation_attr.alias);
-        // field.set_aggr_str(relation_attr.attribute_name);
-        query_fields.push_back(field);
-      } else {
-        Field field(table, field_meta->copy());
-        if (relation_attr.type != A_NO) {
-          field.set_aggr(relation_attr.type);
-          if (relation_attr.type == A_AVG) {
-            field.meta()->set_type(FLOATS);
-          }
+      }else{
+        if (tables.size() != 1) {
+          LOG_WARN("invalid. I do not know the attr's table. attr=%s",
+                   relation_attr.attribute_name);
+          return RC::SCHEMA_FIELD_MISSING;
         }
-        field.set_alias(relation_attr.alias);
-        query_fields.push_back(field);
+
+        Table* table = tables[0];
+        const FieldMeta* field_meta =
+            table->table_meta().field(relation_attr.attribute_name);
+        if (nullptr == field_meta && !relation_attr.print_attr) {
+          LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(),
+                   relation_attr.attribute_name);
+          return RC::SCHEMA_FIELD_MISSING;
+        }
+
+        if (relation_attr.print_attr) {
+          FieldMeta* meta = new FieldMeta;
+          meta->init(relation_attr.attribute_name, CHARS, 0,
+                     sizeof(relation_attr.attribute_name) + 2, true, false);
+          Field field(table, meta);
+          // field.set_table(tables[0]);
+          field.set_aggr(relation_attr.type);
+          field.set_alias(relation_attr.alias);
+          // field.set_aggr_str(relation_attr.attribute_name);
+          query_fields.push_back(field);
+        } else {
+          Field field(table, field_meta->copy());
+          if (relation_attr.type != A_NO) {
+            field.set_aggr(relation_attr.type);
+            if (relation_attr.type == A_AVG) {
+              field.meta()->set_type(FLOATS);
+            }
+          }
+          field.set_alias(relation_attr.alias);
+          query_fields.push_back(field);
+        }
       }
     }
     if (i < select_sql->attr_num) {
