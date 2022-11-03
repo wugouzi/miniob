@@ -462,13 +462,12 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
       Pretable* pre = new Pretable;
       pre->init(db, nullptr, nullptr);
       auto tuple_set = TupleSet();
-      auto tuple_cell = new TupleCell();
+      auto tuple_cell = TupleCell();
       // TODO wudengke 填入正确的参数/参数类型
-      // TODO fix 这里报错的问题
-      tuple_cell->set_data("test");
-      tuple_cell->set_length(233);
-      tuple_cell->set_type(AttrType::CHARS);
-      tuple_set.push(*tuple_cell);
+      tuple_cell.set_data("test");
+      tuple_cell.set_length(5);
+      tuple_cell.set_type(AttrType::CHARS);
+      tuple_set.push(tuple_cell);
       pre->groups_.push_back({tuple_set});
       pretables.push_back(pre);
     }
