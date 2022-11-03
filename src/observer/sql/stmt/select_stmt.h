@@ -64,8 +64,8 @@ public:
   // void add_parent_tables(std::unordered_set<Table *> tables) { parent_tables_ = tables; }
   // std::unordered_set<Table *> parent_tables() { return parent_tables_; }
 
-private:
   std::vector<Field> query_fields_;
+private:
   std::vector<Field> groupby_fields_;
   // std::vector<Field> having_fields_;
   Condition *having_conditions_;

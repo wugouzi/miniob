@@ -15,11 +15,10 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include <iostream>
+#include <cstring>
 #include "sql/parser/parse_defs.h"
 #include "storage/common/table.h"
 #include "storage/common/field_meta.h"
-
-
 
 class TupleCell
 {
@@ -37,6 +36,40 @@ public:
   void set_length(int length) { this->length_ = length; }
   void set_data(char *data) { this->data_ = data; }
   void set_data(const char *data) { this->set_data(const_cast<char *>(data)); }
+
+  RC apply_func(MapFuncType func) {
+    switch (func) {
+      case MapFuncType::M_ID:
+        break;
+      case MapFuncType::M_LENGTH: {
+        if(attr_type_ == AttrType::CHARS){
+          auto data = new char[5];
+          auto len = strlen(data_);
+          memcpy(data, &len, sizeof(int));
+          set_data(data);
+          set_type(AttrType::INTS);
+          set_length(5);
+        } else {
+          return RC::INTERNAL;
+        }
+        break;
+      }
+      default: {
+        return RC::INTERNAL;
+      }
+    }
+    return RC::SUCCESS;
+  }
+
+  TupleCell copy() {
+    auto res = TupleCell();
+    auto new_data = new char[length_];
+    memcpy(new_data, data_, length_);
+    res.set_data(new_data);
+    res.set_length(length_);
+    res.set_type(attr_type_);
+    return res;
+  }
 
   void to_string(std::ostream &os) const;
 

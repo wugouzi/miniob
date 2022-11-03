@@ -30,12 +30,14 @@ public:
   const FieldMeta *metac() const { return field_; }
   FieldMeta meta_copy() const { return *field_; }
 
+  void set_attr_type(AttrType typ) { this->meta()->set_type(typ); }
+
   AttrType attr_type() const
   {
     return field_->type();
   }
 
-  const char *table_name() const { return table_->name(); }
+  const char* table_name() const { return table_ ? table_->name() : ""; }
   const char *field_name() const { return field_->name(); }
 
   void set_table(const Table *table)

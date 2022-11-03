@@ -107,6 +107,7 @@ class TupleSet {
 
   void push(const TupleCell &cell); // only for in values
   TupleCell &get_cell(int idx);
+  void set_cell(int idx, TupleCell cell);
 
   const std::string& data() const { return data_; }
 
@@ -191,6 +192,21 @@ class Pretable {
   int tuple_num() const;
   void groupby(const std::vector<Field> groupby_fields);
   void having(Condition *having_conditions, int having_condition_num);
+  void apply_func() {
+    for (auto i = 0; i < fields_.size();i++) {
+      auto& f = fields_[i];
+      auto meta = f.meta()->copy();
+      for (auto& group : groups_) {
+        for (auto& r : group) {
+          auto value = r.get_cell(i).copy();
+          value.apply_func(f.map_func_type_);
+          meta->set_type(value.attr_type());
+          r.set_cell(i,value);
+        }
+      }
+      f.set_field(meta);
+    }
+  }
   bool only_one_cell() const {
     return groups_.size() == 1
         && groups_[0].size() == 1

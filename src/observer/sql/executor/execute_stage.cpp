@@ -461,14 +461,21 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
     if (ok) {
       Pretable* pre = new Pretable;
       pre->init(db, nullptr, nullptr);
-      auto tuple_set = TupleSet();
-      auto tuple_cell = TupleCell();
-      // TODO wudengke 填入正确的参数/参数类型
-      tuple_cell.set_data("test");
-      tuple_cell.set_length(5);
-      tuple_cell.set_type(AttrType::CHARS);
-      tuple_set.push(tuple_cell);
-      pre->groups_.push_back({tuple_set});
+      // auto field_meta = new FieldMeta();
+      // field_meta->init("hahaname", AttrType::CHARS, 0, 10, true, false);
+      // auto field = new Field();
+      // field->set_field(field_meta);
+      for(auto &f: select_stmt->query_fields_){
+        auto tuple_set = TupleSet();
+        auto tuple_cell = TupleCell();
+        // TODO wudengke 填入正确的参数/参数类型
+        tuple_cell.set_data(f.aggr_str().c_str());
+        tuple_cell.set_length(f.aggr_str().size()+1);
+        tuple_cell.set_type(AttrType::CHARS);
+        tuple_set.push(tuple_cell);
+        pre->groups_.push_back({tuple_set});
+        pre->fields_.push_back(f);
+      }
       pretables.push_back(pre);
     }
   }
@@ -508,6 +515,7 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
     res->having(select_stmt->having_conditions(), select_stmt->having_condition_num());
   } else {
     // order by fields, if necessary
+    res->apply_func();
     res->order_by(select_stmt->order_by_fields());
     res->filter_fields(select_stmt->query_fields());
   }
@@ -538,6 +546,7 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
   }
   std::stringstream ss;
 
+  // TODO wudengke 因为query_fields仍然没有被修改，所以仍然输出的是没有经过func map的数据。需要对query_field也进行修改
   print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1, select_stmt->query_num());
   res->print(ss, select_stmt->query_num());
 
@@ -1222,6 +1231,10 @@ void TupleSet::push(const TupleCell &cell)
 TupleCell &TupleSet::get_cell(int idx)
 {
   return cells_[idx];
+}
+
+void TupleSet::set_cell(int idx, TupleCell cell){
+  cells_[idx] = cell;
 }
 
 // const Field &TupleSet::get_field(int idx)
