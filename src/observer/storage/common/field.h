@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include <string>
+#include <defs.h>
 #include "storage/common/table.h"
 #include "storage/common/field_meta.h"
 
@@ -52,14 +53,31 @@ public:
   bool has_table() const { return table_ != nullptr; }
 
   MapFuncType map_func_type_ = MapFuncType::M_ID;
+  char* func_args = nullptr;
+  // 不包括第一个参数的argc
+  int func_argc = 0;
+
+  // 临时hack，只会有至多一个参数
+  std::vector<char*> get_func_args() {
+    std::vector<char *> res;
+    if(func_argc){
+      res.push_back(func_args);
+    }
+    return res;
+  }
 
   bool fix_aggr_map(){
     if(aggr_type_ == AggreType::A_LENGTH){
       map_func_type_ = MapFuncType::M_LENGTH;
-      aggr_type_ = AggreType::A_NO;
-      return true;
+    }else if(aggr_type_ == AggreType::A_ROUND){
+      map_func_type_ = MapFuncType::M_ROUND;
+    }else if(aggr_type_ == AggreType::A_DATE_FORMAT){
+      map_func_type_ = MapFuncType::M_DATE_FORMAT;
+    }else{
+      return false;
     }
-    return false;
+    aggr_type_ = AggreType::A_NO;
+    return true;
   }
 
   void set_aggr(AggreType type) {

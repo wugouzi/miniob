@@ -12,9 +12,11 @@ See the Mulan PSL v2 for more details. */
 // Created by wangyunlai on 2022/9/28
 //
 
-#include <string.h>
-#include <vector>
 #include "util/util.h"
+#include <string.h>
+#include <iomanip>
+#include <sstream>
+#include <vector>
 
 std::string double2string(double v)
 {
@@ -77,4 +79,12 @@ bool string_like(const char *s1, const char *s2)
     }
   }
   return dp[n][m];
+}
+
+std::string custom_round(double val, int digit){
+  std::stringstream tmp;
+  tmp << std::setprecision(digit) << std::fixed << val;
+  std::string res;
+  tmp >> res;
+  return res;
 }

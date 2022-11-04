@@ -417,6 +417,10 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
           // field.set_table(tables[0]);
           field.set_aggr(relation_attr.type);
           field.set_alias(relation_attr.alias);
+          // append func args
+          field.func_argc = relation_attr.argc;
+          field.func_args = relation_attr.args[0];
+          // TODO set col name 
           // field.set_aggr_str(relation_attr.attribute_name);
           query_fields.push_back(field);
         } else {
@@ -428,6 +432,9 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
             }
           }
           field.set_alias(relation_attr.alias);
+          // append func args
+          field.func_argc = relation_attr.argc;
+          field.func_args = relation_attr.args[0];
           query_fields.push_back(field);
         }
       }

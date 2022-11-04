@@ -16,9 +16,12 @@ See the Mulan PSL v2 for more details. */
 
 #include <iostream>
 #include <cstring>
+#include <util/util.h>
+#include <common/log/log.h>
 #include "sql/parser/parse_defs.h"
 #include "storage/common/table.h"
 #include "storage/common/field_meta.h"
+
 
 class TupleCell
 {
@@ -37,7 +40,7 @@ public:
   void set_data(char *data) { this->data_ = data; }
   void set_data(const char *data) { this->set_data(const_cast<char *>(data)); }
 
-  RC apply_func(MapFuncType func) {
+  RC apply_func(MapFuncType func, std::vector<char *> extra_args) {
     switch (func) {
       case MapFuncType::M_ID:
         break;
@@ -53,6 +56,22 @@ public:
           return RC::INTERNAL;
         }
         break;
+      }
+      case MapFuncType::M_ROUND: {
+        if(attr_type_ == AttrType::FLOATS){
+          int digit = 0;
+          if (extra_args.size()) {
+            auto arg1 = extra_args[0];
+            digit = static_cast<int>((long long)arg1);
+          }
+          auto res = custom_round(*reinterpret_cast<float*>(data_), digit);
+          auto data = strdup(res.c_str());
+          set_data(data);
+          set_type(AttrType::CHARS);
+          set_length(res.size()+1);
+        }else{
+          return RC::INTERNAL;
+        }
       }
       default: {
         return RC::INTERNAL;

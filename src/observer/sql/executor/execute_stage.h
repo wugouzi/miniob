@@ -192,16 +192,21 @@ class Pretable {
   int tuple_num() const;
   void groupby(const std::vector<Field> groupby_fields);
   void having(Condition *having_conditions, int having_condition_num);
-  void apply_func() {
-    for (auto i = 0; i < fields_.size();i++) {
-      auto& f = fields_[i];
+  void apply_func(std::vector<Field> query_field) {
+    for (auto i = 0; i < query_field.size();i++) {
+      auto& f = query_field[i];
       auto meta = f.meta()->copy();
+      auto index = this->index(f);
+      if(index == -1){
+        LOG_ERROR("ji le!!!\n");
+        continue;
+      }
       for (auto& group : groups_) {
         for (auto& r : group) {
-          auto value = r.get_cell(i).copy();
-          value.apply_func(f.map_func_type_);
+          auto value = r.get_cell(index).copy();
+          value.apply_func(f.map_func_type_, f.get_func_args());
           meta->set_type(value.attr_type());
-          r.set_cell(i,value);
+          r.set_cell(index,value);
         }
       }
       f.set_field(meta);

@@ -43,6 +43,15 @@ void relation_init(Relation *relation, const char *relation_name, const char *al
   relation->alias = strdup(alias);
 }
 
+void func_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type, int is_digit, int argc, char *single_arg)
+{
+  aggregation_attr_init(relation_attr, relation_name, attribute_name, type,
+                        is_digit);
+  relation_attr->argc = argc;
+  // HACK 只支持一个额外参数
+  relation_attr->args[0] = single_arg;
+}
+
 void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type, int is_digit)
 {
   if (relation_name != nullptr) {

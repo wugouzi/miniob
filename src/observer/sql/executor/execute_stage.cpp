@@ -515,7 +515,7 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
     res->having(select_stmt->having_conditions(), select_stmt->having_condition_num());
   } else {
     // order by fields, if necessary
-    res->apply_func();
+    res->apply_func(select_stmt->query_fields());
     res->order_by(select_stmt->order_by_fields());
     res->filter_fields(select_stmt->query_fields());
   }

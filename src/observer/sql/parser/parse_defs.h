@@ -23,6 +23,7 @@ See the Mulan PSL v2 for more details. */
 #define MAX_ERROR_MESSAGE 20
 #define MAX_DATA 50
 
+
 typedef enum { M_ID, M_LENGTH, M_ROUND, M_DATE_FORMAT  } MapFuncType;
 
 typedef enum
@@ -34,7 +35,9 @@ typedef enum
   A_COUNT,
   A_FAILURE,
   A_SUM,
-  A_LENGTH
+  A_LENGTH,
+  A_ROUND,
+  A_DATE_FORMAT
 } AggreType;
 
 
@@ -45,7 +48,13 @@ typedef struct {
   AggreType type;
   int print_attr;
   char *alias;
+  char *args[MAX_NUM];
+  int argc;
 } RelAttr;
+
+typedef struct {
+  char* date_format_pattern;
+} FuncParameters;
 
 typedef enum {
   EQUAL_TO,     //"="     0
@@ -264,6 +273,9 @@ void relation_init(Relation *relation, const char *relation_name, const char *al
 void relation_attr_destroy(RelAttr *relation_attr);
 
 void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type, int is_digit);
+
+
+void func_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type, int is_digit, int argc, char *arg);
 
 void value_init_integer(Value *value, int v);
 void value_init_null(Value *value);

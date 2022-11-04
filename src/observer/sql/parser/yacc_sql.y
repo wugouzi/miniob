@@ -61,6 +61,10 @@ typedef struct ParserContext {
   int in_having;
 
   int is_or[MAX_NUM];
+
+  // 为了func增加的单个参数，写得很死！
+  char* args[MAX_NUM];
+  char* argc[MAX_NUM];
 } ParserContext;
 
 //获取子串
@@ -89,6 +93,8 @@ void yyerror(yyscan_t scanner, const char *str)
   memset(context->having_condition_lengths, 0, sizeof(context->having_condition_lengths));
   memset(context->a_types, 0, sizeof(context->a_types));
   memset(context->aggr_attr_lens, 0, sizeof(context->aggr_attr_lens));
+  memset(context->args, 0, sizeof(context->args));
+  memset(context->argc, 0, sizeof(context->argc));
   context->ssql->sstr.insertion.valuelist_num = 0;
   context->selects_num = 0;
 
@@ -501,7 +507,7 @@ SELECT {
 
 select_:
 select_stmt select_attr FROM rel_name rel_list where groupby having order {
-  // printf("SELECT: num: %d, ptr: %d pop, table: %s, cond num: %d\n", S_TOP, CONTEXT->ptr, CONTEXT->ssql->selects[S_TOP].relations[0], CONTEXT->condition_lengths[S_TOP]);
+  printf("SELECT: num: %d, ptr: %d pop, table: %s, cond num: %d\n", S_TOP, CONTEXT->ptr, CONTEXT->ssql->selects[S_TOP].relations[0], CONTEXT->condition_lengths[S_TOP]);
   selects_append_conditions(&CONTEXT->ssql->selects[S_TOP], CONTEXT->conditions[S_TOP], CONTEXT->condition_lengths[S_TOP], CONTEXT->is_or[S_TOP]);
   selects_append_having_conditions(&CONTEXT->ssql->selects[S_TOP], CONTEXT->having_conditions[S_TOP], CONTEXT->having_condition_lengths[S_TOP], CONTEXT->is_or[S_TOP]);
   CONTEXT->ptr--;
@@ -584,6 +590,9 @@ STAR alias attr_list {
 | aggregation_attr alias attr_list {
   selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
+| func_attr alias attr_list {
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
+}
 ;
 
 aggregation_attr:
@@ -628,10 +637,14 @@ aggregation_func LBRACE ID aggregation_extra_id RBRACE {
   // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
   CONTEXT->a_types[S_TOP] = A_NO;
 } 
-| aggregation_func LBRACE SSS RBRACE {
-  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, $3, CONTEXT->a_types[S_TOP], 0);
-}
 ;
+/* | aggregation_func LBRACE SSS RBRACE {
+  char s[1000];
+  memset(s, 0, sizeof(s));
+  sprintf(s,"length(%s)", $3);
+  CONTEXT->a_types[S_TOP] = A_LENGTH;
+  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, $3, CONTEXT->a_types[S_TOP], 0);
+} */
 
 aggregation_func:
 MAX {
@@ -648,11 +661,84 @@ MAX {
 }
 | SUM {
   CONTEXT->a_types[S_TOP] = A_SUM;
-}
-| LENGTH {
+} 
+;
+
+non_aggregation_func:
+LENGTH {
   CONTEXT->a_types[S_TOP] = A_LENGTH;
+} 
+| ROUND {
+  CONTEXT->a_types[S_TOP] = A_ROUND;
+} 
+| DATE_FORMAT {
+  CONTEXT->a_types[S_TOP] = A_DATE_FORMAT;
 }
 ;
+
+func_attr: 
+non_aggregation_func LBRACE ID func_extra_args RBRACE {
+  func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, $3, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  CONTEXT->a_types[S_TOP] = A_NO;
+}
+| non_aggregation_func LBRACE ID DOT ID func_extra_args RBRACE {
+  func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], $3, $5, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
+  CONTEXT->a_types[S_TOP] = A_NO;
+}
+| non_aggregation_func LBRACE RBRACE {
+  func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, "fail", A_FAILURE, 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
+  CONTEXT->a_types[S_TOP] = A_NO;
+}
+| non_aggregation_func LBRACE STAR func_extra_args RBRACE {
+  func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, "*", CONTEXT->a_types[S_TOP] != A_COUNT ? A_FAILURE : CONTEXT->a_types[S_TOP], 1, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
+  CONTEXT->a_types[S_TOP] = A_NO;
+}
+| non_aggregation_func LBRACE NUMBER func_extra_args RBRACE {
+  char *str = malloc(10 * sizeof(char));
+  snprintf(str, 10, "%d", $3);
+  func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, str, CONTEXT->a_types[S_TOP], 1, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
+  CONTEXT->a_types[S_TOP] = A_NO;
+}
+| non_aggregation_func LBRACE FLOAT func_extra_args RBRACE {
+  char *buf = malloc(20 * sizeof(char));
+  snprintf(buf, 20, "%.2f", $3);
+  size_t len = strlen(buf);
+  while (buf[len - 1] == '0') {
+    len--;
+  }
+  if (buf[len - 1] == '.') {
+    len--;
+  }
+  buf[len] = '\0';
+  func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, buf, CONTEXT->a_types[S_TOP], 1, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
+  CONTEXT->a_types[S_TOP] = A_NO;
+} 
+| non_aggregation_func LBRACE SSS RBRACE {
+  char s[1000];
+  memset(s, 0, sizeof(s));
+  sprintf(s,"length(%s)", $3);
+  CONTEXT->a_types[S_TOP] = A_LENGTH;
+  func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, $3, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+}
+;
+
+
+func_extra_args: 
+// empty
+| COMMA NUMBER aggregation_extra_id {
+  CONTEXT->args[S_TOP] = $2;
+  CONTEXT->argc[S_TOP]++;
+}
+| COMMA SSS aggregation_extra_id {
+  CONTEXT->args[S_TOP] = strdup($2);
+}
+;
+
 
 aggregation_extra_id:
 
@@ -693,6 +779,10 @@ attr_list:
 }
 | COMMA aggregation_attr alias attr_list {
   printf("append aggr\n");
+  selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
+}
+| COMMA func_attr alias attr_list {
+  printf("append map func aggr\n");
   selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &CONTEXT->aggr_attrs[S_TOP][--CONTEXT->aggr_attr_lens[S_TOP]], CONTEXT->alias[S_TOP][--CONTEXT->alias_lengths[S_TOP]]);
 }
 ;
