@@ -127,6 +127,7 @@ bool PredicateOperator::execute_filter_unit(const FilterUnit *filter_unit, RowTu
     } else {
       LOG_INFO("test2");
       left_expr->get_value(tuple, left_cell);
+      LOG_INFO("test3");
     }
 
     LOG_INFO("haha1");

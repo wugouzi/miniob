@@ -24,7 +24,7 @@ RC FieldExpr::get_value(const Tuple &tuple, TupleCell &cell) const
   if(rc!=RC::SUCCESS){
     return rc;
   }
-  cell.apply_func(map_func_obj);
+  return cell.apply_func(map_func_obj);
 }
 
 RC ValueExpr::get_value(const Tuple &tuple, TupleCell & cell) const
