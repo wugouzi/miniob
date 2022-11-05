@@ -2479,6 +2479,9 @@ select date_format(feat1, '%Y-%m-%d') from t1;
 -- where examples
 select length(col1) from t1 where length(col1)>=8;
 
+-- failed
+select id, length(col1) from t1 where id>2;
+
 CREATE TABLE SELECT_TABLES_1(ID INT, AGE INT, U_NAME CHAR);
 CREATE TABLE SELECT_TABLES_2(ID INT, AGE INT, U_NAME CHAR);
 CREATE TABLE SELECT_TABLES_3(ID INT, RES INT, U_NAME CHAR);

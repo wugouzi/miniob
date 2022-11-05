@@ -480,6 +480,18 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
     groupby_fields.push_back(Field(table, field_meta->copy()));
   }
 
+  // adjust aggr num and mark field as length
+  auto adjust_aggr_num = [&] {
+    for (auto& f : query_fields) {
+      if(f.fix_aggr_map()){
+        // 减掉多余的aggr_num
+        select_sql->aggregate_num--;
+      }
+    }
+  };
+
+  adjust_aggr_num();
+
   // check non-permit attr
   if (select_sql->aggregate_num > 0) {
     for (auto &field : query_fields) {
@@ -538,17 +550,6 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
     return rc;
   }
 
-  // adjust aggr num and mark field as length
-  auto adjust_aggr_num = [&] {
-    for (auto& f : query_fields) {
-      if(f.fix_aggr_map()){
-        // 减掉多余的aggr_num
-        select_sql->aggregate_num--;
-      }
-    }
-  };
-
-  adjust_aggr_num();
 
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
