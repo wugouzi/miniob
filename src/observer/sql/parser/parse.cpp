@@ -64,6 +64,9 @@ void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, co
   relation_attr->attribute_name = strdup(attribute_name);
   relation_attr->type = type;
   relation_attr->print_attr = is_digit;
+  relation_attr->argc = 0;
+  // HACK 只支持一个额外参数
+  relation_attr->args[0] = NULL;
 }
 
 void relation_attr_destroy(RelAttr *relation_attr)
