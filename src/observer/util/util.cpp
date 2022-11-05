@@ -124,6 +124,13 @@ std::string custom_date_format(char *date, char* pattern) {
   auto m = ((value % 10000) / 100);
   auto d = (value % 100);
   auto p = std::string(pattern);
+  // strip leading & tailing quotes
+  if (!p.empty() && p.back() == '\'') {
+    p.erase(p.end() - 1);
+  }
+  if (!p.empty() && p.front() == '\'') {
+    p.erase(0, 1);
+  }
   std::stringstream ss;
   tm t;
   strptime(date_to_string(value).c_str(), "%Y-%m-%\d", &t);
