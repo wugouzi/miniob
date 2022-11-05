@@ -35,6 +35,8 @@ void relation_attr_init(RelAttr *relation_attr, const char *relation_name, const
   relation_attr->type = A_NO;
   relation_attr->print_attr = false;
   relation_attr->alias = nullptr;
+  relation_attr->argc = 0;
+  memset(relation_attr->args, 0, sizeof(relation_attr->args));
 }
 
 void relation_init(Relation *relation, const char *relation_name, const char *alias)
