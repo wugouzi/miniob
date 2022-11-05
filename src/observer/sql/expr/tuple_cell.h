@@ -50,6 +50,7 @@ public:
   }
 
   RC apply_func(MapFuncType func, std::vector<char*> extra_args) {
+    LOG_WARN("cao");
     switch (func) {
       case MapFuncType::M_ID:
         break;
@@ -118,6 +119,7 @@ public:
         return RC::INTERNAL;
       }
     }
+    LOG_INFO("apply_func returning\n");
     return RC::SUCCESS;
   }
 
