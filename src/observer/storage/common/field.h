@@ -70,35 +70,38 @@ public:
   }
 
   RC evaluate_as_const_expression(TupleCell &cell) const {
-    if(this->map_func_type_ != MapFuncType::M_ID){
+    if (this->map_func_type_ != MapFuncType::M_ID) {
       auto arg1 = this->field_name();
-      if(this->map_func_type_ == MapFuncType::M_LENGTH){
+      if (this->map_func_type_ == MapFuncType::M_LENGTH) {
         if (arg1 && arg1[0] == '\'') {
           cell.set_data(arg1);
-          cell.set_length(strlen(arg1)+1);
+          cell.set_length(strlen(arg1) + 1);
           cell.set_type(AttrType::CHARS);
           auto t = TempMapFuncObject();
           t.argc = this->func_argc;
           t.arg = this->func_args;
           t.type = this->map_func_type_;
           cell.apply_func(t);
+          return RC::SUCCESS;
         }
-      }else if(this->map_func_type_ == MapFuncType::M_ROUND){
-        auto f = to_float(arg1);
-        auto data = new char[5];
-        memcpy(data, &f, sizeof(f));
-        cell.set_data(data);
-        cell.set_length(sizeof(float)+1);
-        cell.set_type(AttrType::FLOATS);
-        auto t = TempMapFuncObject();
-        t.argc = this->func_argc;
-        t.arg = this->func_args;
-        t.type = this->map_func_type_;
-        cell.apply_func(t);
-      } else if(this->map_func_type_ == MapFuncType::M_DATE_FORMAT){
-        return RC::INTERNAL;
+      } else if (this->map_func_type_ == MapFuncType::M_ROUND) {
+        if (arg1 && '0' <= arg1[0] && arg1[0] <= '9') {
+          auto f = to_float(arg1);
+          auto data = new char[5];
+          memcpy(data, &f, sizeof(f));
+          cell.set_data(data);
+          cell.set_length(sizeof(float) + 1);
+          cell.set_type(AttrType::FLOATS);
+          auto t = TempMapFuncObject();
+          t.argc = this->func_argc;
+          t.arg = this->func_args;
+          t.type = this->map_func_type_;
+          cell.apply_func(t);
+          return RC::SUCCESS;
+        }
+      } else if (this->map_func_type_ == MapFuncType::M_DATE_FORMAT) {
+        // no need to handle
       }
-      return RC::SUCCESS;
     }
     return RC::INTERNAL;
   }

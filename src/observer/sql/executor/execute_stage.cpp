@@ -2178,7 +2178,9 @@ void Pretable::filter_fields(const std::vector<Field> &fields) {
       for (auto i = 0; i < fields.size();i++){
         auto t = TupleCell();
         RC rc = fields[i].evaluate_as_const_expression(t);
-        tuple.set_cell(i, t);
+        if(rc == SUCCESS){
+          tuple.set_cell(i, t);
+        }
       }
     }
   }
