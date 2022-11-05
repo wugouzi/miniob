@@ -41,6 +41,7 @@ public:
   void set_data(const char *data) { this->set_data(const_cast<char *>(data)); }
 
   RC apply_func(TempMapFuncObject obj) {
+    LOG_WARN("apply_func tempmap %s", obj.print().c_str());
     std::vector<char*> args;
     if (obj.argc) {
       args.push_back(obj.arg);

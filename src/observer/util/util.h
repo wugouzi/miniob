@@ -15,6 +15,8 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include <string>
+#include <sstream>
+#include "common/log/log.h"
 #include <vector>
 #include "sql/parser/parse_defs.h"
 
@@ -34,7 +36,14 @@ class TempMapFuncObject {
    int argc = 0;
    char* arg = nullptr;
    MapFuncType type = MapFuncType::M_ID;
+   std::string print() {
+     std::stringstream ss;
+     ss << "argc=" << argc << ";" << "type=" << type << '\n';
+     return ss.str();
+   }
 };
+
+std::vector<char*> make_args(RelAttr& attr);
 
 std::vector<char*> make_args(RelAttr& attr);
 
