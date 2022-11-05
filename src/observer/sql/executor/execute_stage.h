@@ -99,6 +99,7 @@ class TupleSet {
   TupleSet() = default;
   int table_num();
   TupleSet(const Tuple *t, Table *table);
+  TupleSet(const Tuple *t, int len);
   TupleSet(const TupleSet *t);
   TupleSet *copy() const;
 
@@ -148,7 +149,7 @@ class Pretable {
 
 
   RC init(Db *db, Table *table, FilterStmt *filter);
-  RC join(Pretable *pre2, FilterStmt *filter);
+  RC join(Db *db, Pretable *pre2, FilterStmt *filter);
   void print(std::stringstream &os, int num);
   void filter_fields(const std::vector<Field> &fields);
   void filter_fields(int num);

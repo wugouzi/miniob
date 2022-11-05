@@ -487,7 +487,7 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
   Pretable *res = pretables[0];
   auto iter = std::next(pretables.begin());
   while (iter != pretables.end()) {
-    *rc = res->join(*iter, filter_stmt);
+    *rc = res->join(db, *iter, filter_stmt);
     delete *iter;
     iter = pretables.erase(iter);
     if (*rc != RC::SUCCESS) {
@@ -1059,6 +1059,21 @@ RC ExecuteStage::do_clog_sync(SQLStageEvent *sql_event)
 bool is_null(const TupleCell &cell)
 {
   return static_cast<const char*>(cell.data())[cell.length()-1] == 1;
+}
+
+TupleSet::TupleSet(const Tuple *t, int len) {
+  data_ = std::string(t->get_record().data(), len);
+  for (int i = 0; i < t->cell_num(); i++) {
+    TupleCell cell;
+    t->cell_at(i, cell);
+    cells_.push_back(cell);
+    if (is_null(cell)) {
+      LOG_DEBUG("cell %d is null", i);
+      cell.set_type(NULLS);
+    } else {
+      LOG_DEBUG("cell %d is not null", i);
+    }
+  }
 }
 
 TupleSet::TupleSet(const Tuple *t, Table *table) {
@@ -1985,9 +2000,12 @@ CompositeConditionFilter *Pretable::make_cond_filter(std::vector<FilterUnit*> &u
   return ans;
 }
 
-RC Pretable::join(Pretable *pre2, FilterStmt *filter)
+RC Pretable::join(Db *db, Pretable *pre2, FilterStmt *old_filter)
 {
-  std::vector<FilterUnit*> units;
+  FilterStmt *filter = new FilterStmt();
+  filter->is_or = old_filter->is_or;
+  filter->context = old_filter->context;
+  // std::vector<FilterUnit*> units;
 
   for (FilterUnit *unit : filter->filter_units()) {
     Expression *left = unit->left();
@@ -1999,10 +2017,10 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
     FieldExpr *right_field_expr = dynamic_cast<FieldExpr*>(right);
     if (this->field(left_field_expr->field()) != nullptr &&
         pre2->field(right_field_expr->field()) != nullptr) {
-      units.push_back(unit);
+      filter->push(unit);
     } else if (this->field(right_field_expr->field()) != nullptr &&
                pre2->field(left_field_expr->field()) != nullptr) {
-      units.push_back(unit);
+      filter->push(unit);
     }
   }
 
@@ -2022,37 +2040,71 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
     fields_.push_back(field);
   }
 
-  // combine tupleset
-  CompositeConditionFilter *cond_filter = make_cond_filter(units);
   std::vector<TupleSet> &tuple1 = groups_[0];
   std::vector<TupleSet> &tuple2 = pre2->groups_[0];
   std::vector<TupleSet> res;
-  if (cond_filter != nullptr) {
-    for (TupleSet &t1 : tuple1) {
-      for (TupleSet &t2 : tuple2) {
-        TupleSet *tuple = t1.generate_combine(&t2);
-        Record rec;
-        char *buf = new char[tuple->data().size()];
-        memcpy(buf, tuple->data().c_str(), tuple->data().size());
-        rec.set_data(buf);
-        if (cond_filter->filter(rec)) {
-          res.push_back(*tuple);
-        }
-      }
-    }
-  } else {
-    for (TupleSet &t1 : tuple1) {
-      for (TupleSet &t2 : tuple2) {
-        res.push_back(*t1.generate_combine(&t2));
-      }
+  for (TupleSet &t1 : tuple1) {
+    for (TupleSet &t2 : tuple2) {
+      res.push_back(*t1.generate_combine(&t2));
     }
   }
 
   for (Table *t : pre2->tables_) {
     tables_.push_back(t);
   }
-  groups_.clear();
-  groups_.push_back(res);
+  groups_[0].swap(res);
+
+  Operator *scan_oper = new TableScanOperator(this);
+  DEFER([&] () {delete scan_oper;});
+
+  PredicateOperator pred_oper(filter, db);
+  pred_oper.add_child(scan_oper);
+
+  RC rc = RC::SUCCESS;
+
+  res.clear();
+  while ((rc = pred_oper.next()) == RC::SUCCESS) {
+    // get current record
+    // write to response
+    Tuple *tuple = pred_oper.current_tuple();
+    if (nullptr == tuple) {
+      rc = RC::INTERNAL;
+      LOG_WARN("failed to get current record. rc=%s", strrc(rc));
+      break;
+    }
+    groups_[0].push_back(new TupleSet(tuple, groups_[0][0].size()));
+  }
+
+
+  // // combine tupleset
+  // CompositeConditionFilter *cond_filter = make_cond_filter(units);
+  // std::vector<TupleSet> &tuple1 = groups_[0];
+  // std::vector<TupleSet> &tuple2 = pre2->groups_[0];
+  // std::vector<TupleSet> res;
+  // if (cond_filter != nullptr) {
+  //   for (TupleSet &t1 : tuple1) {
+  //     for (TupleSet &t2 : tuple2) {
+  //       TupleSet *tuple = t1.generate_combine(&t2);
+  //       Record rec;
+  //       char *buf = new char[tuple->data().size()];
+  //       memcpy(buf, tuple->data().c_str(), tuple->data().size());
+  //       rec.set_data(buf);
+  //       if (cond_filter->filter(rec)) {
+  //         res.push_back(*tuple);
+  //       }
+  //     }
+  //   }
+  // } else {
+  //   for (TupleSet &t1 : tuple1) {
+  //     for (TupleSet &t2 : tuple2) {
+  //       res.push_back(*t1.generate_combine(&t2));
+  //     }
+  //   }
+  // }
+
+
+
+
   return RC::SUCCESS;
 }
 std::string func_type_to_string(MapFuncType type){
