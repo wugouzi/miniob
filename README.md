@@ -39,8 +39,10 @@ miniob 设计的目标是让同学们快速了解数据库并深入学习数据�
 ## function
 
 TODO:
-[ ] 修改bison，将各个函数及其参数读出，作为field的mark (参考aggr)。
+[x] 修改bison，将各个函数及其参数读出，作为field的mark (参考aggr)。
 [x] 增加FuncType。
-[ ] 实现无表查询。select_to_pretable，插入对应的占位元组。
+[x] 实现无表查询。select_to_pretable，插入对应的占位元组。
+[x] 实现select中的函数。在输出时，apply marked的func。
+[ ] 修复列名不带函数名的问题
+[ ] 修改bison，让where(filter stmt)中也支持使用函数
 [ ] 实现where中的函数。修改dopredicate的getValue，将函数进行求值。
-[ ] 实现select中的函数。在输出时，apply marked的func。

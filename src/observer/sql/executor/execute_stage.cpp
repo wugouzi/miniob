@@ -468,7 +468,6 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
       for(auto &f: select_stmt->query_fields_){
         auto tuple_set = TupleSet();
         auto tuple_cell = TupleCell();
-        // TODO wudengke 填入正确的参数/参数类型
         tuple_cell.set_data(f.aggr_str().c_str());
         tuple_cell.set_length(f.aggr_str().size()+1);
         tuple_cell.set_type(AttrType::CHARS);
@@ -546,7 +545,6 @@ RC ExecuteStage::do_select2(SQLStageEvent *sql_event)
   }
   std::stringstream ss;
 
-  // TODO wudengke 因为query_fields仍然没有被修改，所以仍然输出的是没有经过func map的数据。需要对query_field也进行修改
   print_fields(ss, select_stmt->query_fields(), select_stmt->tables().size() > 1, select_stmt->query_num());
   res->print(ss, select_stmt->query_num());
 
