@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/operator/operator.h"
 #include "storage/record/record_manager.h"
+#include "sql/executor/execute_stage.h"
 #include "rc.h"
 
 class Table;
@@ -26,6 +27,11 @@ public:
   TableScanOperator(Table *table)
     : table_(table)
   {}
+
+  TableScanOperator(Pretable *pre)
+    : pre_(pre)
+  {}
+
 
   virtual ~TableScanOperator() = default;
 
@@ -43,6 +49,8 @@ public:
   // RC tuple_cell_spec_at(int index, TupleCellSpec &spec) const override;
 private:
   Table *table_ = nullptr;
+  Pretable *pre_ = nullptr;
+  int pre_idx_ = 0;
   RecordFileScanner record_scanner_;
   Record current_record_;
   RowTuple tuple_;
