@@ -200,18 +200,23 @@ class Pretable {
       auto meta = f.meta()->copy();
       auto index = this->index(f);
       if(index == -1){
-        LOG_ERROR("ji le!!!\n");
+        // this is not field but a closed expression.
+        // make a cell, and apply func on it!
+        LOG_WARN("ji le!!!\n");
         continue;
-      }
-      for (auto& group : groups_) {
-        for (auto& r : group) {
-          auto value = r.get_cell(index).copy();
-          auto apply_rc = value.apply_func(f.map_func_type_, f.get_func_args());
-          if(apply_rc != RC::SUCCESS){
-            return apply_rc;
+      } else {
+        // this is an expression that involves attributes
+        for (auto& group : groups_) {
+          for (auto& r : group) {
+            auto value = r.get_cell(index).copy();
+            auto apply_rc =
+                value.apply_func(f.map_func_type_, f.get_func_args());
+            if (apply_rc != RC::SUCCESS) {
+              return apply_rc;
+            }
+            meta->set_type(value.attr_type());
+            r.set_cell(index, value);
           }
-          meta->set_type(value.attr_type());
-          r.set_cell(index,value);
         }
       }
       f.set_field(meta);
