@@ -202,7 +202,11 @@ class Pretable {
       if(index == -1){
         // this is not field but a closed expression.
         // make a cell, and apply func on it!
-        LOG_WARN("ji le!!!\n");
+        // int value;
+        // auto rc = f.evaluate_as_const_expression(value);
+        // if (rc != RC::SUCCESS) {
+        //   return rc;
+        // }
         continue;
       } else {
         // this is an expression that involves attributes

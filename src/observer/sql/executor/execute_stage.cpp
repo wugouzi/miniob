@@ -2155,7 +2155,6 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
 // haven't changed field offset
 void Pretable::filter_fields(const std::vector<Field> &fields) {
   std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<AggreType, int>>> mp;
-  std::vector<Field> new_fields(fields.size());
 
   for (size_t i = 0; i < fields.size(); i++) {
     mp[fields[i].table_name()][fields[i].field_name()][fields[i].aggr_type()] = i+1;
@@ -2167,15 +2166,20 @@ void Pretable::filter_fields(const std::vector<Field> &fields) {
     int j = mp[f.table_name()][f.meta()->name()][f.aggr_type()];
     if (j > 0) {
       orders[j-1] = i;
-      // new_fields[j-1] = fields_[i];
     }
   }
 
   fields_ = fields;
 
+  // TODO wudengke
   for (auto &group : groups_) {
     for (auto &tuple : group) {
       tuple.filter_fields(orders);
+      for (auto i = 0; i < fields.size();i++){
+        auto t = TupleCell();
+        RC rc = fields[i].evaluate_as_const_expression(t);
+        tuple.set_cell(i, t);
+      }
     }
   }
 }

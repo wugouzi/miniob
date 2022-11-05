@@ -15,9 +15,12 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include <string>
+#include <sstream>
+#include "util/util.h"
 #include <defs.h>
 #include "storage/common/table.h"
 #include "storage/common/field_meta.h"
+#include "sql/expr/tuple_cell.h"
 
 class Field
 {
@@ -64,6 +67,40 @@ public:
       res.push_back(func_args);
     }
     return res;
+  }
+
+  RC evaluate_as_const_expression(TupleCell &cell) const {
+    if(this->map_func_type_ != MapFuncType::M_ID){
+      auto arg1 = this->field_name();
+      if(this->map_func_type_ == MapFuncType::M_LENGTH){
+        if (arg1 && arg1[0] == '\'') {
+          cell.set_data(arg1);
+          cell.set_length(strlen(arg1)+1);
+          cell.set_type(AttrType::CHARS);
+          auto t = TempMapFuncObject();
+          t.argc = this->func_argc;
+          t.arg = this->func_args;
+          t.type = this->map_func_type_;
+          cell.apply_func(t);
+        }
+      }else if(this->map_func_type_ == MapFuncType::M_ROUND){
+        auto f = to_float(arg1);
+        auto data = new char[5];
+        memcpy(data, &f, sizeof(f));
+        cell.set_data(data);
+        cell.set_length(sizeof(float)+1);
+        cell.set_type(AttrType::FLOATS);
+        auto t = TempMapFuncObject();
+        t.argc = this->func_argc;
+        t.arg = this->func_args;
+        t.type = this->map_func_type_;
+        cell.apply_func(t);
+      } else if(this->map_func_type_ == MapFuncType::M_DATE_FORMAT){
+        return RC::INTERNAL;
+      }
+      return RC::SUCCESS;
+    }
+    return RC::INTERNAL;
   }
 
   bool fix_aggr_map(){

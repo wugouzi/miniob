@@ -180,3 +180,12 @@ std::vector<char*> make_args(RelAttr& attr) {
   }
   return {};
 }
+
+float to_float(std::string s)
+{
+  std::stringstream ss;
+  ss << s;
+  float res;
+  ss >> res;
+  return res;
+}

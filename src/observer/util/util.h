@@ -37,3 +37,5 @@ class TempMapFuncObject {
 };
 
 std::vector<char*> make_args(RelAttr& attr);
+
+float to_float(std::string s);
