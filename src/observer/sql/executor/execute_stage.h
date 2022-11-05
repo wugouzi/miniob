@@ -45,6 +45,8 @@ class SessionEvent;
 class SelectStmt;
 class Pretable;
 
+std::string func_args_to_string(MapFuncType type, char* rest_arg);
+
 class ExecuteStage : public common::Stage {
 public:
   ~ExecuteStage();

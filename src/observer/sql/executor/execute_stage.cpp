@@ -16,8 +16,9 @@ See the Mulan PSL v2 for more details. */
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <string>
 #include <sstream>
+#include <sstream>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -2057,6 +2058,18 @@ RC Pretable::join(Pretable *pre2, FilterStmt *filter)
   groups_.push_back(res);
   return RC::SUCCESS;
 }
+std::string func_type_to_string(MapFuncType type){
+  switch (type) {
+    case M_LENGTH:
+      return "length";
+    case M_ROUND:
+      return "round";
+    case M_DATE_FORMAT:
+      return "date_format";
+    default:
+      return "";
+  }
+}
 
 std::string aggr_to_string(AggreType type) {
   switch (type) {
@@ -2070,15 +2083,47 @@ std::string aggr_to_string(AggreType type) {
       return "count";
     case A_SUM:
       return "sum";
-    case A_LENGTH:
-      return "length";
     default:
       return "";
   }
 }
 
 
-// TODO: ALIAS
+std::string func_args_to_string(MapFuncType type, char *rest_arg){
+  switch (type) {
+    case M_LENGTH:
+      return "";
+    case M_ROUND:{
+      return std::to_string((long long)rest_arg);
+    }
+    case M_DATE_FORMAT:
+    {
+      auto s = std::string(rest_arg);
+      strip_quote(s);
+      return s;
+    }
+    default:
+      return "";
+  }
+}
+
+std::string format_func(MapFuncType type,std::string first_arg, int has_rest_argc, char* rest_arg){
+  std::vector<std::string> arg_str_list;
+  if (has_rest_argc) {
+    auto s = func_args_to_string(type, rest_arg);
+    if(!s.empty()){
+      arg_str_list.push_back(s);
+    }
+  }
+  std::stringstream ss;
+  ss << func_type_to_string(type) << "(" << first_arg;
+  for(auto &a: arg_str_list){
+    ss << ", " << a;
+  }
+  ss << ")";
+  return ss.str();
+}
+
 void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> &fields, bool multi, int num) {
   bool first = true;
   for (int i = 0; i < num; i++) {
@@ -2098,6 +2143,9 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
       }
       if (field.aggr_type() != A_NO) {
         tp = aggr_to_string(field.aggr_type()) + '(' + tp + ')';
+      }else if(field.map_func_type_ != MapFuncType::M_ID){
+        tp = format_func(field.map_func_type_, tp, field.func_argc,
+                         field.func_args);
       }
     }
     ss << tp;

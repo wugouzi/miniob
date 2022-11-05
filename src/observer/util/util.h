@@ -21,3 +21,4 @@ bool string_like(const char *s1, const char *s2);
 std::string date_to_string(int date);
 std::string custom_round(double val, int digit);
 std::string custom_date_format(char* date, char* pattern);
+void strip_quote(std::string& p);

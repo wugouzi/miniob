@@ -78,20 +78,30 @@ public:
         break;
       }
       case MapFuncType::M_ROUND: {
-        if(attr_type_ == AttrType::FLOATS){
+        float f;
+        if(attr_type_ == AttrType::CHARS){
+          std::stringstream ss;
+          ss << data_;
+          ss >> f;
+          attr_type_ = AttrType::FLOATS;
+        }else if(attr_type_ == AttrType::FLOATS){
+          f = *reinterpret_cast<float*>(data_);
+        }
+        if (attr_type_ == AttrType::FLOATS) {
           int digit = 0;
           if (extra_args.size()) {
             auto arg1 = extra_args[0];
             digit = static_cast<int>((long long)arg1);
           }
-          auto res = custom_round(*reinterpret_cast<float*>(data_), digit);
+          auto res = custom_round(f, digit);
           auto data = strdup(res.c_str());
           set_data(data);
           set_type(AttrType::CHARS);
           set_length(res.size()+1);
-        }else{
+        } else {
           return RC::INTERNAL;
         }
+        break;
       }
       default: {
         return RC::INTERNAL;

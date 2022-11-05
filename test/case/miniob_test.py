@@ -51,7 +51,7 @@ python3 miniob_test.py \
         --test-result-tmp-dir=./result_tmp \
         --use-unix-socket \
         --git-repo=https://github.com/wugouzi/miniob \
-        --git-branch=main2 \
+        --git-branch=wudengke \
         --code-type=git \
         --target-dir=./miniob \
         --log=stdout \

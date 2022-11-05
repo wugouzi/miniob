@@ -118,12 +118,7 @@ std::string ReplaceAll(std::string str,
   return str;
 }
 
-std::string custom_date_format(char *date, char* pattern) {
-  int value = *(int*)date;
-  auto y = (value / 10000);
-  auto m = ((value % 10000) / 100);
-  auto d = (value % 100);
-  auto p = std::string(pattern);
+void strip_quote(std::string& p){
   // strip leading & tailing quotes
   if (!p.empty() && p.back() == '\'') {
     p.erase(p.end() - 1);
@@ -131,6 +126,15 @@ std::string custom_date_format(char *date, char* pattern) {
   if (!p.empty() && p.front() == '\'') {
     p.erase(0, 1);
   }
+}
+
+std::string custom_date_format(char *date, char* pattern) {
+  int value = *(int*)date;
+  auto y = (value / 10000);
+  auto m = ((value % 10000) / 100);
+  auto d = (value % 100);
+  auto p = std::string(pattern);
+  strip_quote(p);
   std::stringstream ss;
   tm t;
   strptime(date_to_string(value).c_str(), "%Y-%m-%\d", &t);
