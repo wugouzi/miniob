@@ -2007,7 +2007,7 @@ RC Pretable::join(Db *db, Pretable *pre2, FilterStmt *old_filter)
   filter->context = old_filter->context;
   // std::vector<FilterUnit*> units;
 
-  for (FilterUnit *unit : filter->filter_units()) {
+  for (FilterUnit *unit : old_filter->filter_units()) {
     Expression *left = unit->left();
     Expression *right = unit->right();
     if (left->type() == ExprType::VALUE || right->type() == ExprType::VALUE) {
@@ -2061,6 +2061,11 @@ RC Pretable::join(Db *db, Pretable *pre2, FilterStmt *old_filter)
   pred_oper.add_child(scan_oper);
 
   RC rc = RC::SUCCESS;
+  rc = pred_oper.open();
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to open operator");
+    return rc;
+  }
 
   res.clear();
   while ((rc = pred_oper.next()) == RC::SUCCESS) {
@@ -2072,8 +2077,9 @@ RC Pretable::join(Db *db, Pretable *pre2, FilterStmt *old_filter)
       LOG_WARN("failed to get current record. rc=%s", strrc(rc));
       break;
     }
-    groups_[0].push_back(new TupleSet(tuple, groups_[0][0].size()));
+    res.push_back(new TupleSet(tuple, groups_[0][0].size()));
   }
+  groups_[0].swap(res);
 
 
   // // combine tupleset

@@ -118,6 +118,7 @@ class TupleSet {
   bool in(TupleCell &cell) const;
   bool not_in(TupleCell &cell) const;
 
+
   // void combine(const TupleSet *t2);
   // void push(const Field &p, const TupleCell &cell);
   // const Field &get_field(int idx);
@@ -128,10 +129,6 @@ class TupleSet {
   // int get_offset(const char *table_name, const char *field_name) const;
 
  private:
-  // int table_num_ = 0;
-  // std::vector<std::pair<Table*, FieldMeta>> metas_;
-  // std::vector<std::pair<Table*, Field>> metas_;
-  // each meta has new fieldmeta
   std::vector<TupleCell> cells_;
   std::string data_;
 };

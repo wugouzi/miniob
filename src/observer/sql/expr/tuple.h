@@ -16,6 +16,8 @@ See the Mulan PSL v2 for more details. */
 
 #include <cstring>
 #include <memory>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "common/log/log.h"
@@ -99,9 +101,20 @@ public:
   void set_schema(const Table *table, const std::vector<FieldMeta> *fields)
   {
     table_ = table;
+    tables_.push_back(const_cast<Table*>(table));
     this->speces_.reserve(fields->size());
     for (const FieldMeta &field : *fields) {
       speces_.push_back(new TupleCellSpec(new FieldExpr(table, &field)));
+    }
+  }
+
+  void set_schema(std::vector<Field> &fields)
+  {
+    this->speces_.reserve(fields.size());
+    for (auto &field : fields) {
+      Table *table = const_cast<Table *>(field.table());
+      tables_.push_back(table);
+      speces_.push_back(new TupleCellSpec(new FieldExpr(table, field.meta())));
     }
   }
 
@@ -132,7 +145,14 @@ public:
   RC find_cell(const Field &field, TupleCell &cell) const override
   {
     const char *table_name = field.table_name();
-    if (0 != strcmp(table_name, table_->name())) {
+    Table *table = nullptr;
+    for (Table *t : tables_) {
+      if (0 == strcmp(table_name, t->name())) {
+        table = t;
+        break;
+      }
+    }
+    if (table == nullptr) {
       return RC::NOTFOUND;
     }
 
@@ -140,7 +160,8 @@ public:
     for (size_t i = 0; i < speces_.size(); ++i) {
       const FieldExpr * field_expr = (const FieldExpr *)speces_[i]->expression();
       const Field &field = field_expr->field();
-      if (0 == strcmp(field_name, field.field_name())) {
+      if (0 == strcmp(field_name, field.field_name()) &&
+          0 == strcmp(table_name, field.table_name())) {
         return cell_at(i, cell);
       }
     }
@@ -170,6 +191,7 @@ public:
   const Table *table() const { return table_; }
 private:
   Record *record_ = nullptr;
+  std::vector<Table *> tables_;
   const Table *table_ = nullptr;
   std::vector<TupleCellSpec *> speces_;
 };
