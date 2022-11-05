@@ -20,6 +20,7 @@ See the Mulan PSL v2 for more details. */
 #include <sstream>
 #include <string>
 #include <vector>
+#include <sql/parser/parse_defs.h>
 
 std::string double2string(double v)
 {
@@ -148,4 +149,34 @@ std::string custom_date_format(char *date, char* pattern) {
   // %d	月的一天，数字，如09、30
   ss << std::put_time(&t, p.c_str());
   return ss.str();
+}
+
+MapFuncType transform_aggr_to_func_type(AggreType aggr){
+  switch (aggr) {
+    case AggreType::A_LENGTH:
+      return MapFuncType::M_LENGTH;
+      break;
+    case AggreType::A_DATE_FORMAT:
+      return MapFuncType::M_DATE_FORMAT;
+      break;
+    case AggreType::A_ROUND:
+      return MapFuncType::M_ROUND;
+      break;
+    default:
+      break;
+  }
+  return MapFuncType::M_ID;
+}
+
+TempMapFuncObject::TempMapFuncObject(RelAttr &attr) {
+  arg = attr.args[0];
+  argc = attr.argc;
+  type = transform_aggr_to_func_type(attr.type);
+}
+
+std::vector<char*> make_args(RelAttr& attr) {
+  if (attr.argc) {
+    return {attr.args[0]};
+  }
+  return {};
 }

@@ -20,7 +20,11 @@ See the Mulan PSL v2 for more details. */
 
 RC FieldExpr::get_value(const Tuple &tuple, TupleCell &cell) const
 {
-  return tuple.find_cell(field_, cell);
+  auto rc = tuple.find_cell(field_, cell);
+  if(rc!=RC::SUCCESS){
+    return rc;
+  }
+  cell.apply_func(map_func_obj);
 }
 
 RC ValueExpr::get_value(const Tuple &tuple, TupleCell & cell) const
@@ -34,5 +38,5 @@ RC ValueExpr::get_value(const Tuple &tuple, TupleCell & cell) const
   } else {
     cell = tuple_cell_;
   }
-  return RC::SUCCESS;
+  return cell.apply_func(map_func_obj);
 }

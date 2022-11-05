@@ -900,7 +900,17 @@ condition_list:
 			}
     ;
 condition:
-ID comOp value
+non_aggregation_func LBRACE ID RBRACE comOp value {
+  RelAttr left_attr;
+
+  Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
+  func_attr_init(&left_attr, NULL, $3, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, right_value);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+}
+| ID comOp value
 {
   RelAttr left_attr;
   relation_attr_init(&left_attr, NULL, $1);

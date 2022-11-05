@@ -2462,14 +2462,19 @@ select * from t1 t1 where id in (select t1.id from t2 t1 where t1.id=1 or t1.id=
 
 -- wudengke 测试function用
 
-CREATE TABLE t1(id INT, col1 char, feat1 date, col2 float);
+CREATE TABLE t1(id INT, col1 char(255), feat1 date, col2 float);
 
 insert INTO t1 values(1, 'test', '2021-01-02', 2.3);
 insert INTO t1 values(2, '', '2021-01-02', 8.9);
+insert INTO t1 values(3, 'testtest', '2021-01-03', 23.3);
 
+-- basic examples
 select length('this is a string') as len;
 select length(col1) from t1;
 select round(col2, 2) from t1;
 select round(2.3);
 select round(2.3) from t1;
 select date_format(feat1, '%Y-%m-%d') from t1;
+
+-- where examples
+select length(col1) from t1 where length(col1)>5;

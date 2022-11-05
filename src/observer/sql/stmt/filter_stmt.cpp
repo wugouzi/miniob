@@ -128,6 +128,13 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     }
   }
 
+  auto process_cell_map_func = [&](TupleCell& cell, RelAttr& rel) {
+    auto func_type = transform_aggr_to_func_type(rel.type);
+    if(func_type!=MapFuncType::M_ID){
+      cell.apply_func(func_type, make_args(rel));
+    }
+  };
+
   Expression *left = nullptr;
   Expression *right = nullptr;
   if (condition.left_is_attr) {
@@ -135,7 +142,8 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     if (attr.relation_name != nullptr &&
         context.count(attr.relation_name) &&
         context[attr.relation_name].count(attr.attribute_name)) {
-      TupleCell &cell = context[attr.relation_name][attr.attribute_name];
+      TupleCell cell = context[attr.relation_name][attr.attribute_name];
+      process_cell_map_func(cell, attr);
       Value value;
       value.type = cell.attr_type();
       value.data = cell.get_data();
@@ -152,6 +160,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       }
       left = new FieldExpr(table, field->copy());
     }
+    left->set_map_func(TempMapFuncObject(attr));
   } else {
     if (condition.left_value.type == DATES && *(int *)condition.left_value.data == -1) {
       return RC::INVALID_ARGUMENT;
@@ -170,7 +179,8 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     if (attr.relation_name != nullptr &&
         context.count(attr.relation_name) &&
         context[attr.relation_name].count(attr.attribute_name)) {
-      TupleCell &cell = context[attr.relation_name][attr.attribute_name];
+      TupleCell cell = context[attr.relation_name][attr.attribute_name];
+      process_cell_map_func(cell, attr);
       Value value;
       value.type = cell.attr_type();
       value.data = cell.get_data();
@@ -188,6 +198,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       }
       right = new FieldExpr(table, field->copy());
     }
+    right->set_map_func(TempMapFuncObject(attr));
   } else {
     if (condition.right_value.type == DATES && *(int *)condition.right_value.data == -1) {
       return RC::INVALID_ARGUMENT;

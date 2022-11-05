@@ -43,6 +43,6 @@ TODO:
 [x] 增加FuncType。
 [x] 实现无表查询。select_to_pretable，插入对应的占位元组。
 [x] 实现select中的函数。在输出时，apply marked的func。
-[ ] 修复列名不带函数名的问题
-[ ] 修改bison，让where(filter stmt)中也支持使用函数
-[ ] 实现where中的函数。修改dopredicate的getValue，将函数进行求值。
+[x] 修复列名不带函数名的问题
+[x] 修改bison，让where(filter stmt)中也支持使用函数
+[ ] 实现where中的函数。`RC FilterStmt::create_filter_unit`，对表达式进行函数标记；修改dopredicate的getValue，对有标记的cell应用函数。

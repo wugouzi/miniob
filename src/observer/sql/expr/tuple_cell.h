@@ -40,6 +40,14 @@ public:
   void set_data(char *data) { this->data_ = data; }
   void set_data(const char *data) { this->set_data(const_cast<char *>(data)); }
 
+  RC apply_func(TempMapFuncObject obj) {
+    std::vector<char*> args;
+    if (obj.argc) {
+      args.push_back(obj.arg);
+    }
+    return apply_func(obj.type, args);
+  }
+
   RC apply_func(MapFuncType func, std::vector<char*> extra_args) {
     switch (func) {
       case MapFuncType::M_ID:

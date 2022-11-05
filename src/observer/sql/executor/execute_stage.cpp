@@ -462,10 +462,6 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
     if (ok) {
       Pretable* pre = new Pretable;
       pre->init(db, nullptr, nullptr);
-      // auto field_meta = new FieldMeta();
-      // field_meta->init("hahaname", AttrType::CHARS, 0, 10, true, false);
-      // auto field = new Field();
-      // field->set_field(field_meta);
       for(auto &f: select_stmt->query_fields_){
         auto tuple_set = TupleSet();
         auto tuple_cell = TupleCell();

@@ -25,7 +25,6 @@ See the Mulan PSL v2 for more details. */
 class Db;
 class Table;
 class FieldMeta;
-
 class FilterUnit
 {
 public:

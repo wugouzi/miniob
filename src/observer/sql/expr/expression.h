@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/parser/parse_defs.h"
 #include "storage/common/field.h"
 #include "sql/expr/tuple_cell.h"
+#include "util/util.h"
 
 class Tuple;
 class Pretable;
@@ -37,6 +38,10 @@ public:
   
   virtual RC get_value(const Tuple &tuple, TupleCell &cell) const = 0;
   virtual ExprType type() const = 0;
+
+  TempMapFuncObject map_func_obj;
+
+  void set_map_func(TempMapFuncObject obj) { map_func_obj = obj; }
 };
 
 class FieldExpr : public Expression
