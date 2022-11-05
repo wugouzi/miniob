@@ -44,7 +44,7 @@ RC TableScanOperator::next()
   if (pre_idx_ >= group.size()) {
     return RC::RECORD_EOF;
   }
-  int len = group[pre_idx_].data().size();
+  int len = group[pre_idx_++].data().size();
   char *data = new char[len];
   memcpy(data, group[pre_idx_].data().c_str(),len);
   current_record_.set_data(data);
