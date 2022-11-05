@@ -1,11 +1,11 @@
 {
   "basic":{"necessary":true, "score":10},
-  "primary-date":{"necessary":true, "score":10},
-  "primary-update":{"necessary":true, "score":10},
-  "primary-select-meta":{"necessary":true, "score":10},
-  "primary-select-tables":{"necessary":true, "score":10},
-  "primary-aggregation-func":{"necessary":true, "score":10},
-  "primary-drop-table":{"necessary":true, "score":10},
+  "primary-date":{"necessary":false, "score":10},
+  "primary-update":{"necessary":false, "score":10},
+  "primary-select-meta":{"necessary":false, "score":10},
+  "primary-select-tables":{"necessary":false, "score":10},
+  "primary-aggregation-func":{"necessary":false, "score":10},
+  "primary-drop-table":{"necessary":false, "score":10},
 
   "primary-insert":{"necessary":false, "score":10},
   "primary-join-tables":{"necessary":false, "score":20},

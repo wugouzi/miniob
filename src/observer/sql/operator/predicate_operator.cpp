@@ -121,11 +121,15 @@ bool PredicateOperator::execute_filter_unit(const FilterUnit *filter_unit, RowTu
           }
         }
       } else {
+        LOG_INFO("test1");
         left_expr->get_value(tuple, left_cell);
       }
     } else {
+      LOG_INFO("test2");
       left_expr->get_value(tuple, left_cell);
     }
+
+    LOG_INFO("haha1");
 
     if (right_expr->type() == ExprType::VALUE) {
       ValueExpr *val_expr = dynamic_cast<ValueExpr *>(right_expr);
@@ -155,6 +159,8 @@ bool PredicateOperator::execute_filter_unit(const FilterUnit *filter_unit, RowTu
     } else {
       right_expr->get_value(tuple, right_cell);
     }
+
+    LOG_INFO("haha2");
 
     // NULL COMPARE
     // TODO: type check
@@ -211,6 +217,8 @@ bool PredicateOperator::execute_filter_unit(const FilterUnit *filter_unit, RowTu
         } break;
       }
     }
+
+    LOG_INFO("haha3");
     return filter_result;
 }
 
