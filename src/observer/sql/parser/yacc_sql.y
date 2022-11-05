@@ -715,6 +715,7 @@ non_aggregation_func LBRACE ID func_extra_args RBRACE {
   char s[1000];
   memset(s, 0, sizeof(s));
   sprintf(s,"length(%s)", $3);
+  printf("hahaa=%s\n", s);
   CONTEXT->a_types[S_TOP] = A_LENGTH;
   func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, $3, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
 }

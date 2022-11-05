@@ -213,14 +213,14 @@ class Pretable {
         for (auto& group : groups_) {
           for (auto& r : group) {
             if (f.map_func_type_ != MapFuncType::M_ID) {
-              auto value = r.get_cell(0).copy();
+              auto value = r.get_cell(index).copy();
               auto apply_rc =
                   value.apply_func(f.map_func_type_, f.get_func_args());
               if (apply_rc != RC::SUCCESS) {
                 return apply_rc;
               }
               meta->set_type(value.attr_type());
-              r.set_cell(0, value);
+              r.set_cell(index, value);
             }
           }
         }

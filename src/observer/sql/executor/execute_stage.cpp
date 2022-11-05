@@ -462,16 +462,17 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
     if (ok) {
       Pretable* pre = new Pretable;
       pre->init(db, nullptr, nullptr);
-      for(auto &f: select_stmt->query_fields_){
-        auto tuple_set = TupleSet();
+      pre->groups_.resize(1);
+      auto tuple_set = TupleSet();
+      for (auto& f : select_stmt->query_fields_) {
         auto tuple_cell = TupleCell();
         tuple_cell.set_data(f.aggr_str().c_str());
         tuple_cell.set_length(f.aggr_str().size()+1);
         tuple_cell.set_type(AttrType::CHARS);
-        tuple_set.push(tuple_cell);
-        pre->groups_.push_back({tuple_set});
         pre->fields_.push_back(f);
+        tuple_set.push(tuple_cell);
       }
+      pre->groups_[0].push_back(tuple_set);
       pretables.push_back(pre);
     }
   }

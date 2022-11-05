@@ -55,7 +55,9 @@ public:
       case MapFuncType::M_LENGTH: {
         if (attr_type_ == AttrType::CHARS) {
           auto data = new char[5];
-          auto len = strlen(data_);
+          auto s = std::string(data_);
+          strip_quote(s);
+          auto len = s.size();
           memcpy(data, &len, sizeof(int));
           set_data(data);
           set_type(AttrType::INTS);
