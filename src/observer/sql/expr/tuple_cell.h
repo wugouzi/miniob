@@ -40,18 +40,38 @@ public:
   void set_data(char *data) { this->data_ = data; }
   void set_data(const char *data) { this->set_data(const_cast<char *>(data)); }
 
-  RC apply_func(MapFuncType func, std::vector<char *> extra_args) {
+  RC apply_func(MapFuncType func, std::vector<char*> extra_args) {
     switch (func) {
       case MapFuncType::M_ID:
         break;
       case MapFuncType::M_LENGTH: {
-        if(attr_type_ == AttrType::CHARS){
+        if (attr_type_ == AttrType::CHARS) {
           auto data = new char[5];
           auto len = strlen(data_);
           memcpy(data, &len, sizeof(int));
           set_data(data);
           set_type(AttrType::INTS);
           set_length(5);
+        } else {
+          return RC::INTERNAL;
+        }
+        break;
+      }
+      case MapFuncType::M_DATE_FORMAT: {
+        if (attr_type_ == AttrType::DATES) {
+          char* date_value = data_;
+          char* pattern = "";
+          if (extra_args.size() == 1) {
+            pattern = extra_args[0];
+          } else {
+            LOG_ERROR("date_format argument number error");
+            return RC::INTERNAL;
+          }
+          auto res = custom_date_format(date_value, pattern);
+          auto data = strdup(res.c_str());
+          set_data(data);
+          set_type(AttrType::CHARS);
+          set_length(res.size()+1);
         } else {
           return RC::INTERNAL;
         }

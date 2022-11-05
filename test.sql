@@ -2472,3 +2472,4 @@ select length(col1) from t1;
 select round(col2, 2) from t1;
 select round(2.3);
 select round(2.3) from t1;
+select date_format(feat1, '%Y-%m-%d') from t1;

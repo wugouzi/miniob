@@ -449,7 +449,7 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
     int ok = 1;
     if (!query_fields.empty()) {
       for (auto &field : query_fields) {
-        if(field.map_func_type_ == MapFuncType::M_LENGTH){
+        if(field.map_func_type_ != MapFuncType::M_ID){
           // OK
         }else{
           ok = 0;
@@ -515,7 +515,7 @@ Pretable *ExecuteStage::select_to_pretable(Db *db, SelectStmt *select_stmt, RC *
     res->having(select_stmt->having_conditions(), select_stmt->having_condition_num());
   } else {
     // order by fields, if necessary
-    res->apply_func(select_stmt->query_fields());
+    *rc = res->apply_func(select_stmt->query_fields());
     res->order_by(select_stmt->order_by_fields());
     res->filter_fields(select_stmt->query_fields());
   }

@@ -13,9 +13,12 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "util/util.h"
-#include <string.h>
+#include <cstring>
+#include <algorithm>
+#include <ctime>
 #include <iomanip>
 #include <sstream>
+#include <string>
 #include <vector>
 
 std::string double2string(double v)
@@ -87,4 +90,51 @@ std::string custom_round(double val, int digit){
   std::string res;
   tmp >> res;
   return res;
+}
+
+std::string append_day_suffix(std::string day) {
+  auto last_c = day.back();
+  if (last_c == '1') {
+    return day + "st";
+  } else if (last_c == '2') {
+    return day + "ed";
+  } else if (last_c == '3') {
+    return day + "rd";
+  } else {
+    return day + "th";
+  }
+}
+
+// from https://stackoverflow.com/questions/2896600/how-to-replace-all-occurrences-of-a-character-in-string
+std::string ReplaceAll(std::string str,
+                       const std::string& from,
+                       const std::string& to) {
+  size_t start_pos = 0;
+  while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+    str.replace(start_pos, from.length(), to);
+    start_pos +=
+        to.length();
+  }
+  return str;
+}
+
+std::string custom_date_format(char *date, char* pattern) {
+  int value = *(int*)date;
+  auto y = (value / 10000);
+  auto m = ((value % 10000) / 100);
+  auto d = (value % 100);
+  auto p = std::string(pattern);
+  std::stringstream ss;
+  tm t;
+  strptime(date_to_string(value).c_str(), "%Y-%m-%\d", &t);
+  // %Y	年，4 位，如2022
+  // %y	年，2 位，如22
+  // %M	月名，英文，如January
+  p = ReplaceAll(p, "%M", "%B");
+  // %m	月号，数字，如06、12
+  // %D	月的一天，带英文后缀，如21st、28th
+  p = ReplaceAll(p, "%D", append_day_suffix(std::to_string(d)));
+  // %d	月的一天，数字，如09、30
+  ss << std::put_time(&t, p.c_str());
+  return ss.str();
 }

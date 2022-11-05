@@ -638,13 +638,6 @@ aggregation_func LBRACE ID aggregation_extra_id RBRACE {
   CONTEXT->a_types[S_TOP] = A_NO;
 } 
 ;
-/* | aggregation_func LBRACE SSS RBRACE {
-  char s[1000];
-  memset(s, 0, sizeof(s));
-  sprintf(s,"length(%s)", $3);
-  CONTEXT->a_types[S_TOP] = A_LENGTH;
-  aggregation_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, $3, CONTEXT->a_types[S_TOP], 0);
-} */
 
 aggregation_func:
 MAX {
@@ -736,6 +729,7 @@ func_extra_args:
 }
 | COMMA SSS aggregation_extra_id {
   CONTEXT->args[S_TOP] = strdup($2);
+  CONTEXT->argc[S_TOP]++;
 }
 ;
 
