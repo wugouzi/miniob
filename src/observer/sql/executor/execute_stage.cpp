@@ -2176,10 +2176,12 @@ void Pretable::filter_fields(const std::vector<Field> &fields) {
     for (auto &tuple : group) {
       tuple.filter_fields(orders);
       for (auto i = 0; i < fields.size();i++){
-        auto t = TupleCell();
-        RC rc = fields[i].evaluate_as_const_expression(t);
-        if(rc == SUCCESS){
-          tuple.set_cell(i, t);
+        if (fields[i].map_func_type_ != MapFuncType::M_ID) {
+          auto t = TupleCell();
+          RC rc = fields[i].evaluate_as_const_expression(t);
+          if (rc == SUCCESS) {
+            tuple.set_cell(i, t);
+          }
         }
       }
     }
