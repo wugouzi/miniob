@@ -2477,4 +2477,4 @@ select round(2.3) from t1;
 select date_format(feat1, '%Y-%m-%d') from t1;
 
 -- where examples
-select length(col1) from t1 where length(col1)>5;
+select length(col1) from t1 where length(col1)=8;

@@ -45,4 +45,12 @@ TODO:
 [x] 实现select中的函数。在输出时，apply marked的func。
 [x] 修复列名不带函数名的问题
 [x] 修改bison，让where(filter stmt)中也支持使用函数
-[ ] 实现where中的函数。`RC FilterStmt::create_filter_unit`，对表达式进行函数标记；修改dopredicate的getValue，对有标记的cell应用函数。
+[x] 实现where中的函数。`RC FilterStmt::create_filter_unit`，对表达式进行函数标记；修改dopredicate的getValue，对有标记的cell应用函数。
+[ ] 修复case: `select round(2.3) from t1;`.
+    - As it should be something like
+  ```sql
+    round(2.3)
+    2
+    2
+    2
+  ```
