@@ -96,15 +96,12 @@ public:
           digit = static_cast<int>((long long)arg1);
         }
         if (attr_type_ == AttrType::CHARS) {
-          // std::stringstream ss;
-          // ss << data_;
-          // ss >> f;
-          // attr_type_ = AttrType::FLOATS;
-          auto res = custom_round(strdup(data_), digit);
-          auto data = strdup(res.c_str());
+          auto res = std::stof(custom_round(strdup(data_), digit).c_str());
+          auto data = new char[5];
+          memcpy(data, &res, sizeof(res));
           set_data(data);
-          set_type(AttrType::CHARS);
-          set_length(res.size()+1);
+          set_type(AttrType::FLOATS);
+          set_length(sizeof(float)+1);
         } else if (attr_type_ == AttrType::FLOATS) {
           double f = *reinterpret_cast<float*>(data_);
           int digit = 0;
@@ -112,13 +109,12 @@ public:
             auto arg1 = extra_args[0];
             digit = static_cast<int>((long long)arg1);
           }
-          auto res = custom_round(f, digit);
-          auto data = strdup(res.c_str());
+          auto res = std::stof(custom_round(f, digit).c_str());
+          auto data = new char[5];
+          memcpy(data, &res, sizeof(res));
           set_data(data);
-          set_type(AttrType::CHARS);
-          set_length(res.size()+1);
-        // }
-        // if (attr_type_ == AttrType::FLOATS) {
+          set_type(AttrType::FLOATS);
+          set_length(sizeof(float)+1);
         } else {
           return RC::INTERNAL;
         }
