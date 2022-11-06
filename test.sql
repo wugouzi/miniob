@@ -2470,6 +2470,7 @@ insert INTO t1 values(3, 'testtest', '2021-01-03', 23.3);
 
 -- basic examples
 select length('this is a string') as len;
+select length('this is a string');
 select length(col1) from t1;
 select round(col2, 2) from t1;
 select round(2.3);
@@ -2599,3 +2600,4 @@ select date_format('2019-9-17', '%y/%m/%d') as date_type;
 select date_format('2019-9-17', '%y-%Y-%m-%M-%d-%D') as date_type;
 
 select date_format('2019-9-1', '%y-%Y-%m-%M-%d-%D') as date_type;
+select date_format('2019-9-1', '%y-%Y-%m-%M-%d-%D');

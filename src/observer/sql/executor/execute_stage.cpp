@@ -2154,7 +2154,6 @@ std::string func_args_to_string(MapFuncType type, char *rest_arg){
     case M_DATE_FORMAT:
     {
       auto s = std::string(rest_arg);
-      strip_quote(s);
       return s;
     }
     default:

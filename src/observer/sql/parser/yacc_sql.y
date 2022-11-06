@@ -725,7 +725,7 @@ non_aggregation_func LBRACE ID func_extra_args RBRACE {
   char s[1000];
   memset(s, 0, sizeof(s));
   sprintf(s,"length(%s)", $3);
-  printf("hahaa=%s\n", s);
+  // printf("hahaa=%s\n", s);
   CONTEXT->aggr_for_func[CONTEXT->fc] = A_LENGTH;
   func_attr_init(&CONTEXT->rel_stack[CONTEXT->fc], NULL, $3, CONTEXT->aggr_for_func[CONTEXT->fc], 0, CONTEXT->rel_argc[CONTEXT->fc], CONTEXT->rel_args[CONTEXT->fc]);
   CONTEXT->fc++;

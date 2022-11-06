@@ -2549,7 +2549,7 @@ CONTEXT->value_lengths[S_TOP] = 0;
   char s[1000];
   memset(s, 0, sizeof(s));
   sprintf(s,"length(%s)", (yyvsp[-1].string));
-  printf("hahaa=%s\n", s);
+  // printf("hahaa=%s\n", s);
   CONTEXT->aggr_for_func[CONTEXT->fc] = A_LENGTH;
   func_attr_init(&CONTEXT->rel_stack[CONTEXT->fc], NULL, (yyvsp[-1].string), CONTEXT->aggr_for_func[CONTEXT->fc], 0, CONTEXT->rel_argc[CONTEXT->fc], CONTEXT->rel_args[CONTEXT->fc]);
   CONTEXT->fc++;

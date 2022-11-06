@@ -50,6 +50,7 @@ typedef struct {
   char *alias;
   char *args[MAX_NUM];
   int argc;
+  size_t is_const_func_expr;
 } RelAttr;
 
 typedef struct {
