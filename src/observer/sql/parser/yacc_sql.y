@@ -911,6 +911,47 @@ non_aggregation_func LBRACE ID RBRACE comOp value {
   condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, right_value);
   CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 }
+| non_aggregation_func LBRACE ID DOT ID RBRACE comOp value {
+  RelAttr left_attr;
+
+  Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
+  func_attr_init(&left_attr, $3, $5, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, right_value);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+}
+| value comOp non_aggregation_func LBRACE ID RBRACE {
+  RelAttr right_attr;
+
+  Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
+  func_attr_init(&right_attr, NULL, $6, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, &attr, NULL);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+}
+| value comOp non_aggregation_func LBRACE ID DOT ID RBRACE {
+  RelAttr right_attr;
+
+  Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
+  func_attr_init(&right_attr, $6, $8, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, &attr, NULL);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+}
+| non_aggregation_func LBRACE ID DOT ID RBRACE comOp non_aggregation_func LBRACE ID DOT ID RBRACE {
+  RelAttr left_attr;
+  RelAttr right_attr;
+
+  func_attr_init(&left_attr, $3, $5, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  func_attr_init(&left_attr, $3, $5, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+
+  Condition condition;
+  condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, &attr, NULL);
+  CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
+}
 | ID comOp value
 {
   RelAttr left_attr;
