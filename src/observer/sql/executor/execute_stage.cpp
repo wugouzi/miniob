@@ -2213,16 +2213,16 @@ void ExecuteStage::print_fields(std::stringstream &ss, const std::vector<Field> 
 
 // haven't changed field offset
 void Pretable::filter_fields(const std::vector<Field> &fields) {
-  std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<AggreType, int>>> mp;
+  std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<AggreType, std::map<std::tuple<MapFuncType,char *>,  int>>>> mp;
 
   for (size_t i = 0; i < fields.size(); i++) {
-    mp[fields[i].table_name()][fields[i].field_name()][fields[i].aggr_type()] = i+1;
+    mp[fields[i].table_name()][fields[i].field_name()][fields[i].aggr_type()][{fields[i].map_func_type_,fields[i].func_args }] = i+1;
   }
 
   std::vector<int> orders(fields.size());
   for (size_t i = 0; i < fields_.size(); i++) {
     auto &f = fields_[i];
-    int j = mp[f.table_name()][f.meta()->name()][f.aggr_type()];
+    int j = mp[f.table_name()][f.meta()->name()][f.aggr_type()][{f.map_func_type_, f.func_args }];
     if (j > 0) {
       orders[j-1] = i;
     }

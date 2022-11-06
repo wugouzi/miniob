@@ -208,9 +208,9 @@ class Pretable {
         continue;
       } else {
         // this is an expression that involves attributes
-        for (auto& group : groups_) {
-          for (auto& r : group) {
-            if (f.map_func_type_ != MapFuncType::M_ID) {
+        if (f.map_func_type_ != MapFuncType::M_ID) {
+          for (auto& group : groups_) {
+            for (auto& r : group) {
               auto value = r.get_cell(index).copy();
               auto apply_rc =
                   value.apply_func(f.map_func_type_, f.get_func_args());
@@ -218,12 +218,14 @@ class Pretable {
                 return apply_rc;
               }
               meta->set_type(value.attr_type());
-              r.set_cell(index, value);
+              r.push(value);
             }
           }
+          f.set_field(meta);
+          fields_.push_back(f);
+          // fields_.back().set_field(meta);
         }
       }
-      f.set_field(meta);
     }
     return RC::SUCCESS;
   }
