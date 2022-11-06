@@ -277,6 +277,8 @@ void aggregation_attr_init(RelAttr *relation_attr, const char *relation_name, co
 
 void func_attr_init(RelAttr *relation_attr, const char *relation_name, const char *attribute_name, AggreType type, int is_digit, int argc, char *arg);
 
+void func_attr_append(RelAttr *);
+
 void value_init_integer(Value *value, int v);
 void value_init_null(Value *value);
 void value_init_float(Value *value, float v);

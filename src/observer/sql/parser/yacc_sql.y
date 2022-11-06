@@ -65,6 +65,12 @@ typedef struct ParserContext {
   // 为了func增加的单个参数，写得很死！
   char* args[MAX_NUM];
   char* argc[MAX_NUM];
+
+  AggreType aggr_for_func[MAX_NUM];
+  RelAttr rel_stack[MAX_NUM];
+  char* rel_args[MAX_NUM];
+  char* rel_argc[MAX_NUM];
+  int fc;
 } ParserContext;
 
 //获取子串
@@ -660,12 +666,69 @@ MAX {
 non_aggregation_func:
 LENGTH {
   CONTEXT->a_types[S_TOP] = A_LENGTH;
+  CONTEXT->aggr_for_func[CONTEXT->fc] = A_LENGTH;
 } 
 | ROUND {
   CONTEXT->a_types[S_TOP] = A_ROUND;
+  CONTEXT->aggr_for_func[CONTEXT->fc] = A_ROUND;
 } 
 | DATE_FORMAT {
   CONTEXT->a_types[S_TOP] = A_DATE_FORMAT;
+  CONTEXT->aggr_for_func[CONTEXT->fc] = A_DATE_FORMAT;
+}
+;
+
+func_expr: 
+non_aggregation_func LBRACE ID func_extra_args RBRACE {
+  func_attr_init(&CONTEXT->rel_stack[CONTEXT->fc], NULL, $3, CONTEXT->aggr_for_func[CONTEXT->fc], 0, CONTEXT->rel_argc[CONTEXT->fc], CONTEXT->rel_args[CONTEXT->fc]);
+  CONTEXT->aggr_for_func[CONTEXT->fc] = A_NO;
+  CONTEXT->fc++;
+}
+| non_aggregation_func LBRACE ID DOT ID func_extra_args RBRACE {
+  func_attr_init(&CONTEXT->rel_stack[CONTEXT->fc], $3, $5, CONTEXT->aggr_for_func[CONTEXT->fc], 0, CONTEXT->rel_argc[CONTEXT->fc], CONTEXT->rel_args[CONTEXT->fc]);
+  CONTEXT->aggr_for_func[CONTEXT->fc] = A_NO;
+  CONTEXT->fc++;
+}
+| non_aggregation_func LBRACE RBRACE {
+  func_attr_init(&CONTEXT->rel_stack[CONTEXT->fc], NULL, "fail", A_FAILURE, 0, CONTEXT->rel_argc[CONTEXT->fc], CONTEXT->rel_args[CONTEXT->fc]);
+  CONTEXT->aggr_for_func[CONTEXT->fc] = A_NO;
+  CONTEXT->fc++;
+}
+| non_aggregation_func LBRACE STAR func_extra_args RBRACE {
+  func_attr_init(&CONTEXT->rel_stack[CONTEXT->fc], NULL, "*", CONTEXT->aggr_for_func[CONTEXT->fc] != A_COUNT ? A_FAILURE : CONTEXT->aggr_for_func[CONTEXT->fc], 1, CONTEXT->rel_argc[CONTEXT->fc], CONTEXT->rel_args[CONTEXT->fc]);
+  CONTEXT->aggr_for_func[CONTEXT->fc] = A_NO;
+  CONTEXT->fc++;
+}
+| non_aggregation_func LBRACE NUMBER func_extra_args RBRACE {
+  char *str = malloc(10 * sizeof(char));
+  snprintf(str, 10, "%d", $3);
+  func_attr_init(&CONTEXT->rel_stack[CONTEXT->fc], NULL, str, CONTEXT->aggr_for_func[CONTEXT->fc], 1, CONTEXT->rel_argc[CONTEXT->fc], CONTEXT->rel_args[CONTEXT->fc]);
+  CONTEXT->aggr_for_func[CONTEXT->fc] = A_NO;
+  CONTEXT->fc++;
+}
+| non_aggregation_func LBRACE FLOAT func_extra_args RBRACE {
+  char *buf = malloc(20 * sizeof(char));
+  snprintf(buf, 20, "%.2f", $3);
+  size_t len = strlen(buf);
+  while (buf[len - 1] == '0') {
+    len--;
+  }
+  if (buf[len - 1] == '.') {
+    len--;
+  }
+  buf[len] = '\0';
+  func_attr_init(&CONTEXT->rel_stack[CONTEXT->fc], NULL, buf, CONTEXT->aggr_for_func[CONTEXT->fc], 1, CONTEXT->rel_argc[CONTEXT->fc], CONTEXT->rel_args[CONTEXT->fc]);
+  CONTEXT->aggr_for_func[CONTEXT->fc] = A_NO;
+  CONTEXT->fc++;
+} 
+| non_aggregation_func LBRACE SSS RBRACE {
+  char s[1000];
+  memset(s, 0, sizeof(s));
+  sprintf(s,"length(%s)", $3);
+  printf("hahaa=%s\n", s);
+  CONTEXT->aggr_for_func[CONTEXT->fc] = A_LENGTH;
+  func_attr_init(&CONTEXT->rel_stack[CONTEXT->fc], NULL, $3, CONTEXT->aggr_for_func[CONTEXT->fc], 0, CONTEXT->rel_argc[CONTEXT->fc], CONTEXT->rel_args[CONTEXT->fc]);
+  CONTEXT->fc++;
 }
 ;
 
@@ -727,10 +790,14 @@ func_extra_args:
 | COMMA NUMBER aggregation_extra_id {
   CONTEXT->args[S_TOP] = $2;
   CONTEXT->argc[S_TOP]++;
+  CONTEXT->rel_args[CONTEXT->fc] = $2;
+  CONTEXT->rel_argc[CONTEXT->fc]++;
 }
 | COMMA SSS aggregation_extra_id {
   CONTEXT->args[S_TOP] = strdup($2);
   CONTEXT->argc[S_TOP]++;
+  CONTEXT->rel_args[CONTEXT->fc] = strdup($2);
+  CONTEXT->rel_argc[CONTEXT->fc]++;
 }
 ;
 
@@ -901,17 +968,17 @@ condition_list:
 			}
     ;
 condition:
-non_aggregation_func LBRACE ID RBRACE comOp value {
-  RelAttr left_attr;
+func_expr comOp value {
+  RelAttr* left_attr = CONTEXT->rel_stack[CONTEXT->fc-1];
 
   Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
-  func_attr_init(&left_attr, NULL, $3, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  // func_attr_init(&left_attr, NULL, $3, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
   
   Condition condition;
-  condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, right_value);
+  condition_init(&condition, CONTEXT->comps[S_TOP], 1, left_attr, NULL, 0, NULL, right_value);
   CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 }
-| non_aggregation_func LBRACE ID DOT ID RBRACE comOp value {
+/* | non_aggregation_func LBRACE ID DOT ID RBRACE comOp value {
   RelAttr left_attr;
 
   Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
@@ -920,36 +987,37 @@ non_aggregation_func LBRACE ID RBRACE comOp value {
   Condition condition;
   condition_init(&condition, CONTEXT->comps[S_TOP], 1, &left_attr, NULL, 0, NULL, right_value);
   CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
-}
-| value comOp non_aggregation_func LBRACE ID RBRACE {
-  RelAttr right_attr;
+} */
+| value comOp func_expr {
+  RelAttr* right_attr =  RelAttr* right_attr = CONTEXT->rel_stack[CONTEXT->fc-1];
 
   Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
-  func_attr_init(&right_attr, NULL, $6, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  // func_attr_init(&right_attr, NULL, $6, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
 
   Condition condition;
-  condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, &attr, NULL);
+  condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, right_attr, NULL);
   CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 }
-| value comOp non_aggregation_func LBRACE ID DOT ID RBRACE {
-  RelAttr right_attr;
+/* | value comOp  {
+
+  RelAttr* right_attr = CONTEXT->rel_stack[CONTEXT->fc-1];
 
   Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
-  func_attr_init(&right_attr, $6, $8, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  // func_attr_init(&right_attr, $6, $8, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
 
   Condition condition;
-  condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, &attr, NULL);
+  condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, right_attr, NULL);
   CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
-}
-| non_aggregation_func LBRACE ID DOT ID RBRACE comOp non_aggregation_func LBRACE ID DOT ID RBRACE {
-  RelAttr left_attr;
-  RelAttr right_attr;
+} */
+| func_expr comOp func_expr {
+  RelAttr* left_attr = CONTEXT->rel_stack[CONTEXT->fc-2];
+  RelAttr* right_attr = CONTEXT->rel_stack[CONTEXT->fc-1];
 
-  func_attr_init(&left_attr, $3, $5, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
-  func_attr_init(&left_attr, $3, $5, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  // func_attr_init(&left_attr, $3, $5, CONTEXT->aggr_for_func[CONTEXT->fc-2], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  // func_attr_init(&right_attr, $10, $12,CONTEXT->aggr_for_func[CONTEXT->fc-1], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
 
   Condition condition;
-  condition_init(&condition, CONTEXT->comps[S_TOP], 0, NULL, left_value, 1, &attr, NULL);
+  condition_init(&condition, CONTEXT->comps[S_TOP], 1, left_attr, NULL, 1, right_attr, NULL);
   CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 }
 | ID comOp value
