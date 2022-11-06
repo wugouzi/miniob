@@ -2621,3 +2621,15 @@ select id, length(name), round(score), date_format(u_date, '%D,%M,%Y') as date_t
 -- -ID | LENGTH(NAME) | ROUND(SCORE) | DATE_TYPE
 
 select id, date_format(u_date, '%z/%n/%d') as date_type from function_table where length(name) < 6;
+
+create table fail(id int, name char(20));
+insert into fail values(1,'wefwe');
+insert into fail values(2,'awefwef');
+
+select date_format(33, '%z/%n/%d') as date;
+select date_format(name, '%z/%n/%d') from fail;
+select length(3) as len;
+select length(id) from fail;
+select round('wefwe', 2) from fail;
+select round('wefwe') from fail;
+select round(name) from fail;
