@@ -83,7 +83,7 @@ public:
           auto data = strdup(res.c_str());
           set_data(data);
           set_type(AttrType::CHARS);
-          set_length(strlen(data)+1);
+          set_length(strlen(data)+2);
         } else {
           return RC::INTERNAL;
         }
@@ -109,7 +109,7 @@ public:
           auto data = strdup(res.c_str());
           set_data(data);
           set_type(AttrType::CHARS);
-          set_length(res.size()+1);
+          set_length(res.size()+2);
         } else {
           return RC::INTERNAL;
         }
