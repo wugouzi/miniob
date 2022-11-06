@@ -101,7 +101,18 @@ public:
           return RC::SUCCESS;
         }
       } else if (this->map_func_type_ == MapFuncType::M_DATE_FORMAT) {
-        // no need to handle
+        if (arg1 && arg1[0] == '\'') {
+          auto data = strdup(arg1);
+          cell.set_data(data);
+          cell.set_length(strlen(arg1) + 1);
+          cell.set_type(AttrType::CHARS);
+          auto t = TempMapFuncObject();
+          t.argc = this->func_argc;
+          t.arg = this->func_args;
+          t.type = this->map_func_type_;
+          cell.apply_func(t);
+          return RC::SUCCESS;
+        }
       }
     }
     return RC::INTERNAL;

@@ -2634,7 +2634,7 @@ CONTEXT->value_lengths[S_TOP] = 0;
 #line 779 "yacc_sql.y"
                                                               {
   CONTEXT->a_types[S_TOP] = A_DATE_FORMAT;
-  func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, (yyvsp[-2].string), CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+  func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, (yyvsp[-2].string), CONTEXT->a_types[S_TOP], 1, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
 }
 #line 2640 "yacc_sql.tab.c"
     break;

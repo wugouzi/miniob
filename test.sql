@@ -2640,5 +2640,5 @@ select round(name) from fail;
 create table test_date(id int,u_time date);
 insert into test_date values(1, '2022-01-01');
 insert into test_date values(2, '2022-01-03');
-select date_format('2010-12-12', '%y/%m/%d') as date from test_date;
+select date_format('2010-12-12', '%y/%m/%d') as datee from test_date;
 select date_format('2010-12-12', '%y/%m/%d') from test_date;
