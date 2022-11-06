@@ -399,6 +399,8 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
         field.set_aggr(relation_attr.type);
         field.set_alias(relation_attr.alias);
         field.set_aggr_str(relation_attr.attribute_name);
+        field.func_argc = relation_attr.argc;
+        field.func_args = relation_attr.args[0];
         query_fields.push_back(field);
       }else{
         if (tables.size() != 1) {

@@ -2521,3 +2521,17 @@ INSERT INTO SELECT_TABLES_4 VALUES (2, 4, 'D');
 INSERT INTO SELECT_TABLES_5 VALUES (1, 10, 'G');
 INSERT INTO SELECT_TABLES_5 VALUES (1, 11, 'F');
 INSERT INTO SELECT_TABLES_5 VALUES (2, 12, 'C')
+
+-- failed
+
+4. round
+select round(235.415, 2) as round_value;
+-- ROUND_VALUE
+-- -235.42
+-- +235
+select id, length(name), round(score) from function_table where id<4;
+-- 1 | 5 | 23457
+-- 2 | 6 | 32
+
+-- alias
+select length(name) as g from t1;
