@@ -20,6 +20,7 @@ See the Mulan PSL v2 for more details. */
 #include <sstream>
 #include <string>
 #include <vector>
+#include <cmath>
 #include <sql/parser/parse_defs.h>
 
 std::string double2string(double v)
@@ -85,9 +86,14 @@ bool string_like(const char *s1, const char *s2)
   return dp[n][m];
 }
 
+double my_round(double value, int decimal_places) {
+    const double multiplier = std::pow(10.0, decimal_places);
+    return std::round(value * multiplier) / multiplier;
+}
+
 std::string custom_round(double val, int digit){
   std::stringstream tmp;
-  tmp << std::setprecision(digit) << std::fixed << val;
+  tmp << std::setprecision(digit) << std::fixed << my_round(val, digit);
   std::string res;
   tmp >> res;
   return res;
@@ -185,7 +191,7 @@ float to_float(std::string s)
 {
   std::stringstream ss;
   ss << s;
-  float res;
+  double res;
   ss >> res;
   return res;
 }

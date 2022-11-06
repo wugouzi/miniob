@@ -86,9 +86,9 @@ public:
         }
       } else if (this->map_func_type_ == MapFuncType::M_ROUND) {
         if (arg1 && '0' <= arg1[0] && arg1[0] <= '9') {
-          auto f = to_float(arg1);
+          auto f = std::stod(arg1);
           auto data = new char[5];
-          memcpy(data, &f, sizeof(f));
+          memcpy(data, &f, sizeof(float));
           cell.set_data(data);
           cell.set_length(sizeof(float) + 1);
           cell.set_type(AttrType::FLOATS);
@@ -96,6 +96,7 @@ public:
           t.argc = this->func_argc;
           t.arg = this->func_args;
           t.type = this->map_func_type_;
+          // custom_round(argc)
           cell.apply_func(t);
           return RC::SUCCESS;
         }

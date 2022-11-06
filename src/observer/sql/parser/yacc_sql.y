@@ -761,7 +761,8 @@ non_aggregation_func LBRACE ID func_extra_args RBRACE {
 }
 | non_aggregation_func LBRACE FLOAT func_extra_args RBRACE {
   char *buf = malloc(20 * sizeof(char));
-  snprintf(buf, 20, "%.2f", $3);
+  // printf("3=%f\n", $3);
+  snprintf(buf, 20, "%.4f", $3);
   size_t len = strlen(buf);
   while (buf[len - 1] == '0') {
     len--;
@@ -770,6 +771,7 @@ non_aggregation_func LBRACE ID func_extra_args RBRACE {
     len--;
   }
   buf[len] = '\0';
+  // printf("buf=%s\n", buf);
   func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, buf, CONTEXT->a_types[S_TOP], 1, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
   // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
   CONTEXT->a_types[S_TOP] = A_NO;
