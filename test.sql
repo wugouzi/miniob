@@ -2536,9 +2536,17 @@ select round(235.415, 2) as round_value;
 -- ROUND_VALUE
 -- -235.42
 -- +235
-select id, length(name), round(score) from t1 where id<4;
+CREATE TABLE haha(id INT, col1 char(255), feat1 date, col2 float);
+
+insert INTO haha values(1, 'test', '2021-01-02', 23457.53);
+insert INTO haha values(2, '', '2021-01-02', 32.93);
+insert INTO haha values(3, 'testtest', '2021-01-03', 23.55);
+insert INTO haha values(4, 'testtest', '2021-01-03', 23.49);
+select id, length(col1), round(col2) from haha where id<4;
 -- 1 | 5 | 23457
 -- 2 | 6 | 32
+
+select id, length(col1), round(col2, 1) from haha where id<4;
 
 -- alias
 select length(name) as g from t1;
@@ -2577,7 +2585,7 @@ insert INTO function_table_2 values(2, 'mongo', 38);
 -- ID | LENGTH(NAME) | ROUND(SCORE,2)
 select t1.id, t1.name, round(t1.score) as s1, t2.id, t2.name, round(t2.score) as s2 from function_table t1, function_table_2 t2 where t1.id > t2.id and round(t1.score) > round(t2.score);
 
-select t1.id, t1.name, round(t1.score) as s1, t2.id, t2.name, round(t2.score) as s2 from function_table t1, function_table_2 t2 where round(t1.score) > round(t2.score);
+select t1.id, t1.name, round(t1.score) as s1, t2.id, t2.name, round(t2.score) as s2 from function_table t1, function_table_2 t2 where t1.score) > round(t2.score);
 -- -3 | CHERRY | 1919 | 2 | MANGO | 38
 -- -4 | FIG | 23333 | 2 | MANGO | 38
 -- -5 | WATERMELON | 1000 | 2 | MANGO | 38
