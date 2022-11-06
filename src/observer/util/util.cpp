@@ -101,11 +101,7 @@ std::string custom_round(char *s, int digit){
 }
 
 std::string custom_round(double val, int digit){
-  std::stringstream tmp;
-  tmp << std::setprecision(digit) << std::fixed << my_round(val, digit);
-  std::string res;
-  tmp >> res;
-  return res;
+  return double2string(my_round(val, digit));
 }
 
 std::string append_day_suffix(std::string day) {
