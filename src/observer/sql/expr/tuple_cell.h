@@ -69,8 +69,33 @@ public:
         break;
       }
       case MapFuncType::M_DATE_FORMAT: {
-        if (attr_type_ == AttrType::DATES) {
-          char* date_value = data_;
+        char* date_value = data_;
+        if (attr_type_ == AttrType::CHARS) {
+          auto s = std::string(date_value);
+          std::string temp;
+          for (auto c: s) {
+            if(c != '-'){
+              temp += c;
+            }
+          }
+          strip_quote(temp);
+          auto ahah = stoi(temp);
+          date_value = (char*)(&ahah);
+
+          char* pattern = "";
+          if (extra_args.size() == 1) {
+            pattern = extra_args[0];
+          } else {
+            LOG_ERROR("date_format argument number error");
+            return RC::INTERNAL;
+          }
+          auto res = custom_date_format(date_value, pattern);
+          auto data = strdup(res.c_str());
+          set_data(data);
+          set_type(AttrType::CHARS);
+          set_length(strlen(data)+1);
+
+        }else if (attr_type_ == AttrType::DATES) {
           char* pattern = "";
           if (extra_args.size() == 1) {
             pattern = extra_args[0];

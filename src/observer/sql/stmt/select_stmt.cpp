@@ -382,12 +382,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
     } else {
       if(tables.size() == 0){
         FieldMeta* meta = new FieldMeta;
-        // if(relation_attr.type == AggreType::A_ROUND){
-        //   // 特判，修改meta类型
-        //   meta->init(relation_attr.attribute_name, FLOATS, 0,
-        //              sizeof(relation_attr.attribute_name) + 2, true, false);
-        // }else{
-        // }
+        // cast_arg_by_func();
         meta->init(relation_attr.attribute_name, CHARS, 0,
                    sizeof(relation_attr.attribute_name) + 2, true, false);
         Field field(nullptr, meta);
