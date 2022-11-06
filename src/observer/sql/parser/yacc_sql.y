@@ -969,7 +969,7 @@ condition_list:
     ;
 condition:
 func_expr comOp value {
-  RelAttr* left_attr = CONTEXT->rel_stack[CONTEXT->fc-1];
+  RelAttr* left_attr = &CONTEXT->rel_stack[CONTEXT->fc-1];
 
   Value *right_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
   // func_attr_init(&left_attr, NULL, $3, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
@@ -989,7 +989,7 @@ func_expr comOp value {
   CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 } */
 | value comOp func_expr {
-  RelAttr* right_attr =  RelAttr* right_attr = CONTEXT->rel_stack[CONTEXT->fc-1];
+  RelAttr* right_attr = &CONTEXT->rel_stack[CONTEXT->fc-1];
 
   Value *left_value = &CONTEXT->values[S_TOP][CONTEXT->value_lengths[S_TOP] - 1];
   // func_attr_init(&right_attr, NULL, $6, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
@@ -1010,8 +1010,8 @@ func_expr comOp value {
   CONTEXT->conditions[S_TOP][CONTEXT->condition_lengths[S_TOP]++] = condition;
 } */
 | func_expr comOp func_expr {
-  RelAttr* left_attr = CONTEXT->rel_stack[CONTEXT->fc-2];
-  RelAttr* right_attr = CONTEXT->rel_stack[CONTEXT->fc-1];
+  RelAttr* left_attr = &CONTEXT->rel_stack[CONTEXT->fc-2];
+  RelAttr* right_attr = &CONTEXT->rel_stack[CONTEXT->fc-1];
 
   // func_attr_init(&left_attr, $3, $5, CONTEXT->aggr_for_func[CONTEXT->fc-2], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
   // func_attr_init(&right_attr, $10, $12,CONTEXT->aggr_for_func[CONTEXT->fc-1], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
