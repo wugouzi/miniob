@@ -72,13 +72,25 @@ public:
         char* date_value = data_;
         if (attr_type_ == AttrType::CHARS) {
           auto s = std::string(date_value);
+          strip_quote(s);
           std::string temp;
-          for (auto c: s) {
+          std::vector<std::string> ymd;
+          for (auto c : s) {
             if(c != '-'){
               temp += c;
+            }else{ 
+              if(temp.size() == 1 && ymd.size()>=1){
+                temp = "0" + temp;
+              }
+              ymd.push_back(temp);
+              temp = "";
             }
           }
-          strip_quote(temp);
+          ymd.push_back(temp);
+          temp = "";
+          for(auto haha: ymd){
+            temp += haha;
+          }
           auto ahah = stoi(temp);
           date_value = (char*)(&ahah);
 
