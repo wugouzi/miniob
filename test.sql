@@ -2619,3 +2619,5 @@ select id, length(name), round(score), date_format(u_date, '%D,%M,%Y') as date_t
 -- -5 | 10 | 1000 | 21st,December,2019
 -- -6 | 6 | -2526 | 29th,February,2016
 -- -ID | LENGTH(NAME) | ROUND(SCORE) | DATE_TYPE
+
+select id, date_format(u_date, '%z/%n/%d') as date_type from function_table where length(name) < 6;
