@@ -2622,6 +2622,8 @@ select id, length(name), round(score), date_format(u_date, '%D,%M,%Y') as date_t
 
 select id, date_format(u_date, '%z/%n/%d') as date_type from function_table where length(name) < 6;
 
+-- 预期的failure测试
+
 create table fail(id int, name char(20));
 insert into fail values(1,'wefwe');
 insert into fail values(2,'awefwef');
@@ -2633,3 +2635,10 @@ select length(id) from fail;
 select round('wefwe', 2) from fail;
 select round('wefwe') from fail;
 select round(name) from fail;
+
+
+create table test_date(id int,u_time date);
+insert into test_date values(1, '2022-01-01');
+insert into test_date values(2, '2022-01-03');
+select date_format('2010-12-12', '%y/%m/%d') as date from test_date;
+select date_format('2010-12-12', '%y/%m/%d') from test_date;
