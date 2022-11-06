@@ -2553,3 +2553,10 @@ insert INTO t1 values(4, 'testtest', '2021-01-03', 23.49);
 -- bad case
 
 select round(col2, 1), round(col2, 2) from t1 where id<4;
+
+-- failed
+
+select round(235.415, 2) as round_value;
+-- ROUND_VALUE
+-- -235.42
+-- +235.41

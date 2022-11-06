@@ -109,7 +109,7 @@ public:
           auto data = strdup(res.c_str());
           set_data(data);
           set_type(AttrType::CHARS);
-          set_length(res.size()+2);
+          set_length(res.size()+1);
         } else {
           return RC::INTERNAL;
         }

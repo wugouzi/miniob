@@ -218,7 +218,7 @@ class Pretable {
                 return apply_rc;
               }
               meta->set_type(value.attr_type());
-              r.push(value);
+              r.push(std::move(value));
             }
           }
           f.set_field(meta);
