@@ -2627,6 +2627,12 @@ select id, date_format(u_date, '%z/%n/%d') as date_type from function_table wher
 -- 预期的failure测试
 
 create table fail(id int, name char(20));
+select round(name) from fail;
+select data_format(name) from fail;
+select data_format(id) from fail;
+select length(id) from fail;
+
+
 insert into fail values(1,'wefwe');
 insert into fail values(2,'awefwef');
 
