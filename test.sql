@@ -2601,3 +2601,7 @@ select date_format('2019-9-17', '%y-%Y-%m-%M-%d-%D') as date_type;
 
 select date_format('2019-9-1', '%y-%Y-%m-%M-%d-%D') as date_type;
 select date_format('2019-9-1', '%y-%Y-%m-%M-%d-%D');
+
+--failed
+
+select id, length(name), round(score), date_format(u_date, '%D,%M,%Y') as date_type from function_table where id <> 4;

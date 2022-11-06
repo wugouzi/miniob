@@ -101,7 +101,7 @@ QUOTE            [\'\"]
 [Aa][Ss]                                             RETURN_TOKEN(AS);
 [Ll][Ee][Nn][Gg][Tt][Hh]                             RETURN_TOKEN(LENGTH);
 [Rr][Oo][Uu][Nn][Dd]                                 RETURN_TOKEN(ROUND);
-{QUOTE}[ \40\42A-Za-z0-9_/\.\-\%]*{QUOTE}            yylval->string=strdup(yytext); RETURN_TOKEN(SSS);
+{QUOTE}[ \40\42A-Za-z0-9_/\.\-\%,]*{QUOTE}            yylval->string=strdup(yytext); RETURN_TOKEN(SSS);
 {ID}                                                 yylval->string=strdup(yytext); RETURN_TOKEN(ID);
 "("                                                  RETURN_TOKEN(LBRACE);
 ")"                                                  RETURN_TOKEN(RBRACE);
