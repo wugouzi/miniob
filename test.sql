@@ -2628,9 +2628,8 @@ select id, date_format(u_date, '%z/%n/%d') as date_type from function_table wher
 
 create table fail(id int, name char(20));
 select round(name) from fail;
-select data_format(name) from fail;
-select data_format(id) from fail;
-select length(id) from fail;
+select length(fail.id) from fail;
+select round(fail.name) from fail;
 
 
 insert into fail values(1,'wefwe');
