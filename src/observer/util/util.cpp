@@ -156,13 +156,14 @@ std::string custom_date_format(char *date, char* pattern) {
   strip_quote(p);
   // std::stringstream ss;
   tm t;
-  strptime(date_to_string(value).c_str(), "%Y-%m-%\d", &t);
+  // memset(&t, 0, sizeof(t));
+  strptime(date_to_string(value).c_str(), "%Y-%m-\%d", &t);
   // %Y	年，4 位，如2022
   p = ReplaceAll(p, "%Y", format_time(&t, "%Y"));
   // %y	年，2 位，如22
   p = ReplaceAll(p, "%y", format_time(&t, "%y"));
   // %M	月名，英文，如January
-  p = ReplaceAll(p, "%M", format_time(&t, "%M"));
+  p = ReplaceAll(p, "%M", format_time(&t, "%B"));
   // %m	月号，数字，如06、12
   p = ReplaceAll(p, "%m", format_time(&t, "%m"));
   // %D	月的一天，带英文后缀，如21st、28th
