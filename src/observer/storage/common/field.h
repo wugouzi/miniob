@@ -34,6 +34,8 @@ public:
   const FieldMeta *metac() const { return field_; }
   FieldMeta meta_copy() const { return *field_; }
 
+  bool is_literal = false;
+
   void set_attr_type(AttrType typ) { this->meta()->set_type(typ); }
 
   AttrType attr_type() const

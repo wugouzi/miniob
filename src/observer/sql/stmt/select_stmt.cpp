@@ -396,6 +396,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
         field.set_aggr_str(relation_attr.attribute_name);
         field.func_argc = relation_attr.argc;
         field.func_args = relation_attr.args[0];
+        field.is_literal = relation_attr.print_attr;
         query_fields.push_back(field);
       }else{
         if (tables.size() != 1) {
@@ -423,7 +424,8 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
           // append func args
           field.func_argc = relation_attr.argc;
           field.func_args = relation_attr.args[0];
-          // TODO set col name 
+          field.is_literal = relation_attr.print_attr;
+          // TODO set col name
           // field.set_aggr_str(relation_attr.attribute_name);
           query_fields.push_back(field);
 
@@ -439,8 +441,8 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
           // append func args
           field.func_argc = relation_attr.argc;
           field.func_args = relation_attr.args[0];
+          field.is_literal = relation_attr.print_attr;
           query_fields.push_back(field);
-
         }
       }
     }
@@ -547,17 +549,18 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
     LOG_WARN("cannot handle order by clause");
     return rc;
   }
+
   auto type_check = [&](Field& f) {
     if (f.map_func_type_ == MapFuncType::M_DATE_FORMAT) {
-      if (f.attr_type() != AttrType::CHARS) {
+      if (f.attr_type() != AttrType::DATES && !f.is_literal) {
         return false;
       }
     } else if (f.map_func_type_ == MapFuncType::M_LENGTH) {
-      if (f.attr_type() != AttrType::CHARS) {
+      if (f.attr_type() != AttrType::CHARS && !f.is_literal) {
         return false;
       }
     } else if (f.map_func_type_ == MapFuncType::M_ROUND) {
-      if (f.attr_type() != AttrType::FLOATS) {
+      if (f.attr_type() != AttrType::FLOATS && !f.is_literal) {
         return false;
       }
     }
