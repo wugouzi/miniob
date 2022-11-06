@@ -2491,7 +2491,11 @@ select id, length(name) from t1 where id>2;
 
 
 -- where examples
-select length(col1) from t1 where length(col1)>=8;
+select t1.name, t2.name, length(t1.name), length(t2.name), t1.name, t2.name, length(t1.name) from t1, t2 where length(t1.name)>=0;
+
+-- failed
+
+select t1.name, length(t1.name), t1.name from t1 where length(t1.name)>=0;
 
 create table float_test(id int, f float);
 insert into float_test values(1, 1.5);
