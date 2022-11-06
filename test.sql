@@ -2529,9 +2529,23 @@ select round(235.415, 2) as round_value;
 -- ROUND_VALUE
 -- -235.42
 -- +235
-select id, length(name), round(score) from function_table where id<4;
+select id, length(name), round(score) from t1 where id<4;
 -- 1 | 5 | 23457
 -- 2 | 6 | 32
 
 -- alias
 select length(name) as g from t1;
+
+-- multi round
+
+
+CREATE TABLE t1(id INT, col1 char(255), feat1 date, col2 float);
+
+insert INTO t1 values(1, 'test', '2021-01-02', 23457.53);
+insert INTO t1 values(2, '', '2021-01-02', 32.93);
+insert INTO t1 values(3, 'testtest', '2021-01-03', 23.55);
+insert INTO t1 values(4, 'testtest', '2021-01-03', 23.49);
+
+-- bad case
+
+select round(col2, 1), round(col2, 2) from t1 where id<4;
