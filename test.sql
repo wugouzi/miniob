@@ -2480,7 +2480,9 @@ create table t1(id int, name char(20));
 create table t2(id int, name char(20));
 insert into t1 values(2, 'ab');
 insert into t1 values(4, 'test');
+insert into t1 values(5, 'test3aaaa');
 insert into t2 values(3, 'abc');
+insert into t2 values(4, 'a');
 select id, length(name) from t1 where id>1;
 select * from t1,t2 where length(t1.name)>length(t2.name);
 
@@ -2490,6 +2492,13 @@ select id, length(name) from t1 where id>2;
 
 -- where examples
 select length(col1) from t1 where length(col1)>=8;
+
+create table float_test(id int, f float);
+insert into float_test values(1, 1.5);
+insert into float_test values(2, 2.6);
+insert into float_test values(3, 3.1);
+insert into float_test values(3, 4.1);
+select id, round(f) from float_test where round(f)>2;
 
 -- failed
 select id, length(col1) from t1 where id>2;
