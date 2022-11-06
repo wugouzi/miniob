@@ -2592,4 +2592,10 @@ select t1.id, t1.name, round(t1.score) as s1, t2.id, t2.name, round(t2.score) as
 -- T1.ID | T1.NAME | S1 | T2.ID | T2.NAME | S2
 -- 5. date_format
 select date_format('2019-9-17', '%y/%m/%d') as date_type;
+
+select date_format('2019-9-17', '%y/%m/%d') as date_type;
 -- -DATE_TYPE
+ 
+select date_format('2019-9-17', '%y-%Y-%m-%M-%d-%D') as date_type;
+
+select date_format('2019-9-1', '%y-%Y-%m-%M-%d-%D') as date_type;

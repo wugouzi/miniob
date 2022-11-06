@@ -75,10 +75,11 @@ public:
           strip_quote(s);
           std::string temp;
           std::vector<std::string> ymd;
+          s += '-';
           for (auto c : s) {
             if(c != '-'){
               temp += c;
-            }else{ 
+            } else{ 
               if(temp.size() == 1 && ymd.size()>=1){
                 temp = "0" + temp;
               }
@@ -86,8 +87,6 @@ public:
               temp = "";
             }
           }
-          ymd.push_back(temp);
-          temp = "";
           for(auto haha: ymd){
             temp += haha;
           }
