@@ -86,12 +86,12 @@ public:
         }
       } else if (this->map_func_type_ == MapFuncType::M_ROUND) {
         if (arg1 && '0' <= arg1[0] && arg1[0] <= '9') {
-          auto f = std::stod(arg1);
-          auto data = new char[5];
-          memcpy(data, &f, sizeof(float));
+          // auto f = std::stod(arg1);
+          auto data = strdup(arg1);
+          // memcpy(data, &f, sizeof(float));
           cell.set_data(data);
-          cell.set_length(sizeof(float) + 1);
-          cell.set_type(AttrType::FLOATS);
+          cell.set_length(strlen(arg1) + 1);
+          cell.set_type(AttrType::CHARS);
           auto t = TempMapFuncObject();
           t.argc = this->func_argc;
           t.arg = this->func_args;

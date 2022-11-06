@@ -91,6 +91,15 @@ double my_round(double value, int decimal_places) {
     return std::round(value * multiplier) / multiplier;
 }
 
+
+std::string custom_round(char *s, int digit){
+  double d;
+  std::stringstream tmp;
+  tmp << s;
+  tmp >> d;
+  return custom_round(d, digit);
+}
+
 std::string custom_round(double val, int digit){
   std::stringstream tmp;
   tmp << std::setprecision(digit) << std::fixed << my_round(val, digit);

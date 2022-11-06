@@ -90,16 +90,24 @@ public:
         break;
       }
       case MapFuncType::M_ROUND: {
-        float f;
-        if(attr_type_ == AttrType::CHARS){
-          std::stringstream ss;
-          ss << data_;
-          ss >> f;
-          attr_type_ = AttrType::FLOATS;
-        }else if(attr_type_ == AttrType::FLOATS){
-          f = *reinterpret_cast<float*>(data_);
+        // float f;
+        int digit = 0;
+        if (extra_args.size()) {
+          auto arg1 = extra_args[0];
+          digit = static_cast<int>((long long)arg1);
         }
-        if (attr_type_ == AttrType::FLOATS) {
+        if (attr_type_ == AttrType::CHARS) {
+          // std::stringstream ss;
+          // ss << data_;
+          // ss >> f;
+          // attr_type_ = AttrType::FLOATS;
+          auto res = custom_round(strdup(data_), digit);
+          auto data = strdup(res.c_str());
+          set_data(data);
+          set_type(AttrType::CHARS);
+          set_length(res.size()+1);
+        } else if (attr_type_ == AttrType::FLOATS) {
+          double f = *reinterpret_cast<float*>(data_);
           int digit = 0;
           if (extra_args.size()) {
             auto arg1 = extra_args[0];
@@ -110,6 +118,8 @@ public:
           set_data(data);
           set_type(AttrType::CHARS);
           set_length(res.size()+1);
+        // }
+        // if (attr_type_ == AttrType::FLOATS) {
         } else {
           return RC::INTERNAL;
         }
