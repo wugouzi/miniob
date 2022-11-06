@@ -412,7 +412,6 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
                    relation_attr.attribute_name);
           return RC::SCHEMA_FIELD_MISSING;
         }
-
         if (relation_attr.print_attr) {
           FieldMeta* meta = new FieldMeta;
           meta->init(relation_attr.attribute_name, CHARS, 0,
@@ -427,6 +426,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
           // TODO set col name 
           // field.set_aggr_str(relation_attr.attribute_name);
           query_fields.push_back(field);
+
         } else {
           Field field(table, field_meta->copy());
           if (relation_attr.type != A_NO) {
@@ -440,6 +440,7 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
           field.func_argc = relation_attr.argc;
           field.func_args = relation_attr.args[0];
           query_fields.push_back(field);
+
         }
       }
     }
@@ -546,7 +547,29 @@ RC SelectStmt::create(Db *db, Selects *select_sql, Stmt *&stmt,
     LOG_WARN("cannot handle order by clause");
     return rc;
   }
+  auto type_check = [&](Field& f) {
+    if (f.map_func_type_ == MapFuncType::M_DATE_FORMAT) {
+      if (f.attr_type() != AttrType::CHARS) {
+        return false;
+      }
+    } else if (f.map_func_type_ == MapFuncType::M_LENGTH) {
+      if (f.attr_type() != AttrType::CHARS) {
+        return false;
+      }
+    } else if (f.map_func_type_ == MapFuncType::M_ROUND) {
+      if (f.attr_type() != AttrType::FLOATS) {
+        return false;
+      }
+    }
+    return true;
+  };
 
+  for (auto& f : query_fields) {
+    if (!type_check(f)) {
+      LOG_ERROR("type check failed");
+      return RC::INTERNAL;
+    }
+  }
 
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
