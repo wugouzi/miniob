@@ -2576,6 +2576,8 @@ insert INTO function_table_2 values(2, 'mongo', 38);
 -- 6 | 6 | -2526.27
 -- ID | LENGTH(NAME) | ROUND(SCORE,2)
 select t1.id, t1.name, round(t1.score) as s1, t2.id, t2.name, round(t2.score) as s2 from function_table t1, function_table_2 t2 where t1.id > t2.id and round(t1.score) > round(t2.score);
+
+select t1.id, t1.name, round(t1.score) as s1, t2.id, t2.name, round(t2.score) as s2 from function_table t1, function_table_2 t2 where round(t1.score) > round(t2.score);
 -- -3 | CHERRY | 1919 | 2 | MANGO | 38
 -- -4 | FIG | 23333 | 2 | MANGO | 38
 -- -5 | WATERMELON | 1000 | 2 | MANGO | 38
