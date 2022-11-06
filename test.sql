@@ -2490,12 +2490,9 @@ select t1.id, t1.name, t2.id, t2.name from t1, t2 where length(t1.name) > length
 select id, length(name) from t1 where id>2;
 
 
--- where examples
-select t1.name, t2.name, length(t1.name), length(t2.name), t1.name, t2.name, length(t1.name) from t1, t2 where length(t1.name)>=0;
-
 -- failed
-
-select t1.name, length(t1.name), t1.name from t1 where length(t1.name)>=0;
+-- 不考虑
+-- select t1.name, length(t1.name), t1.name from t1 where length(t1.name)>=0;
 
 create table float_test(id int, f float);
 insert into float_test values(1, 1.5);
@@ -2505,7 +2502,13 @@ insert into float_test values(3, 4.1);
 select id, round(f) from float_test where round(f)>2;
 
 -- failed
-select id, length(col1) from t1 where id>2;
+select id, round(f) from float_test where round(f)>round(2.4);
+
+-- failed
+select id, length(name) from t1 where id>2;
+
+
+
 
 CREATE TABLE SELECT_TABLES_1(ID INT, AGE INT, U_NAME CHAR);
 CREATE TABLE SELECT_TABLES_2(ID INT, AGE INT, U_NAME CHAR);
@@ -2560,3 +2563,23 @@ select round(235.415, 2) as round_value;
 -- ROUND_VALUE
 -- -235.42
 -- +235.41
+
+
+
+CREATE TABLE function_table(id INT, name char(255),  score float);
+CREATE TABLE function_table_2(id INT, name char(255), score float);
+insert INTO function_table values(3, 'cherry', 1919);
+insert INTO function_table values(4, 'fig', 23333);
+insert INTO function_table values(5, 'watermelon', 1000);
+insert INTO function_table_2 values(2, 'mongo', 38);
+
+-- 6 | 6 | -2526.27
+-- ID | LENGTH(NAME) | ROUND(SCORE,2)
+select t1.id, t1.name, round(t1.score) as s1, t2.id, t2.name, round(t2.score) as s2 from function_table t1, function_table_2 t2 where t1.id > t2.id and round(t1.score) > round(t2.score);
+-- -3 | CHERRY | 1919 | 2 | MANGO | 38
+-- -4 | FIG | 23333 | 2 | MANGO | 38
+-- -5 | WATERMELON | 1000 | 2 | MANGO | 38
+-- T1.ID | T1.NAME | S1 | T2.ID | T2.NAME | S2
+-- 5. date_format
+select date_format('2019-9-17', '%y/%m/%d') as date_type;
+-- -DATE_TYPE
