@@ -2602,6 +2602,8 @@ select date_format('2019-9-17', '%y-%Y-%m-%M-%d-%D') as date_type;
 select date_format('2019-9-1', '%y-%Y-%m-%M-%d-%D') as date_type;
 select date_format('2019-9-1', '%y-%Y-%m-%M-%d-%D');
 
+select date_format('2019-9-1', '%%y');
+
 --failed
 
 CREATE TABLE function_table(id INT, name char(255),  score float, u_date date);

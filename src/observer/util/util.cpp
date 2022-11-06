@@ -158,6 +158,8 @@ std::string custom_date_format(char *date, char* pattern) {
   tm t;
   // memset(&t, 0, sizeof(t));
   strptime(date_to_string(value).c_str(), "%Y-%m-\%d", &t);
+  auto caonima_symbol = "@@@@cao@ni@ma@";
+  p = ReplaceAll(p, "%%",caonima_symbol);
   // %Y	年，4 位，如2022
   p = ReplaceAll(p, "%Y", format_time(&t, "%Y"));
   // %y	年，2 位，如22
@@ -171,8 +173,6 @@ std::string custom_date_format(char *date, char* pattern) {
   // %d	月的一天，数字，如09、30
   p = ReplaceAll(p, "%d", format_time(&t, "%d"));
   // 去掉%
-  auto caonima_symbol = "@@@@cao@ni@ma@";
-  p = ReplaceAll(p, "%%",caonima_symbol);
   p = ReplaceAll(p, "%", "");
   p = ReplaceAll(p, caonima_symbol, "%");
   return p;
