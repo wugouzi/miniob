@@ -2476,6 +2476,18 @@ select round(2.3);
 select round(2.3) from t1;
 select date_format(feat1, '%Y-%m-%d') from t1;
 
+create table t1(id int, name char(20));
+create table t2(id int, name char(20));
+insert into t1 values(2, 'ab');
+insert into t1 values(4, 'test');
+insert into t2 values(3, 'abc');
+select id, length(name) from t1 where id>1;
+select * from t1,t2 where length(t1.name)>length(t2.name);
+
+select function_table.id, function_table.name, function_table_2.id, function_table_2.name from function_table, function_table_2 where length(function_table.name) > length(function_table_2.name);
+select id, length(name) from function_table where id>2;
+
+
 -- where examples
 select length(col1) from t1 where length(col1)>=8;
 
