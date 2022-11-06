@@ -140,6 +140,13 @@ void strip_quote(std::string& p){
   }
 }
 
+std::string format_time(tm* t, char* pattern){
+  std::stringstream ss;
+  auto p = std::string(pattern);
+  ss << std::put_time(t, p.c_str());
+  return ss.str();
+}
+
 std::string custom_date_format(char *date, char* pattern) {
   int value = *(int*)date;
   auto y = (value / 10000);
@@ -147,19 +154,27 @@ std::string custom_date_format(char *date, char* pattern) {
   auto d = (value % 100);
   auto p = std::string(pattern);
   strip_quote(p);
-  std::stringstream ss;
+  // std::stringstream ss;
   tm t;
   strptime(date_to_string(value).c_str(), "%Y-%m-%\d", &t);
   // %Y	年，4 位，如2022
+  p = ReplaceAll(p, "%Y", format_time(&t, "%Y"));
   // %y	年，2 位，如22
+  p = ReplaceAll(p, "%y", format_time(&t, "%y"));
   // %M	月名，英文，如January
-  p = ReplaceAll(p, "%M", "%B");
+  p = ReplaceAll(p, "%M", format_time(&t, "%M"));
   // %m	月号，数字，如06、12
+  p = ReplaceAll(p, "%m", format_time(&t, "%m"));
   // %D	月的一天，带英文后缀，如21st、28th
   p = ReplaceAll(p, "%D", append_day_suffix(std::to_string(d)));
   // %d	月的一天，数字，如09、30
-  ss << std::put_time(&t, p.c_str());
-  return ss.str();
+  p = ReplaceAll(p, "%d", format_time(&t, "%d"));
+  // 去掉%
+  auto caonima_symbol = "@@@@cao@ni@ma@";
+  p = ReplaceAll(p, "%%",caonima_symbol);
+  p = ReplaceAll(p, "%", "");
+  p = ReplaceAll(p, caonima_symbol, "%");
+  return p;
 }
 
 MapFuncType transform_aggr_to_func_type(AggreType aggr){
