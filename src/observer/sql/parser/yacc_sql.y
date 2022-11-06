@@ -776,11 +776,15 @@ non_aggregation_func LBRACE ID func_extra_args RBRACE {
   // selects_append_attribute(&CONTEXT->ssql->selects[S_TOP], &attr);
   CONTEXT->a_types[S_TOP] = A_NO;
 } 
+| non_aggregation_func LBRACE DATE_STR func_extra_args RBRACE {
+  CONTEXT->a_types[S_TOP] = A_DATE_FORMAT;
+  func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, $3, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
+}
 | non_aggregation_func LBRACE SSS RBRACE {
   char s[1000];
   memset(s, 0, sizeof(s));
   sprintf(s,"length(%s)", $3);
-  printf("hahaa=%s\n", s);
+  // printf("hahaa=%s\n", s);
   CONTEXT->a_types[S_TOP] = A_LENGTH;
   func_attr_init(&CONTEXT->aggr_attrs[S_TOP][CONTEXT->aggr_attr_lens[S_TOP]++], NULL, $3, CONTEXT->a_types[S_TOP], 0, CONTEXT->argc[S_TOP], CONTEXT->args[S_TOP]);
 }
@@ -796,6 +800,12 @@ func_extra_args:
   CONTEXT->rel_argc[CONTEXT->fc]++;
 }
 | COMMA SSS aggregation_extra_id {
+  CONTEXT->args[S_TOP] = strdup($2);
+  CONTEXT->argc[S_TOP]++;
+  CONTEXT->rel_args[CONTEXT->fc] = strdup($2);
+  CONTEXT->rel_argc[CONTEXT->fc]++;
+}
+| COMMA DATE_STR aggregation_extra_id {
   CONTEXT->args[S_TOP] = strdup($2);
   CONTEXT->argc[S_TOP]++;
   CONTEXT->rel_args[CONTEXT->fc] = strdup($2);
