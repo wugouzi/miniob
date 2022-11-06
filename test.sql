@@ -2604,4 +2604,18 @@ select date_format('2019-9-1', '%y-%Y-%m-%M-%d-%D');
 
 --failed
 
+CREATE TABLE function_table(id INT, name char(255),  score float, u_date date);
+insert INTO function_table values(1, 'apple', 23457, '2020-1-21');
+insert INTO function_table values(2, 'cherry', 32, '2020-10-21');
+insert INTO function_table values(3, 'cherry', 1919, '2020-01-01');
+insert INTO function_table values(4, 'caonima', 1919, '2020-01-01');
+insert INTO function_table values(5, 'watermelon', 1000, '2019-12-21');
+insert INTO function_table values(6, 'cherry', -2526, '2016-02-29');
+
 select id, length(name), round(score), date_format(u_date, '%D,%M,%Y') as date_type from function_table where id <> 4;
+-- -1 | 5 | 23457 | 21st,January,2020
+-- -2 | 6 | 32 | 21st,October,2020
+-- -3 | 6 | 1919 | 1st,January,2020
+-- -5 | 10 | 1000 | 21st,December,2019
+-- -6 | 6 | -2526 | 29th,February,2016
+-- -ID | LENGTH(NAME) | ROUND(SCORE) | DATE_TYPE
